@@ -31,6 +31,9 @@ type Config struct {
 	S3ReadonlySecretKey string `env:"S3_READONLY_SECRET_KEY"`
 	S3PresignExpiry     int    `env:"S3_PRESIGN_EXPIRY" envDefault:"604800"`
 
+	GaragefrontURL       string `env:"GARAGEFRONT_URL"`
+	GaragefrontKeyPrefix string `env:"GARAGEFRONT_KEY_PREFIX" envDefault:"i/mcp"`
+
 	ShortenerAPIURL string `env:"SHORTENER_API_URL"`
 	ShortenerAPIKey string `env:"SHORTENER_API_KEY"`
 	ShortenerExpiry int    `env:"SHORTENER_EXPIRY_SECONDS" envDefault:"0"`

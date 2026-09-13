@@ -15,7 +15,7 @@ import (
 )
 
 func (u *Client) UploadImage(ctx context.Context, data []byte) (string, error) {
-	key := fmt.Sprintf("%s/%s.png", time.Now().UTC().Format("2006-01"), uuid.NewString())
+	key := u.objectKey()
 
 	u.log.Info("uploading image", zap.String("key", key), zap.Int("bytes", len(data)))
 
@@ -35,6 +35,34 @@ func (u *Client) UploadImage(ctx context.Context, data []byte) (string, error) {
 		return "", fmt.Errorf("uploading image to s3://%s/%s: %w", u.cfg.Bucket, key, err)
 	}
 
+	if u.cfg.PublicBaseURL != "" {
+		return publicObjectURL(u.cfg.PublicBaseURL, key), nil
+	}
+
+	return u.presignedURL(ctx, key)
+}
+
+func (u *Client) objectKey() string {
+	key := fmt.Sprintf("%s/%s.png", time.Now().UTC().Format("2006-01"), uuid.NewString())
+	if u.cfg.PublicBaseURL == "" || u.cfg.KeyPrefix == "" {
+		return key
+	}
+
+	return u.cfg.KeyPrefix + "/" + key
+}
+
+func publicObjectURL(base, key string) string {
+	u, err := url.Parse(base)
+	if err != nil {
+		return strings.TrimSuffix(base, "/") + "/" + key
+	}
+
+	u.Path = strings.TrimSuffix(u.Path, "/") + "/" + key
+
+	return u.String()
+}
+
+func (u *Client) presignedURL(ctx context.Context, key string) (string, error) {
 	presigner := s3.NewPresignClient(u.reader)
 	req, err := presigner.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(u.cfg.Bucket),

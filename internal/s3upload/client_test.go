@@ -6,6 +6,42 @@ import (
 	"go.uber.org/zap"
 )
 
+func TestNewPublicBaseURL(t *testing.T) {
+	base := Config{
+		Endpoint:      "http://127.0.0.1:3900",
+		Bucket:        "test-bucket",
+		Region:        "test-region",
+		AccessKey:     "write-key",
+		SecretKey:     "write-secret",
+		PublicBaseURL: "https://cdn.example.com",
+		KeyPrefix:     "i/mcp",
+	}
+
+	t.Run("readonly credentials not required", func(t *testing.T) {
+		if _, err := New(base, zap.NewNop()); err != nil {
+			t.Fatalf("New() error: %v", err)
+		}
+	})
+
+	t.Run("base url without scheme", func(t *testing.T) {
+		cfg := base
+		cfg.PublicBaseURL = "cdn.example.com"
+
+		if _, err := New(cfg, zap.NewNop()); err == nil {
+			t.Fatalf("New() expected error for base URL without scheme")
+		}
+	})
+
+	t.Run("missing key prefix", func(t *testing.T) {
+		cfg := base
+		cfg.KeyPrefix = ""
+
+		if _, err := New(cfg, zap.NewNop()); err == nil {
+			t.Fatalf("New() expected error for missing key prefix")
+		}
+	})
+}
+
 func TestNewMissingConfig(t *testing.T) {
 	base := Config{
 		Endpoint:          "http://127.0.0.1:3900",
