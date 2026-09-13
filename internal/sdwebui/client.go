@@ -5,10 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/wishmatic/neo-mcp/internal/utils"
 )
@@ -16,7 +14,6 @@ import (
 type Client struct {
 	baseURL       string
 	http          *http.Client
-	fetchHTTP     *http.Client
 	verboseErrors bool
 }
 
@@ -24,7 +21,6 @@ func New(baseURL string, verboseErrors bool) *Client {
 	return &Client{
 		baseURL:       strings.TrimRight(baseURL, "/"),
 		http:          &http.Client{},
-		fetchHTTP:     &http.Client{Timeout: 60 * time.Second},
 		verboseErrors: verboseErrors,
 	}
 }
@@ -69,31 +65,6 @@ func (c *Client) postImages(ctx context.Context, label, path string, payload any
 	}
 
 	return decodeImages(out)
-}
-
-func (c *Client) fetch(ctx context.Context, url string) ([]byte, error) {
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("build fetch request: %w", err)
-	}
-
-	resp, err := c.fetchHTTP.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("fetch image: %w", err)
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s", c.httpError(http.MethodGet, url, resp))
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read image body: %w", err)
-	}
-
-	return data, nil
 }
 
 // httpError builds a human-readable error for a non-2xx HTTP response.

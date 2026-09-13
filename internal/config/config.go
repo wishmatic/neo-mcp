@@ -32,9 +32,8 @@ type Config struct {
 	S3PresignExpiry     int    `env:"S3_PRESIGN_EXPIRY" envDefault:"604800"`
 	S3UsePathStyle      bool   `env:"S3_USE_PATH_STYLE" envDefault:"true"`
 
-	GaragefrontURL       string `env:"GARAGEFRONT_URL"`
-	GaragefrontKeyPrefix string `env:"GARAGEFRONT_KEY_PREFIX" envDefault:"i/mcp"`
-	GaragefrontUserID    string `env:"GARAGEFRONT_USER_ID"`
+	GaragefrontURL    string `env:"GARAGEFRONT_URL"`
+	GaragefrontUserID string `env:"GARAGEFRONT_USER_ID"`
 
 	ShortenerAPIURL string `env:"SHORTENER_API_URL"`
 	ShortenerAPIKey string `env:"SHORTENER_API_KEY"`
@@ -56,14 +55,12 @@ func (c Config) Addr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
 
-// GaragefrontPrefix is the object key prefix for garagefront-served images.
-//
-// LibreChat signs its image cookie for i/images/<user id>/*, so a configured user ID places uploads inside a directory
-// that cookie already covers.
+// GaragefrontPrefix is the object key prefix for garagefront-served images. LibreChat signs its image cookie for
+// i/images/<user id>/*, so uploads go under the configured user's directory to fall inside that cookie's resource.
 func (c Config) GaragefrontPrefix() string {
-	if c.GaragefrontUserID != "" {
-		return "i/images/" + c.GaragefrontUserID
+	if c.GaragefrontUserID == "" {
+		return ""
 	}
 
-	return c.GaragefrontKeyPrefix
+	return "i/images/" + c.GaragefrontUserID
 }

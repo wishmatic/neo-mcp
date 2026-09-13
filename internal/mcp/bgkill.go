@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/imageresolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"github.com/wishmatic/neo-mcp/internal/shortener"
@@ -26,6 +27,7 @@ func registerBgkill(
 	client *sdwebui.Client,
 	uploader *s3upload.Client,
 	shortenerClient *shortener.Client,
+	resolver *imageresolve.Resolver,
 ) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "bgkill",
@@ -43,7 +45,7 @@ func registerBgkill(
 			zap.Bool("full_mode", in.FullMode),
 		)
 
-		image, err := client.FetchImage(ctx, in.ImageURL)
+		image, err := resolver.Fetch(ctx, in.ImageURL)
 		if err != nil {
 			log.Error("bgkill failed to fetch image",
 				zap.String("image_url", in.ImageURL),

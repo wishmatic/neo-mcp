@@ -55,6 +55,12 @@ these verbatim to your system prompt or a skill, along with checkpoints, LoRA, a
 
 Please see [.env.example](.env.example) for a configuration.
 
+### Garagefront
+
+Garagefront support is single user for now: `GARAGEFRONT_USER_ID` is static, so every image is uploaded to one
+LibreChat user's directory. Please raise an issue if you want multi-user, especially if you'd want it without an admin
+having to add an envar per user.
+
 ### Extensions Support
 
 Some extensions I use will be supported over time if they can be called via the Forge API.
@@ -70,11 +76,6 @@ features.
 
 This is also very bespoke to my use case. I recommend forking this and adjusting features to your needs if it doesn't
 quite fit your own.
-
-## Todo
-
-- The current way this is set up with Garagefront is pretty hacky to tie into the LibreChat cookie signing. There
-  should be a better way of doing this, at least maybe fetching the user ID from the cookie or something.
 
 ## License
 

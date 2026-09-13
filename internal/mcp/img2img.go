@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/imageresolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"github.com/wishmatic/neo-mcp/internal/shortener"
@@ -26,6 +27,7 @@ func registerImg2Img(
 	client *sdwebui.Client,
 	uploader *s3upload.Client,
 	shortenerClient *shortener.Client,
+	resolver *imageresolve.Resolver,
 ) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "img2img",
@@ -57,7 +59,7 @@ func registerImg2Img(
 			zap.Float64("hr_cfg", in.HRCFGScale),
 		)
 
-		initImage, err := client.FetchImage(ctx, in.InitImageURL)
+		initImage, err := resolver.Fetch(ctx, in.InitImageURL)
 		if err != nil {
 			log.Error("img2img failed to fetch init image",
 				zap.String("init_image_url", in.InitImageURL),

@@ -61,16 +61,3 @@ func TestImg2ImgPayload(t *testing.T) {
 		t.Errorf("sd_model_checkpoint = %q, want model.safetensors", payload.OverrideSettings.Checkpoint)
 	}
 }
-
-func TestFetchImageNonOK(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer server.Close()
-
-	c := New(server.URL, false)
-
-	if _, err := c.FetchImage(context.Background(), server.URL+"/missing.png"); err == nil {
-		t.Fatal("FetchImage() expected error, got nil")
-	}
-}

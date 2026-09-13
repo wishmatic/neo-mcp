@@ -73,7 +73,3 @@ func (c *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, err
 
 	return c.postImages(ctx, "img2img", "/sdapi/v1/img2img", payload)
 }
-
-func (c *Client) FetchImage(ctx context.Context, url string) ([]byte, error) {
-	return c.fetch(ctx, url)
-}

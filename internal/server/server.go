@@ -13,6 +13,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/auth"
 	"github.com/wishmatic/neo-mcp/internal/config"
+	"github.com/wishmatic/neo-mcp/internal/imageresolve"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
@@ -30,6 +31,10 @@ type Server struct {
 func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	if cfg.APIKey == "" {
 		return nil, auth.ErrNoAPIKey
+	}
+
+	if cfg.GaragefrontURL != "" && cfg.GaragefrontUserID == "" {
+		return nil, fmt.Errorf("GARAGEFRONT_USER_ID is required when GARAGEFRONT_URL is set")
 	}
 
 	router := chi.NewRouter()
@@ -78,7 +83,17 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		)
 	}
 
-	mcpSrv, err := mcpServer.New(log, sdClient, uploader, shortenerClient)
+	var store imageresolve.ObjectStore
+	if uploader != nil {
+		store = uploader
+	}
+
+	resolver, err := imageresolve.New(store, cfg.GaragefrontURL)
+	if err != nil {
+		return nil, fmt.Errorf("build image resolver: %w", err)
+	}
+
+	mcpSrv, err := mcpServer.New(log, sdClient, uploader, shortenerClient, resolver)
 	if err != nil {
 		return nil, fmt.Errorf("build mcp server: %w", err)
 	}
