@@ -18,7 +18,19 @@ Note that the only version of Forge we support is
 
 ## Usage
 
-Deploy as a Docker image. Instructions pending.
+Deploy as a Docker image:
+
+```sh
+docker run -d \
+  -p 8080:8080 \
+  -e API_KEY=change-me \
+  -e SD_URL=http://host.docker.internal:7860 \
+  ghcr.io/wishmatic/neo-mcp:latest
+```
+
+The MCP endpoint is served at `/mcp`.
+
+All other configuration is optional but strongly recommended; see [.env.example](.env.example).
 
 ### SD Web UI Forge Neo's API
 
