@@ -41,8 +41,8 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodOptions},
-		AllowedHeaders:   []string{"Accept", "Content-Type", "Authorization", "Mcp-Session-Id"},
-		ExposedHeaders:   []string{"Mcp-Session-Id"},
+		AllowedHeaders:   []string{"Accept", "Content-Type", "Authorization"},
+		ExposedHeaders:   []string{},
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))

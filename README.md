@@ -34,9 +34,6 @@ You must set `AUTH_MODE` to one of `bearer` (recommended and default) or `basic`
 
 `API_KEY` is always required.
 
-Credentials are checked only on the session-establishing request; subsequent requests that carry an `Mcp-Session-Id`
-header are allowed through without re-checking credentials for supported clients.
-
 ### Agent Model Knowledge
 
 Your agent will need knowledge of VAE and text encoder models as well as available upscalers in order to use them. Add

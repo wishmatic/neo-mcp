@@ -18,15 +18,12 @@ func guarded(mode AuthMode) http.Handler {
 	}))
 }
 
-func do(t *testing.T, h http.Handler, authHeader, sessionID string) *httptest.ResponseRecorder {
+func do(t *testing.T, h http.Handler, authHeader string) *httptest.ResponseRecorder {
 	t.Helper()
 
 	req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
 	if authHeader != "" {
 		req.Header.Set("Authorization", authHeader)
-	}
-	if sessionID != "" {
-		req.Header.Set(sessionIDHeader, sessionID)
 	}
 
 	rec := httptest.NewRecorder()
@@ -52,20 +49,11 @@ func TestBearerAuth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rec := do(t, guarded(AuthBearer), tt.authHeader, "")
+			rec := do(t, guarded(AuthBearer), tt.authHeader)
 			if rec.Code != tt.wantCode {
 				t.Errorf("status = %d, want %d (body: %q)", rec.Code, tt.wantCode, rec.Body.String())
 			}
 		})
-	}
-}
-
-func TestBearerAllowsSessionIDWithoutCredentials(t *testing.T) {
-	// Follow-up tool calls carry a session ID but may omit the Authorization header (LibreChat bug).
-
-	rec := do(t, guarded(AuthBearer), "", "some-session-id")
-	if rec.Code != http.StatusOK {
-		t.Errorf("status = %d, want %d (body: %q)", rec.Code, http.StatusOK, rec.Body.String())
 	}
 }
 
@@ -83,7 +71,7 @@ func TestBasicAuth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rec := do(t, guarded(AuthBasic), tt.authHeader, "")
+			rec := do(t, guarded(AuthBasic), tt.authHeader)
 			if rec.Code != tt.wantCode {
 				t.Errorf("status = %d, want %d (body: %q)", rec.Code, tt.wantCode, rec.Body.String())
 			}
@@ -91,15 +79,8 @@ func TestBasicAuth(t *testing.T) {
 	}
 }
 
-func TestBasicAllowsSessionIDWithoutCredentials(t *testing.T) {
-	rec := do(t, guarded(AuthBasic), "", "some-session-id")
-	if rec.Code != http.StatusOK {
-		t.Errorf("status = %d, want %d (body: %q)", rec.Code, http.StatusOK, rec.Body.String())
-	}
-}
-
 func TestUnauthorizedIncludesChallenge(t *testing.T) {
-	rec := do(t, guarded(AuthBearer), "", "")
+	rec := do(t, guarded(AuthBearer), "")
 
 	if rec.Header().Get("WWW-Authenticate") == "" {
 		t.Error("expected WWW-Authenticate header on 401 response")
@@ -109,5 +90,6 @@ func TestUnauthorizedIncludesChallenge(t *testing.T) {
 func basicToken(user, pass string) string {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.SetBasicAuth(user, pass)
+
 	return req.Header.Get("Authorization")[len("Basic "):]
 }

@@ -12,16 +12,6 @@ import (
 
 var ErrNoAPIKey = errors.New("API_KEY is required")
 
-// sessionIDHeader is the MCP streamable-HTTP header that carries a session identifier on follow-up requests. Once a
-// session is established by an authenticated request, subsequent requests address it via this header rather than by
-// re-sending credentials.
-const sessionIDHeader = "Mcp-Session-Id"
-
-// hasSession reports whether the request carries an MCP session identifier to prevent re-authentication.
-func hasSession(r *http.Request) bool {
-	return strings.TrimSpace(r.Header.Get(sessionIDHeader)) != ""
-}
-
 type AuthMode int
 
 const (
@@ -41,12 +31,6 @@ func (m AuthMode) middleware(log *zap.Logger, apiKey string) func(http.Handler) 
 func bearerAuth(log *zap.Logger, apiKey string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Follow-up requests carry an MCP session ID and are already authenticated by the session-establishing request.
-			if hasSession(r) {
-				next.ServeHTTP(w, r)
-				return
-			}
-
 			token, reason, ok := bearerToken(r)
 			if !ok || subtle.ConstantTimeCompare([]byte(token), []byte(apiKey)) != 1 {
 				if ok {
@@ -65,12 +49,6 @@ func bearerAuth(log *zap.Logger, apiKey string) func(http.Handler) http.Handler 
 func basicAuth(log *zap.Logger, apiKey string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if hasSession(r) {
-				next.ServeHTTP(w, r)
-
-				return
-			}
-
 			user, pass, ok := r.BasicAuth()
 			if !ok {
 				authFailed(log, r, "missing basic auth credentials")
