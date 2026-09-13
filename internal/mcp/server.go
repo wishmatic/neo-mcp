@@ -34,5 +34,6 @@ func registerTools(
 	if sdClient != nil {
 		registerTxt2Img(srv, log, sdClient, uploader, shortenerClient)
 		registerImg2Img(srv, log, sdClient, uploader, shortenerClient)
+		registerBgkill(srv, log, sdClient, uploader, shortenerClient)
 	}
 }

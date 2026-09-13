@@ -2,7 +2,6 @@ package sdwebui
 
 import (
 	"context"
-	"encoding/base64"
 )
 
 type Img2ImgRequest struct {
@@ -77,8 +76,4 @@ func (c *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, err
 
 func (c *Client) FetchImage(ctx context.Context, url string) ([]byte, error) {
 	return c.fetch(ctx, url)
-}
-
-func base64DataURI(data []byte) string {
-	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)
 }

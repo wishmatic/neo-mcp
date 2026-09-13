@@ -114,45 +114,7 @@ func registerImg2Img(
 
 		log.Info("img2img generation finished", zap.Int("images", len(images)))
 
-		if uploader != nil {
-			urls := make([]string, 0, len(images))
-			for _, data := range images {
-				url, err := uploader.UploadImage(ctx, data)
-				if err != nil {
-					log.Error("img2img upload to s3 failed", zap.Error(err))
-
-					return nil, generationOutput{}, err
-				}
-
-				if shortenerClient != nil {
-					short, err := shortenerClient.Shorten(ctx, url)
-					if err != nil {
-						log.Warn("img2img url shortening failed; returning presigned url", zap.Error(err))
-					} else {
-						url = short
-					}
-				}
-
-				urls = append(urls, url)
-			}
-
-			content := make([]mcp.Content, 0, len(urls))
-			for _, url := range urls {
-				content = append(content, &mcp.TextContent{Text: url})
-			}
-
-			return &mcp.CallToolResult{Content: content}, generationOutput{Count: len(urls), URLs: urls}, nil
-		}
-
-		content := make([]mcp.Content, 0, len(images))
-		for _, data := range images {
-			content = append(content, &mcp.ImageContent{
-				Data:     data,
-				MIMEType: "image/png",
-			})
-		}
-
-		return &mcp.CallToolResult{Content: content}, generationOutput{Count: len(images)}, nil
+		return publishImages(ctx, log, "img2img", images, uploader, shortenerClient)
 	})
 }
 

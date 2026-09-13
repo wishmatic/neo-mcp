@@ -47,6 +47,10 @@ func decodeImages(out imagesResponse) ([][]byte, error) {
 	return images, nil
 }
 
+func base64DataURI(data []byte) string {
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)
+}
+
 var knownModelExtensions = []string{
 	".safetensors",
 	".gguf",

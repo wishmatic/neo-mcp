@@ -29,33 +29,43 @@ func New(baseURL string, verboseErrors bool) *Client {
 	}
 }
 
-func (c *Client) postImages(ctx context.Context, label, path string, payload any) ([][]byte, error) {
+func postJSON[T any](ctx context.Context, c *Client, label, path string, payload any) (T, error) {
+	var out T
+
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("marshal %s payload: %w", label, err)
+		return out, fmt.Errorf("marshal %s payload: %w", label, err)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("build %s request: %w", label, err)
+		return out, fmt.Errorf("build %s request: %w", label, err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("call %s: %w", label, err)
+		return out, fmt.Errorf("call %s: %w", label, err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s", c.httpError(http.MethodPost, path, resp))
+		return out, fmt.Errorf("%s", c.httpError(http.MethodPost, path, resp))
 	}
 
-	var out imagesResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, fmt.Errorf("decode %s response: %w", label, err)
+		return out, fmt.Errorf("decode %s response: %w", label, err)
+	}
+
+	return out, nil
+}
+
+func (c *Client) postImages(ctx context.Context, label, path string, payload any) ([][]byte, error) {
+	out, err := postJSON[imagesResponse](ctx, c, label, path, payload)
+	if err != nil {
+		return nil, err
 	}
 
 	return decodeImages(out)

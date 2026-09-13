@@ -38,12 +38,12 @@ type generationInput struct {
 	HRCFGScale        float64 `json:"hr_cfg,omitempty" jsonschema:"if HR is enabled, the CFG scale for the hi-res second pass"`
 }
 
-// generationOutput is the structured output shared by both tools. The generated images always travel in the call
+// generationOutput is the structured output shared by the image tools. The generated images always travel in the call
 // result's content (as inline image content, or as URLs when upload is configured), so URLs is a convenience mirror
 // that is only populated in the latter case.
 type generationOutput struct {
 	Count int      `json:"count" jsonschema:"number of images generated"`
-	URLs  []string `json:"urls,omitempty" jsonschema:"presigned URLs for the generated images, only set when S3 upload is configured"`
+	URLs  []string `json:"urls,omitempty" jsonschema:"URLs for the generated images, only set when S3 upload is configured"`
 }
 
 func setDefault(props map[string]*jsonschema.Schema, name string, value any) {

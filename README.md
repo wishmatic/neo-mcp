@@ -8,6 +8,8 @@ Note that the only version of Forge we support is
 [Haoming02's fork](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo#stable-diffusion-webui-forge---neo).
 
 - Core feature: `txt2img` and `img2img` tools are implemented with full control of knobs to adjust image generation.
+- `bgkill` removes the background from an image via the
+  [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension.
 - If you provide `S3_*` environment variables, generated images are uploaded to an S3-compatible object store and
   returned as presigned URLs.
     - Without this, they're returned as plain `image/png` content.
@@ -56,8 +58,8 @@ Please see [.env.example](.env.example) for a configuration.
 
 Some extensions I use will be supported over time if they can be called via the Forge API.
 
-Right now, this is only [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) for removing
-backgrounds. [TODO: This isn't done yet.]
+Right now, this is only [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet), which provides the
+`bgkill` tool.
 
 ## Warning
 
@@ -65,7 +67,7 @@ This MCP will be available and maintained so long as I use it, and is built for 
 issue requests and PRs will be _considered_ but unless I find use out of it myself, I probably won't work on those
 features.
 
-This is also very bespoke to my use case. I recommend forking this and removing features to your needs if it doesn't
+This is also very bespoke to my use case. I recommend forking this and adjusting features to your needs if it doesn't
 quite fit your own.
 
 ## License
