@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (u *Uploader) UploadImage(ctx context.Context, data []byte) (string, error) {
+func (u *Client) UploadImage(ctx context.Context, data []byte) (string, error) {
 	key := fmt.Sprintf("%s/%s.png", time.Now().UTC().Format("2006-01"), uuid.NewString())
 
 	u.log.Info("uploading image", zap.String("key", key), zap.Int("bytes", len(data)))

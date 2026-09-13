@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/wishmatic/neo-mcp/internal/utils"
 )
@@ -26,29 +25,13 @@ type newResponse struct {
 	Reason     string `json:"reason"`
 }
 
-type Client struct {
-	apiURL      string
-	apiKey      string
-	expiryDelay int
-	http        *http.Client
-}
-
-func New(apiURL, apiKey string, expiryDelay int) *Client {
-	return &Client{
-		apiURL:      strings.TrimRight(apiURL, "/"),
-		apiKey:      apiKey,
-		expiryDelay: expiryDelay,
-		http:        &http.Client{Timeout: 15 * time.Second},
-	}
-}
-
 func (c *Client) Shorten(ctx context.Context, longURL string) (string, error) {
 	body, err := json.Marshal(newRequest{LongLink: longURL, ExpiryDelay: c.expiryDelay})
 	if err != nil {
 		return "", fmt.Errorf("marshal shorten request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.apiURL+"/api/new", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/new", bytes.NewReader(body))
 	if err != nil {
 		return "", fmt.Errorf("build shorten request: %w", err)
 	}
@@ -90,14 +73,14 @@ func (c *Client) Shorten(ctx context.Context, longURL string) (string, error) {
 	}
 
 	if !utils.IsHTTP(short) {
-		short = resolveRelative(c.apiURL, short)
+		short = resolveRelative(c.baseURL, short)
 	}
 
 	return short, nil
 }
 
-func resolveRelative(apiURL, short string) string {
-	u, err := url.Parse(apiURL)
+func resolveRelative(baseURL, short string) string {
+	u, err := url.Parse(baseURL)
 	if err != nil {
 		return short
 	}

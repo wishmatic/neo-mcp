@@ -3,28 +3,8 @@ package sdwebui
 import (
 	"encoding/base64"
 	"fmt"
-	"net/http"
 	"strings"
-	"time"
-
-	"github.com/wishmatic/neo-mcp/internal/utils"
 )
-
-type Client struct {
-	baseURL       string
-	http          *http.Client
-	fetchHTTP     *http.Client
-	verboseErrors bool
-}
-
-func New(baseURL string, verboseErrors bool) *Client {
-	return &Client{
-		baseURL:       strings.TrimRight(baseURL, "/"),
-		http:          &http.Client{},
-		fetchHTTP:     &http.Client{Timeout: 60 * time.Second},
-		verboseErrors: verboseErrors,
-	}
-}
 
 type overrideSettings struct {
 	Checkpoint             string   `json:"sd_model_checkpoint,omitempty"`
@@ -65,24 +45,6 @@ func decodeImages(out imagesResponse) ([][]byte, error) {
 	}
 
 	return images, nil
-}
-
-// httpError builds a human-readable error for a non-2xx HTTP response.
-func (c *Client) httpError(method, path string, resp *http.Response) string {
-	body := utils.ReadLimited(resp.Body)
-
-	if c.verboseErrors {
-		return fmt.Sprintf(
-			"%s %s returned HTTP %d (%s): %s",
-			method, path, resp.StatusCode, resp.Status, body,
-		)
-	}
-
-	if body != "" {
-		return fmt.Sprintf("%s %s returned HTTP %d: %s", method, path, resp.StatusCode, body)
-	}
-
-	return fmt.Sprintf("%s %s returned HTTP %d", method, path, resp.StatusCode)
 }
 
 var knownModelExtensions = []string{

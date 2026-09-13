@@ -1,12 +1,6 @@
 package sdwebui
 
-import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
-)
+import "context"
 
 type Txt2ImgRequest struct {
 	Checkpoint             string   `json:"-"`
@@ -75,33 +69,5 @@ func (c *Client) Txt2Img(ctx context.Context, req Txt2ImgRequest) ([][]byte, err
 
 	applyOverrideSettings(payload, req.Checkpoint, req.ForgePreset, req.ForgeAdditionalModules)
 
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("marshal txt2img payload: %w", err)
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/sdapi/v1/txt2img", bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("build txt2img request: %w", err)
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.http.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("call txt2img: %w", err)
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s", c.httpError(http.MethodPost, "/sdapi/v1/txt2img", resp))
-	}
-
-	var out imagesResponse
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, fmt.Errorf("decode txt2img response: %w", err)
-	}
-
-	return decodeImages(out)
+	return c.postImages(ctx, "txt2img", "/sdapi/v1/txt2img", payload)
 }

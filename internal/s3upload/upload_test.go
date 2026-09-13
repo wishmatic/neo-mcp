@@ -19,7 +19,7 @@ func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 	return f(r)
 }
 
-func newTestUploader(t *testing.T, rt http.RoundTripper) *Uploader {
+func newTestUploader(t *testing.T, rt http.RoundTripper) *Client {
 	t.Helper()
 
 	cfg := Config{
@@ -36,7 +36,7 @@ func newTestUploader(t *testing.T, rt http.RoundTripper) *Uploader {
 
 	httpClient := &http.Client{Transport: rt}
 
-	return &Uploader{
+	return &Client{
 		cfg: cfg,
 		log: zap.NewNop(),
 		writer: s3.New(s3.Options{

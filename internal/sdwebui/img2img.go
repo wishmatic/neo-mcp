@@ -1,13 +1,8 @@
 package sdwebui
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 )
 
 type Img2ImgRequest struct {
@@ -77,62 +72,11 @@ func (c *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, err
 		payload["hr_additional_modules"] = []string{"Use same choices"}
 	}
 
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("marshal img2img payload: %w", err)
-	}
-
-	httpReq, err := http.NewRequestWithContext(
-		ctx, http.MethodPost, c.baseURL+"/sdapi/v1/img2img", bytes.NewReader(body),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("build img2img request: %w", err)
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.http.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("call img2img: %w", err)
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s", c.httpError(http.MethodPost, "/sdapi/v1/img2img", resp))
-	}
-
-	var out imagesResponse
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, fmt.Errorf("decode img2img response: %w", err)
-	}
-
-	return decodeImages(out)
+	return c.postImages(ctx, "img2img", "/sdapi/v1/img2img", payload)
 }
 
 func (c *Client) FetchImage(ctx context.Context, url string) ([]byte, error) {
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("build fetch request: %w", err)
-	}
-
-	resp, err := c.fetchHTTP.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("fetch image: %w", err)
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s", c.httpError(http.MethodGet, url, resp))
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read image body: %w", err)
-	}
-
-	return data, nil
+	return c.fetch(ctx, url)
 }
 
 func base64DataURI(data []byte) string {

@@ -24,7 +24,7 @@ func registerImg2Img(
 	srv *mcp.Server,
 	log *zap.Logger,
 	client *sdwebui.Client,
-	uploader *s3upload.Uploader,
+	uploader *s3upload.Client,
 	shortenerClient *shortener.Client,
 ) {
 	mcp.AddTool(srv, &mcp.Tool{

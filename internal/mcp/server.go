@@ -11,7 +11,7 @@ import (
 func New(
 	log *zap.Logger,
 	sdClient *sdwebui.Client,
-	uploader *s3upload.Uploader,
+	uploader *s3upload.Client,
 	shortenerClient *shortener.Client,
 ) (*mcp.Server, error) {
 	srv := mcp.NewServer(&mcp.Implementation{
@@ -28,7 +28,7 @@ func registerTools(
 	srv *mcp.Server,
 	log *zap.Logger,
 	sdClient *sdwebui.Client,
-	uploader *s3upload.Uploader,
+	uploader *s3upload.Client,
 	shortenerClient *shortener.Client,
 ) {
 	if sdClient != nil {

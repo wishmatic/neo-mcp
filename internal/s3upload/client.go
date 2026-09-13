@@ -24,7 +24,7 @@ type Config struct {
 	PresignExpiry     time.Duration
 }
 
-type Uploader struct {
+type Client struct {
 	cfg Config
 	log *zap.Logger
 
@@ -32,7 +32,7 @@ type Uploader struct {
 	reader *s3.Client
 }
 
-func New(cfg Config, log *zap.Logger) (*Uploader, error) {
+func New(cfg Config, log *zap.Logger) (*Client, error) {
 	if cfg.Endpoint == "" || cfg.Bucket == "" || cfg.Region == "" ||
 		cfg.AccessKey == "" || cfg.SecretKey == "" ||
 		cfg.ReadonlyAccessKey == "" || cfg.ReadonlySecretKey == "" {
@@ -51,14 +51,13 @@ func New(cfg Config, log *zap.Logger) (*Uploader, error) {
 	writer := newClient(cfg.Endpoint, cfg.Region, cfg.AccessKey, cfg.SecretKey)
 	reader := newClient(cfg.PublicEndpoint, cfg.Region, cfg.ReadonlyAccessKey, cfg.ReadonlySecretKey)
 
-	return &Uploader{cfg: cfg, log: log, writer: writer, reader: reader}, nil
+	return &Client{cfg: cfg, log: log, writer: writer, reader: reader}, nil
 }
 
 func newClient(endpoint, region, accessKey, secretKey string) *s3.Client {
 	return s3.New(s3.Options{
 		Region:       region,
 		BaseEndpoint: aws.String(endpoint),
-		UsePathStyle: true,
 		Credentials:  credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
 	})
 }
