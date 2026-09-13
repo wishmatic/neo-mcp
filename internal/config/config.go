@@ -30,6 +30,7 @@ type Config struct {
 	S3ReadonlyAccessKey string `env:"S3_READONLY_ACCESS_KEY"`
 	S3ReadonlySecretKey string `env:"S3_READONLY_SECRET_KEY"`
 	S3PresignExpiry     int    `env:"S3_PRESIGN_EXPIRY" envDefault:"604800"`
+	S3UsePathStyle      bool   `env:"S3_USE_PATH_STYLE" envDefault:"true"`
 
 	GaragefrontURL       string `env:"GARAGEFRONT_URL"`
 	GaragefrontKeyPrefix string `env:"GARAGEFRONT_KEY_PREFIX" envDefault:"i/mcp"`

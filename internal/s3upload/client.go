@@ -24,6 +24,7 @@ type Config struct {
 	ReadonlyAccessKey string
 	ReadonlySecretKey string
 	PresignExpiry     time.Duration
+	UsePathStyle      bool
 
 	// PublicBaseURL, when set, replaces presigned URLs with durable unsigned ones of the form PublicBaseURL/<key>.
 	// Access control is delegated to whatever serves that base, such as CloudFront signed cookies. KeyPrefix
@@ -45,7 +46,7 @@ func New(cfg Config, log *zap.Logger) (*Client, error) {
 		return nil, fmt.Errorf("s3upload: S3_ENDPOINT, S3_BUCKET, S3_REGION, S3_ACCESS_KEY and S3_SECRET_KEY are required")
 	}
 
-	writer := newClient(cfg.Endpoint, cfg.Region, cfg.AccessKey, cfg.SecretKey)
+	writer := cfg.newClient(cfg.Endpoint, cfg.AccessKey, cfg.SecretKey)
 
 	if cfg.PublicBaseURL != "" {
 		base, err := url.Parse(cfg.PublicBaseURL)
@@ -75,15 +76,16 @@ func New(cfg Config, log *zap.Logger) (*Client, error) {
 		cfg.PublicEndpoint = cfg.Endpoint
 	}
 
-	reader := newClient(cfg.PublicEndpoint, cfg.Region, cfg.ReadonlyAccessKey, cfg.ReadonlySecretKey)
+	reader := cfg.newClient(cfg.PublicEndpoint, cfg.ReadonlyAccessKey, cfg.ReadonlySecretKey)
 
 	return &Client{cfg: cfg, log: log, writer: writer, reader: reader}, nil
 }
 
-func newClient(endpoint, region, accessKey, secretKey string) *s3.Client {
+func (c Config) newClient(endpoint, accessKey, secretKey string) *s3.Client {
 	return s3.New(s3.Options{
-		Region:       region,
+		Region:       c.Region,
 		BaseEndpoint: aws.String(endpoint),
+		UsePathStyle: c.UsePathStyle,
 		Credentials:  credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
 	})
 }

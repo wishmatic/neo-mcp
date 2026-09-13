@@ -58,6 +58,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		ReadonlyAccessKey: cfg.S3ReadonlyAccessKey,
 		ReadonlySecretKey: cfg.S3ReadonlySecretKey,
 		PresignExpiry:     time.Duration(cfg.S3PresignExpiry) * time.Second,
+		UsePathStyle:      cfg.S3UsePathStyle,
 		PublicBaseURL:     cfg.GaragefrontURL,
 		KeyPrefix:         cfg.GaragefrontKeyPrefix,
 	}, log)
