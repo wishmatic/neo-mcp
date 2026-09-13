@@ -28,7 +28,6 @@ type Server struct {
 }
 
 func New(cfg config.Config, log *zap.Logger) (*Server, error) {
-	mode := cfg.AuthMode()
 	if cfg.APIKey == "" {
 		return nil, auth.ErrNoAPIKey
 	}
@@ -36,7 +35,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
-	router.Use(middleware.RealIP)
+	router.Use(middleware.ClientIPFromRemoteAddr)
 	router.Use(middleware.Recoverer)
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
@@ -85,7 +84,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		return mcpSrv
 	}, nil)
 
-	protected := auth.Middleware(mode, log, cfg.APIKey)(mcpHandler)
+	protected := auth.Middleware(log, cfg.APIKey)(mcpHandler)
 
 	router.Mount("/mcp", protected)
 	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {

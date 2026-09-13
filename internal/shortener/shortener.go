@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/wishmatic/neo-mcp/internal/utils"
 )
 
 type newRequest struct {
@@ -64,7 +65,7 @@ func (c *Client) Shorten(ctx context.Context, longURL string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		msg := readLimited(resp.Body)
+		msg := utils.ReadLimited(resp.Body)
 
 		return "", fmt.Errorf("shortener returned HTTP %d: %s", resp.StatusCode, msg)
 	}
@@ -88,23 +89,11 @@ func (c *Client) Shorten(ctx context.Context, longURL string) (string, error) {
 		return "", fmt.Errorf("shortener returned an empty shorturl")
 	}
 
-	if !isHTTP(short) {
+	if !utils.IsHTTP(short) {
 		short = resolveRelative(c.apiURL, short)
 	}
 
 	return short, nil
-}
-
-func readLimited(r io.Reader) string {
-	b, _ := io.ReadAll(io.LimitReader(r, 4*1024))
-
-	return strings.TrimSpace(string(b))
-}
-
-func isHTTP(s string) bool {
-	u, err := url.Parse(s)
-
-	return err == nil && (u.Scheme == "http" || u.Scheme == "https")
 }
 
 func resolveRelative(apiURL, short string) string {

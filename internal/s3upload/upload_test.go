@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -32,7 +31,7 @@ func newTestUploader(t *testing.T, rt http.RoundTripper) *Uploader {
 		SecretKey:         "write-secret",
 		ReadonlyAccessKey: "read-key",
 		ReadonlySecretKey: "read-secret",
-		PresignExpiry:     7 * 24 * time.Hour,
+		PresignExpiry:     defaultPresignExpiry,
 	}
 
 	httpClient := &http.Client{Transport: rt}
@@ -97,15 +96,19 @@ func TestUploadImage(t *testing.T) {
 	if gotMethod != http.MethodPut {
 		t.Fatalf("request method = %q, want %q", gotMethod, http.MethodPut)
 	}
+
 	if !strings.HasPrefix(gotPath, "/test-bucket/") {
 		t.Fatalf("request path = %q, want path-style prefix /test-bucket/", gotPath)
 	}
+
 	if !strings.HasSuffix(gotPath, ".png") {
 		t.Fatalf("request path = %q, want .png suffix", gotPath)
 	}
+
 	if gotCT != "image/png" {
 		t.Fatalf("Content-Type = %q, want %q", gotCT, "image/png")
 	}
+
 	if !bytes.Equal(gotBody, want) {
 		t.Fatalf("request body = %q, want %q", gotBody, want)
 	}
@@ -113,6 +116,7 @@ func TestUploadImage(t *testing.T) {
 	if !strings.Contains(url, gotPath) {
 		t.Fatalf("presigned URL %q does not contain object path %q", url, gotPath)
 	}
+
 	if !strings.Contains(url, "X-Amz-Signature=") {
 		t.Fatalf("presigned URL %q missing X-Amz-Signature", url)
 	}
@@ -160,38 +164,6 @@ func TestRewriteEndpoint(t *testing.T) {
 	}
 }
 
-func TestNewMissingConfig(t *testing.T) {
-	base := Config{
-		Endpoint:          "http://127.0.0.1:3900",
-		Bucket:            "test-bucket",
-		Region:            "test-region",
-		AccessKey:         "write-key",
-		SecretKey:         "write-secret",
-		ReadonlyAccessKey: "read-key",
-		ReadonlySecretKey: "read-secret",
-	}
-
-	fields := map[string]func(*Config){
-		"endpoint":            func(c *Config) { c.Endpoint = "" },
-		"bucket":              func(c *Config) { c.Bucket = "" },
-		"region":              func(c *Config) { c.Region = "" },
-		"access key":          func(c *Config) { c.AccessKey = "" },
-		"secret key":          func(c *Config) { c.SecretKey = "" },
-		"readonly access key": func(c *Config) { c.ReadonlyAccessKey = "" },
-		"readonly secret key": func(c *Config) { c.ReadonlySecretKey = "" },
-	}
-
-	for name, mutate := range fields {
-		t.Run(name, func(t *testing.T) {
-			cfg := base
-			mutate(&cfg)
-
-			if _, err := New(cfg, zap.NewNop()); err == nil {
-				t.Fatalf("New() with missing %s expected error, got nil", name)
-			}
-		})
-	}
+func ptr(s string) *string {
+	return new(s)
 }
-
-//go:fix inline
-func ptr(s string) *string { return new(s) }

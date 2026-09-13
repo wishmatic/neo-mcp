@@ -12,23 +12,7 @@ import (
 
 var ErrNoAPIKey = errors.New("API_KEY is required")
 
-type AuthMode int
-
-const (
-	AuthBearer AuthMode = iota
-	AuthBasic
-)
-
-func (m AuthMode) middleware(log *zap.Logger, apiKey string) func(http.Handler) http.Handler {
-	switch m {
-	case AuthBasic:
-		return basicAuth(log, apiKey)
-	default:
-		return bearerAuth(log, apiKey)
-	}
-}
-
-func bearerAuth(log *zap.Logger, apiKey string) func(http.Handler) http.Handler {
+func Middleware(log *zap.Logger, apiKey string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, reason, ok := bearerToken(r)
@@ -36,42 +20,21 @@ func bearerAuth(log *zap.Logger, apiKey string) func(http.Handler) http.Handler 
 				if ok {
 					reason = "invalid token"
 				}
-				authFailed(log, r, reason)
-				unauthorized(w, `Bearer realm="mcp"`)
+
+				log.Warn("authentication failed",
+					zap.String("reason", reason),
+					zap.String("client_ip", middleware.GetClientIP(r.Context())),
+					zap.String("request_id", middleware.GetReqID(r.Context())),
+				)
+
+				unauthorized(w)
+
 				return
 			}
 
 			next.ServeHTTP(w, r)
 		})
 	}
-}
-
-func basicAuth(log *zap.Logger, apiKey string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user, pass, ok := r.BasicAuth()
-			if !ok {
-				authFailed(log, r, "missing basic auth credentials")
-				unauthorized(w, `Basic realm="mcp"`)
-				return
-			}
-
-			// The API key doubles as both the username and the password.
-
-			if subtle.ConstantTimeCompare([]byte(user), []byte(apiKey)) != 1 ||
-				subtle.ConstantTimeCompare([]byte(pass), []byte(apiKey)) != 1 {
-				authFailed(log, r, "invalid basic auth credentials")
-				unauthorized(w, `Basic realm="mcp"`)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-func Middleware(mode AuthMode, log *zap.Logger, apiKey string) func(http.Handler) http.Handler {
-	return mode.middleware(log, apiKey)
 }
 
 func bearerToken(r *http.Request) (token, reason string, ok bool) {
@@ -93,16 +56,9 @@ func bearerToken(r *http.Request) (token, reason string, ok bool) {
 	return token, "", true
 }
 
-func authFailed(log *zap.Logger, r *http.Request, reason string) {
-	log.Warn("authentication failed",
-		zap.String("reason", reason),
-		zap.String("remote_addr", r.RemoteAddr),
-		zap.String("request_id", middleware.GetReqID(r.Context())),
-	)
-}
-
-func unauthorized(w http.ResponseWriter, challenge string) {
-	w.Header().Set("WWW-Authenticate", challenge)
+func unauthorized(w http.ResponseWriter) {
+	w.Header().Set("WWW-Authenticate", `Bearer realm="mcp"`)
 	w.WriteHeader(http.StatusUnauthorized)
+
 	_, _ = w.Write([]byte("unauthorized"))
 }

@@ -27,12 +27,7 @@ No support will be provided for any issues related to your installation of Forge
 
 ### Authentication
 
-You must set `AUTH_MODE` to one of `bearer` (recommended and default) or `basic`.
-
-- `bearer`: requires `Authorization: Bearer <API_KEY>`
-- `basic`: requires `Authorization: Basic base64(API_KEY:API_KEY)`
-
-`API_KEY` is always required.
+`API_KEY` is required on every request, sent as `Authorization: Bearer <API_KEY>`.
 
 ### Agent Model Knowledge
 

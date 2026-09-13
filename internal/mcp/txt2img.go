@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/google/jsonschema-go/jsonschema"
@@ -13,41 +12,10 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	defaultSampler   = "DPM++ 2M"
-	defaultScheduler = "Automatic"
-)
-
 type txt2imgInput struct {
-	Model       string `json:"model,omitempty" jsonschema:"checkpoint filename; leave empty to use the currently loaded model"`
-	ForgePreset string `json:"forge_preset,omitempty" jsonschema:"Forge UI preset"`
+	generationInput
 
-	VAEAndTextModels []string `json:"vae_and_text_models,omitempty" jsonschema:"VAE and text encoder model filenames to load. Leave empty to use the defaults bundled with the checkpoint"`
-
-	Prompt         string `json:"prompt" jsonschema:"the text prompt describing the image to generate"`
-	NegativePrompt string `json:"negative_prompt,omitempty" jsonschema:"things to avoid in the generated image"`
-
-	SamplingMethod string `json:"sampler_name,omitempty" jsonschema:"the sampler to use"`
-	ScheduleType   string `json:"scheduler,omitempty" jsonschema:"the scheduler to use"`
-	SamplingSteps  int    `json:"steps,omitempty" jsonschema:"number of sampling steps"`
-
-	Width    int     `json:"width,omitempty" jsonschema:"output width in pixels"`
-	Height   int     `json:"height,omitempty" jsonschema:"output height in pixels"`
-	CFGScale float64 `json:"cfg_scale,omitempty" jsonschema:"classifier-free guidance scale"`
-
-	Seed int `json:"seed,omitempty" jsonschema:"random seed; use -1 for a random seed"`
-
-	EnableHR          bool    `json:"enable_hr,omitempty" jsonschema:"enable hi-res (HR) (second-pass) upscaling"`
-	HRScale           float64 `json:"hr_scale,omitempty" jsonschema:"if HR is enabled, the hi-res upscaling factor (e.g. 2 for 2x)"`
-	HRUpscaler        string  `json:"hr_upscaler,omitempty" jsonschema:"if HR is enabled, the hi-res upscaler to use. Leave empty to disable upscaling"`
-	HRSecondPassSteps int     `json:"hr_second_pass_steps,omitempty" jsonschema:"if HR is enabled, the number of steps for the hi-res second pass"`
 	DenoisingStrength float64 `json:"denoising_strength,omitempty" jsonschema:"if HR is enabled, the denoising strength for the hi-res second pass"`
-	HRCFGScale        float64 `json:"hr_cfg,omitempty" jsonschema:"if HR is enabled, the CFG scale for the hi-res second pass"`
-}
-
-type txt2imgOutput struct {
-	Count int      `json:"count" jsonschema:"number of images generated"`
-	URLs  []string `json:"urls,omitempty" jsonschema:"presigned URLs when S3 is configured"`
 }
 
 func registerTxt2Img(
@@ -65,7 +33,7 @@ func registerTxt2Img(
 		ctx context.Context,
 		_ *mcp.CallToolRequest,
 		in txt2imgInput,
-	) (*mcp.CallToolResult, txt2imgOutput, error) {
+	) (*mcp.CallToolResult, generationOutput, error) {
 		log.Debug("tool called",
 			zap.String("tool", "txt2img"),
 			zap.String("model", in.Model),
@@ -125,7 +93,7 @@ func registerTxt2Img(
 				log.Error("txt2img generation failed", zap.Error(err))
 			}
 
-			return nil, txt2imgOutput{}, fmt.Errorf("txt2img: %w", err)
+			return nil, generationOutput{}, fmt.Errorf("txt2img: %w", err)
 		}
 
 		log.Info("txt2img generation finished", zap.Int("images", len(images)))
@@ -136,7 +104,7 @@ func registerTxt2Img(
 				url, err := uploader.UploadImage(ctx, data)
 				if err != nil {
 					log.Error("txt2img upload to s3 failed", zap.Error(err))
-					return nil, txt2imgOutput{}, err
+					return nil, generationOutput{}, err
 				}
 
 				if shortenerClient != nil {
@@ -156,7 +124,7 @@ func registerTxt2Img(
 				content = append(content, &mcp.TextContent{Text: url})
 			}
 
-			return &mcp.CallToolResult{Content: content}, txt2imgOutput{Count: len(urls), URLs: urls}, nil
+			return &mcp.CallToolResult{Content: content}, generationOutput{Count: len(urls), URLs: urls}, nil
 		}
 
 		content := make([]mcp.Content, 0, len(images))
@@ -167,7 +135,7 @@ func registerTxt2Img(
 			})
 		}
 
-		return &mcp.CallToolResult{Content: content}, txt2imgOutput{Count: len(images)}, nil
+		return &mcp.CallToolResult{Content: content}, generationOutput{Count: len(images)}, nil
 	})
 }
 
@@ -177,8 +145,6 @@ func txt2imgSchema() *jsonschema.Schema {
 		panic(fmt.Sprintf("txt2img: infer input schema: %v", err))
 	}
 
-	s.Properties["model"].Description = "Checkpoint filename; leave empty to use the currently loaded model."
-
 	setDefault(s.Properties, "negative_prompt", "")
 	setDefault(s.Properties, "steps", 20)
 	setDefault(s.Properties, "width", 512)
@@ -187,16 +153,6 @@ func txt2imgSchema() *jsonschema.Schema {
 	setDefault(s.Properties, "cfg_scale", 7.0)
 	setDefault(s.Properties, "sampler_name", defaultSampler)
 	setDefault(s.Properties, "scheduler", defaultScheduler)
-	setDefault(s.Properties, "model", "")
 
 	return s
-}
-
-func setDefault(props map[string]*jsonschema.Schema, name string, value any) {
-	raw, err := json.Marshal(value)
-	if err != nil {
-		panic(fmt.Sprintf("txt2img: marshal default for %s: %v", name, err))
-	}
-
-	props[name].Default = raw
 }
