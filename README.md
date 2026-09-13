@@ -13,8 +13,9 @@ Note that the only version of Forge we support is
 - If you provide `S3_*` environment variables, generated images are uploaded to an S3-compatible object store and
   returned as presigned URLs.
     - Without this, they're returned as plain `image/png` content.
-    - If you also provide `GARAGEFRONT_URL`, images are uploaded under `GARAGEFRONT_KEY_PREFIX` and returned as
-      unsigned URLs served by [Garagefront](https://github.com/wishmatic/garagefront). Super niche.
+    - If you also provide `GARAGEFRONT_URL` and `GARAGEFRONT_USER_ID`, images are uploaded under that user's
+      directory and returned as unsigned URLs served by [Garagefront](https://github.com/wishmatic/garagefront).
+      Super niche.
 - If you _also_ provide `SHORTENER_*` environment variables, any generated URLs are shortened first.
     - This assumes your URL shortener is [`chhoto-url`](https://github.com/SinTan1729/chhoto-url).
 
@@ -69,6 +70,11 @@ features.
 
 This is also very bespoke to my use case. I recommend forking this and adjusting features to your needs if it doesn't
 quite fit your own.
+
+## Todo
+
+- The current way this is set up with Garagefront is pretty hacky to tie into the LibreChat cookie signing. There
+  should be a better way of doing this, at least maybe fetching the user ID from the cookie or something.
 
 ## License
 

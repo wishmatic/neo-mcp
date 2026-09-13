@@ -34,6 +34,7 @@ type Config struct {
 
 	GaragefrontURL       string `env:"GARAGEFRONT_URL"`
 	GaragefrontKeyPrefix string `env:"GARAGEFRONT_KEY_PREFIX" envDefault:"i/mcp"`
+	GaragefrontUserID    string `env:"GARAGEFRONT_USER_ID"`
 
 	ShortenerAPIURL string `env:"SHORTENER_API_URL"`
 	ShortenerAPIKey string `env:"SHORTENER_API_KEY"`
@@ -53,4 +54,16 @@ func Load() (Config, error) {
 
 func (c Config) Addr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
+}
+
+// GaragefrontPrefix is the object key prefix for garagefront-served images.
+//
+// LibreChat signs its image cookie for i/images/<user id>/*, so a configured user ID places uploads inside a directory
+// that cookie already covers.
+func (c Config) GaragefrontPrefix() string {
+	if c.GaragefrontUserID != "" {
+		return "i/images/" + c.GaragefrontUserID
+	}
+
+	return c.GaragefrontKeyPrefix
 }

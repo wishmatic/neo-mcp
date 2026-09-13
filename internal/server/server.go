@@ -60,7 +60,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		PresignExpiry:     time.Duration(cfg.S3PresignExpiry) * time.Second,
 		UsePathStyle:      cfg.S3UsePathStyle,
 		PublicBaseURL:     cfg.GaragefrontURL,
-		KeyPrefix:         cfg.GaragefrontKeyPrefix,
+		KeyPrefix:         cfg.GaragefrontPrefix(),
 	}, log)
 	if err != nil {
 		log.Warn("s3 upload disabled", zap.Error(err))
