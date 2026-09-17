@@ -26,6 +26,7 @@ Note that the only version of Forge we support is
       instead, for when you have explicitly asked for an image anyone can open. Super niche.
 - If you _also_ provide `SHORTENER_*` environment variables, any generated URLs are shortened first.
     - This assumes your URL shortener is [`chhoto-url`](https://github.com/SinTan1729/chhoto-url).
+    - This also registers the `shorten` tool, which shortens any URL you give it.
 - `add_review`, `get_reviews`, and `delete_review` record a rating from 1 to 10 with one line of commentary per model,
   stored in a local SQLite database.
     - Created automatically at `DB_PATH` (`neo-mcp.db`; `/data/neo-mcp.db` in Docker).

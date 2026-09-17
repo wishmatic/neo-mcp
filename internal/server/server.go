@@ -151,6 +151,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		Resolver:  resolver,
 		OpenAI:    openaiClient,
 		Store:     storeClient,
+		Shortener: shortenerClient,
 		Examples: mcpServer.ExamplesConfig{
 			Enabled: cfg.ExamplesEnabled,
 			Max:     cfg.ExamplesMax,

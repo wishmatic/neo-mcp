@@ -111,7 +111,9 @@ flowchart TD
     mcp --> novelai
     mcp --> openai
     mcp --> resolve
+    mcp --> shortener
     mcp --> store
+    mcp --> utils
 
     imagegen --> sdwebui
     imagegen --> novelai

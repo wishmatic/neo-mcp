@@ -8,6 +8,7 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/openai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
+	"github.com/wishmatic/neo-mcp/internal/shortener"
 	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
@@ -21,6 +22,7 @@ type Deps struct {
 	Resolver  *resolve.Resolver
 	OpenAI    *openai.Client
 	Store     *store.Client
+	Shortener *shortener.Client
 	Examples  ExamplesConfig
 }
 
@@ -45,6 +47,7 @@ func buildHandlers(deps Deps) *handlers {
 		resolver:  deps.Resolver,
 		openai:    deps.OpenAI,
 		store:     deps.Store,
+		shortener: deps.Shortener,
 		examples:  deps.Examples,
 	}
 
@@ -87,6 +90,10 @@ func registerTools(srv *mcp.Server, h *handlers) {
 
 	if h.store != nil {
 		registerReviews(srv, h)
+	}
+
+	if h.shortener != nil {
+		registerShorten(srv, h)
 	}
 
 	if h.examples.Enabled && h.store != nil && h.publisher.Enabled() {

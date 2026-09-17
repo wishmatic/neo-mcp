@@ -12,7 +12,6 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
-	"github.com/wishmatic/neo-mcp/internal/shortener"
 )
 
 var (
@@ -78,20 +77,6 @@ func newPublicizeImageServer(t *testing.T, data []byte) *httptest.Server {
 
 	return server
 }
-
-func newPublicizeShortener(t *testing.T, status int, body string) *shortener.Client {
-	t.Helper()
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(status)
-		_, _ = w.Write([]byte(body))
-	}))
-
-	t.Cleanup(server.Close)
-
-	return shortener.New(server.URL, "key", 0)
-}
-
 func TestPublicizeUploadsWithMediaType(t *testing.T) {
 	captured := &[]uploadCapture{}
 	imageServer := newPublicizeImageServer(t, publicizeJPEG)
@@ -163,7 +148,7 @@ func TestPublicizeShortensURL(t *testing.T) {
 		resolver: newPublicizeResolver(t),
 		publisher: publish.New(
 			newPublicizeUploader(t, captured),
-			newPublicizeShortener(t, http.StatusOK, `{"success":true,"shorturl":"https://short.example/abc"}`),
+			newShortenClient(t, http.StatusOK, `{"success":true,"shorturl":"https://short.example/abc"}`),
 			zapNop(),
 		),
 	}
@@ -187,7 +172,7 @@ func TestPublicizeShortenerFailureFallsBack(t *testing.T) {
 		resolver: newPublicizeResolver(t),
 		publisher: publish.New(
 			newPublicizeUploader(t, captured),
-			newPublicizeShortener(t, http.StatusInternalServerError, "boom"),
+			newShortenClient(t, http.StatusInternalServerError, "boom"),
 			zapNop(),
 		),
 	}
