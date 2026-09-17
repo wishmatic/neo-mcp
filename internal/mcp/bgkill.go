@@ -7,10 +7,7 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/crop"
-	"github.com/wishmatic/neo-mcp/internal/resolve"
-	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
-	"github.com/wishmatic/neo-mcp/internal/shortener"
 	"go.uber.org/zap"
 )
 
@@ -30,76 +27,71 @@ type bgkillInput struct {
 	Padding *int `json:"padding,omitempty" jsonschema:"transparent padding in pixels added around the cropped foreground; defaults to 32 when the output is square"`
 }
 
-func registerBgkill(
-	srv *mcp.Server,
-	log *zap.Logger,
-	client *sdwebui.Client,
-	uploader *s3upload.Client,
-	shortenerClient *shortener.Client,
-	resolver *resolve.Resolver,
-) {
+func registerBgkill(srv *mcp.Server, h *handlers) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "bgkill",
 		Description: "Remove the background from an image via the BiRefNet extension. Downloads the input image from a URL (following redirects), then returns the foreground with a transparent background.",
 		InputSchema: bgkillSchema(),
-	}, func(
-		ctx context.Context,
-		_ *mcp.CallToolRequest,
-		in bgkillInput,
-	) (*mcp.CallToolResult, generationOutput, error) {
-		log.Debug("tool called",
-			zap.String("tool", "bgkill"),
-			zap.String("model_name", in.ModelName),
+	}, h.bgkill)
+}
+
+func (h *handlers) bgkill(
+	ctx context.Context,
+	_ *mcp.CallToolRequest,
+	in bgkillInput,
+) (*mcp.CallToolResult, generationOutput, error) {
+	h.log.Debug("tool called",
+		zap.String("tool", "bgkill"),
+		zap.String("model_name", in.ModelName),
+		zap.String("image_url", in.ImageURL),
+		zap.Bool("full_mode", in.IsFullMode),
+		zap.Bool("crop", in.IsCrop),
+		zap.Bool("square", in.IsSquare),
+	)
+
+	image, err := h.resolver.Fetch(ctx, in.ImageURL)
+	if err != nil {
+		h.log.Error("bgkill failed to fetch image",
 			zap.String("image_url", in.ImageURL),
-			zap.Bool("full_mode", in.IsFullMode),
-			zap.Bool("crop", in.IsCrop),
-			zap.Bool("square", in.IsSquare),
+			zap.Error(err),
 		)
 
-		image, err := resolver.Fetch(ctx, in.ImageURL)
-		if err != nil {
-			log.Error("bgkill failed to fetch image",
-				zap.String("image_url", in.ImageURL),
-				zap.Error(err),
-			)
+		return nil, generationOutput{}, fmt.Errorf("bgkill: fetch image: %w", err)
+	}
 
-			return nil, generationOutput{}, fmt.Errorf("bgkill: fetch image: %w", err)
+	h.log.Info("bgkill removing background",
+		zap.String("model_name", in.ModelName),
+		zap.Bool("full_mode", in.IsFullMode),
+	)
+
+	out, err := h.forge.Bgkill(ctx, sdwebui.BgkillRequest{
+		ModelName:  in.ModelName,
+		ImageData:  image,
+		IsFullMode: in.IsFullMode,
+	})
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			h.log.Warn("bgkill aborted: request context cancelled before completion",
+				zap.Error(err),
+				zap.String("ctx_err", ctxErr.Error()),
+			)
+		} else {
+			h.log.Error("bgkill failed", zap.Error(err))
 		}
 
-		log.Info("bgkill removing background",
-			zap.String("model_name", in.ModelName),
-			zap.Bool("full_mode", in.IsFullMode),
-		)
+		return nil, generationOutput{}, fmt.Errorf("bgkill: %w", err)
+	}
 
-		out, err := client.Bgkill(ctx, sdwebui.BgkillRequest{
-			ModelName:  in.ModelName,
-			ImageData:  image,
-			IsFullMode: in.IsFullMode,
-		})
+	if opts, ok := bgkillCropOptions(in); ok {
+		out, err = crop.ToContent(out, opts)
 		if err != nil {
-			if ctxErr := ctx.Err(); ctxErr != nil {
-				log.Warn("bgkill aborted: request context cancelled before completion",
-					zap.Error(err),
-					zap.String("ctx_err", ctxErr.Error()),
-				)
-			} else {
-				log.Error("bgkill failed", zap.Error(err))
-			}
+			h.log.Error("bgkill failed to crop foreground", zap.Error(err))
 
 			return nil, generationOutput{}, fmt.Errorf("bgkill: %w", err)
 		}
+	}
 
-		if opts, ok := bgkillCropOptions(in); ok {
-			out, err = crop.ToContent(out, opts)
-			if err != nil {
-				log.Error("bgkill failed to crop foreground", zap.Error(err))
-
-				return nil, generationOutput{}, fmt.Errorf("bgkill: %w", err)
-			}
-		}
-
-		return publishImages(ctx, log, "bgkill", [][]byte{out}, uploader, shortenerClient)
-	})
+	return publishImages(ctx, h.log, "bgkill", [][]byte{out}, h.uploader, h.shortener)
 }
 
 func bgkillCropOptions(in bgkillInput) (crop.Options, bool) {

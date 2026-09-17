@@ -8,6 +8,9 @@ Note that the only version of Forge we support is
 [Haoming02's fork](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo#stable-diffusion-webui-forge---neo).
 
 - Core feature: `txt2img` and `img2img` tools are implemented with full control of knobs to adjust image generation.
+    - They also route to NovelAI when `model` starts with `nai-diffusion-`. Set `NOVELAI_API_KEY` to enable it. Forge-only
+      options such as hi-res fix, presets, and VAE/text encoders are ignored for NovelAI requests.
+    - With NovelAI enabled, `anlas` reports the account's credit balance and the V5 usage meter.
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
   foreground and produce a padded square, which is handy for logo generation.
@@ -53,7 +56,8 @@ No support will be provided for any issues related to your installation of Forge
 ### Agent Model Knowledge
 
 Your agent will need knowledge of VAE and text encoder models as well as available upscalers in order to use them. Add
-these verbatim to your system prompt or a skill, along with checkpoints, LoRA, and anything else it needs.
+these verbatim to your system prompt or a skill, along with checkpoints, LoRA, and anything else it needs. The same goes
+for NovelAI model ids: no list is maintained here, so the agent supplies them.
 
 ### S3 and URL Shortening
 

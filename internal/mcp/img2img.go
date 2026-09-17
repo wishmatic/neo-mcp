@@ -6,10 +6,6 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/resolve"
-	"github.com/wishmatic/neo-mcp/internal/s3upload"
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
-	"github.com/wishmatic/neo-mcp/internal/shortener"
 	"go.uber.org/zap"
 )
 
@@ -19,105 +15,76 @@ type img2imgInput struct {
 	InitImageURL string `json:"init_image_url" jsonschema:"URL of the image to transform; the service downloads it (following redirects)"`
 
 	DenoisingStrength float64 `json:"denoising_strength,omitempty" jsonschema:"how much to change the input image (0 keeps it identical, 1 ignores it)"`
+
+	Noise float64 `json:"noise,omitempty" jsonschema:"NovelAI only: extra image noise; ignored by Forge"`
 }
 
-func registerImg2Img(
-	srv *mcp.Server,
-	log *zap.Logger,
-	client *sdwebui.Client,
-	uploader *s3upload.Client,
-	shortenerClient *shortener.Client,
-	resolver *resolve.Resolver,
-) {
+func registerImg2Img(srv *mcp.Server, h *handlers) {
 	mcp.AddTool(srv, &mcp.Tool{
-		Name:        "img2img",
-		Description: "Transform an existing image. Downloads the input image from a URL (following redirects), then blocks until generation completes and returns the image.",
+		Name: "img2img",
+		Description: "Transform an existing image, via the local Stable Diffusion WebUI (Forge Neo) instance or " +
+			"via NovelAI when the model is a NovelAI model id. Downloads the input image from a URL (following redirects), " +
+			"then blocks until generation completes and returns the image.",
 		InputSchema: img2imgSchema(),
-	}, func(
-		ctx context.Context,
-		_ *mcp.CallToolRequest,
-		in img2imgInput,
-	) (*mcp.CallToolResult, generationOutput, error) {
-		log.Debug("tool called",
-			zap.String("tool", "img2img"),
-			zap.String("model", in.Model),
-			zap.String("forge_preset", in.ForgePreset),
-			zap.Strings("vae_and_text_models", in.VAEAndTextModels),
+	}, h.img2img)
+}
+
+func (h *handlers) img2img(
+	ctx context.Context,
+	_ *mcp.CallToolRequest,
+	in img2imgInput,
+) (*mcp.CallToolResult, generationOutput, error) {
+	provider := providerOf(in.Model)
+
+	h.log.Debug("tool called",
+		zap.String("tool", "img2img"),
+		zap.String("provider", provider),
+		zap.String("model", in.Model),
+		zap.String("forge_preset", in.ForgePreset),
+		zap.Strings("vae_and_text_models", in.VAEAndTextModels),
+		zap.String("init_image_url", in.InitImageURL),
+		zap.String("sampler", in.SamplingMethod),
+		zap.String("scheduler", in.ScheduleType),
+		zap.Int("steps", in.SamplingSteps),
+		zap.Int("width", in.Width),
+		zap.Int("height", in.Height),
+		zap.Float64("cfg_scale", in.CFGScale),
+		zap.Float64("denoising_strength", in.DenoisingStrength),
+		zap.Float64("noise", in.Noise),
+		zap.Int("seed", in.Seed),
+		zap.Bool("enable_hr", in.EnableHR),
+		zap.Float64("hr_scale", in.HRScale),
+		zap.String("hr_upscaler", in.HRUpscaler),
+		zap.Int("hr_second_pass_steps", in.HRSecondPassSteps),
+		zap.Float64("hr_cfg", in.HRCFGScale),
+	)
+
+	initImage, err := h.resolver.Fetch(ctx, in.InitImageURL)
+	if err != nil {
+		h.log.Error("img2img failed to fetch init image",
 			zap.String("init_image_url", in.InitImageURL),
-			zap.String("sampler", in.SamplingMethod),
-			zap.String("scheduler", in.ScheduleType),
-			zap.Int("steps", in.SamplingSteps),
-			zap.Int("width", in.Width),
-			zap.Int("height", in.Height),
-			zap.Float64("cfg_scale", in.CFGScale),
-			zap.Float64("denoising_strength", in.DenoisingStrength),
-			zap.Int("seed", in.Seed),
-			zap.Bool("enable_hr", in.EnableHR),
-			zap.Float64("hr_scale", in.HRScale),
-			zap.String("hr_upscaler", in.HRUpscaler),
-			zap.Int("hr_second_pass_steps", in.HRSecondPassSteps),
-			zap.Float64("hr_cfg", in.HRCFGScale),
+			zap.Error(err),
 		)
 
-		initImage, err := resolver.Fetch(ctx, in.InitImageURL)
-		if err != nil {
-			log.Error("img2img failed to fetch init image",
-				zap.String("init_image_url", in.InitImageURL),
-				zap.Error(err),
-			)
+		return nil, generationOutput{}, fmt.Errorf("img2img: fetch init image: %w", err)
+	}
 
-			return nil, generationOutput{}, fmt.Errorf("img2img: fetch init image: %w", err)
-		}
+	h.log.Info("img2img generating synchronously",
+		zap.String("provider", provider),
+		zap.String("model", in.Model),
+		zap.Int("steps", in.SamplingSteps),
+		zap.Int("width", in.Width),
+		zap.Int("height", in.Height),
+	)
 
-		log.Info("img2img generating synchronously",
-			zap.String("model", in.Model),
-			zap.Int("steps", in.SamplingSteps),
-			zap.Int("width", in.Width),
-			zap.Int("height", in.Height),
-		)
+	images, err := h.generateImg2Img(ctx, in, initImage)
+	if err != nil {
+		return nil, generationOutput{}, h.generationFailure(ctx, "img2img", err)
+	}
 
-		images, err := client.Img2Img(ctx, sdwebui.Img2ImgRequest{
-			Checkpoint:             in.Model,
-			ForgePreset:            in.ForgePreset,
-			ForgeAdditionalModules: in.VAEAndTextModels,
+	h.log.Info("img2img generation finished", zap.Int("images", len(images)))
 
-			InitImageData: initImage,
-
-			Prompt:         in.Prompt,
-			NegativePrompt: in.NegativePrompt,
-			Steps:          in.SamplingSteps,
-			Width:          in.Width,
-			Height:         in.Height,
-			Seed:           in.Seed,
-			CFGScale:       in.CFGScale,
-			SamplerName:    in.SamplingMethod,
-			Scheduler:      in.ScheduleType,
-
-			DenoisingStrength: in.DenoisingStrength,
-
-			EnableHR:          in.EnableHR,
-			HRScale:           in.HRScale,
-			HRUpscaler:        in.HRUpscaler,
-			HRSecondPassSteps: in.HRSecondPassSteps,
-			HRCFGScale:        in.HRCFGScale,
-		})
-		if err != nil {
-			if ctxErr := ctx.Err(); ctxErr != nil {
-				log.Warn("img2img aborted: request context cancelled before completion",
-					zap.Error(err),
-					zap.String("ctx_err", ctxErr.Error()),
-				)
-			} else {
-				log.Error("img2img generation failed", zap.Error(err))
-			}
-
-			return nil, generationOutput{}, fmt.Errorf("img2img: %w", err)
-		}
-
-		log.Info("img2img generation finished", zap.Int("images", len(images)))
-
-		return publishImages(ctx, log, "img2img", images, uploader, shortenerClient)
-	})
+	return publishImages(ctx, h.log, "img2img", images, h.uploader, h.shortener)
 }
 
 func img2imgSchema() *jsonschema.Schema {
@@ -133,8 +100,9 @@ func img2imgSchema() *jsonschema.Schema {
 	setDefault(s.Properties, "seed", -1)
 	setDefault(s.Properties, "cfg_scale", 7.0)
 	setDefault(s.Properties, "denoising_strength", 0.75)
-	setDefault(s.Properties, "sampler_name", defaultSampler)
-	setDefault(s.Properties, "scheduler", defaultScheduler)
+	setDefault(s.Properties, "noise", 0.0)
+	setDefault(s.Properties, "sampler_name", "")
+	setDefault(s.Properties, "scheduler", "")
 
 	return s
 }

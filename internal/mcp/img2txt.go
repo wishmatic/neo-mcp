@@ -7,7 +7,6 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/openai"
-	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"go.uber.org/zap"
 )
 
@@ -29,56 +28,52 @@ type img2txtOutput struct {
 	Model string `json:"model" jsonschema:"the model that produced the response"`
 }
 
-func registerImg2Txt(srv *mcp.Server, log *zap.Logger, resolver *resolve.Resolver, client *openai.Client) {
+func registerImg2Txt(srv *mcp.Server, h *handlers) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "img2txt",
 		Description: "Recognise and analyse an image, returning a textual response. Accepts an http(s) URL (including shortened or Garagefront URLs), a base64 data URI, or raw base64 PNG, JPEG, or WebP data.",
 		InputSchema: img2txtSchema(),
-	}, func(
-		ctx context.Context,
-		_ *mcp.CallToolRequest,
-		in img2txtInput,
-	) (*mcp.CallToolResult, img2txtOutput, error) {
-		log.Debug("tool called",
-			zap.String("tool", "img2txt"),
-			zap.String("model", in.Model),
-			zap.String("prompt", in.Prompt),
-			zap.String("detail", in.Detail),
-			zap.Float64("temperature", in.Temperature),
-			zap.Int("max_tokens", in.MaxTokens),
-			zap.Float64("top_p", in.TopP),
-		)
-
-		out, err := runImg2Txt(ctx, log, resolver, client, in)
-		if err != nil {
-			return nil, img2txtOutput{}, err
-		}
-
-		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: out.Text}}}, out, nil
-	})
+	}, h.img2txt)
 }
 
-func runImg2Txt(
+func (h *handlers) img2txt(
 	ctx context.Context,
-	log *zap.Logger,
-	resolver *resolve.Resolver,
-	client *openai.Client,
+	_ *mcp.CallToolRequest,
 	in img2txtInput,
-) (img2txtOutput, error) {
-	image, err := resolver.Resolve(ctx, in.Image)
+) (*mcp.CallToolResult, img2txtOutput, error) {
+	h.log.Debug("tool called",
+		zap.String("tool", "img2txt"),
+		zap.String("model", in.Model),
+		zap.String("prompt", in.Prompt),
+		zap.String("detail", in.Detail),
+		zap.Float64("temperature", in.Temperature),
+		zap.Int("max_tokens", in.MaxTokens),
+		zap.Float64("top_p", in.TopP),
+	)
+
+	out, err := h.runImg2Txt(ctx, in)
 	if err != nil {
-		log.Error("img2txt failed to resolve image", zap.Error(err))
+		return nil, img2txtOutput{}, err
+	}
+
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: out.Text}}}, out, nil
+}
+
+func (h *handlers) runImg2Txt(ctx context.Context, in img2txtInput) (img2txtOutput, error) {
+	image, err := h.resolver.Resolve(ctx, in.Image)
+	if err != nil {
+		h.log.Error("img2txt failed to resolve image", zap.Error(err))
 
 		return img2txtOutput{}, fmt.Errorf("img2txt: resolve image: %w", err)
 	}
 
-	log.Info("img2txt recognising image",
+	h.log.Info("img2txt recognising image",
 		zap.String("model", in.Model),
 		zap.String("media_type", image.MediaType),
 		zap.Int("image_bytes", len(image.Data)),
 	)
 
-	result, err := client.Describe(ctx, openai.DescribeRequest{
+	result, err := h.openai.Describe(ctx, openai.DescribeRequest{
 		ImageData:    image.Data,
 		MediaType:    image.MediaType,
 		Prompt:       in.Prompt,
@@ -91,12 +86,12 @@ func runImg2Txt(
 	})
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
-			log.Warn("img2txt aborted: request context cancelled before completion",
+			h.log.Warn("img2txt aborted: request context cancelled before completion",
 				zap.Error(err),
 				zap.String("ctx_err", ctxErr.Error()),
 			)
 		} else {
-			log.Error("img2txt failed", zap.Error(err))
+			h.log.Error("img2txt failed", zap.Error(err))
 		}
 
 		return img2txtOutput{}, fmt.Errorf("img2txt: %w", err)

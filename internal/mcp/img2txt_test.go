@@ -72,6 +72,12 @@ func newImg2TxtResolver(t *testing.T) *resolve.Resolver {
 	return resolver
 }
 
+func img2txtHandlers(t *testing.T, client *openai.Client) *handlers {
+	t.Helper()
+
+	return &handlers{log: zapNop(), resolver: newImg2TxtResolver(t), openai: client}
+}
+
 func connectSession(t *testing.T, srv *mcp.Server) *mcp.ClientSession {
 	t.Helper()
 
@@ -168,7 +174,7 @@ func TestImg2TxtSchema(t *testing.T) {
 func TestImg2TxtRegisteredOnlyWhenClientPresent(t *testing.T) {
 	resolver := newImg2TxtResolver(t)
 
-	withClient, err := New(zapNop(), nil, nil, nil, resolver, newImg2TxtClient(t, "http://example.com", "m"))
+	withClient, err := New(zapNop(), nil, nil, nil, nil, resolver, newImg2TxtClient(t, "http://example.com", "m"))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -177,7 +183,7 @@ func TestImg2TxtRegisteredOnlyWhenClientPresent(t *testing.T) {
 		t.Errorf("tools = %v, want img2txt", names)
 	}
 
-	withoutClient, err := New(zapNop(), nil, nil, nil, resolver, nil)
+	withoutClient, err := New(zapNop(), nil, nil, nil, nil, resolver, nil)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -191,8 +197,8 @@ func TestRunImg2TxtResolvesAndForwards(t *testing.T) {
 	imageServer := newImg2TxtImageServer(t)
 	visionServer, captured := newImg2TxtVisionServer(t, `{"choices":[{"message":{"content":"a red square"}}]}`)
 
-	out, err := runImg2Txt(context.Background(), zapNop(), newImg2TxtResolver(t),
-		newImg2TxtClient(t, visionServer.URL, "default-model"),
+	out, err := img2txtHandlers(t, newImg2TxtClient(t, visionServer.URL, "default-model")).runImg2Txt(
+		context.Background(),
 		img2txtInput{
 			Image:        imageServer.URL + "/x.png",
 			Prompt:       "what is it?",
@@ -263,8 +269,8 @@ func TestRunImg2TxtResolvesAndForwards(t *testing.T) {
 }
 
 func TestRunImg2TxtResolveError(t *testing.T) {
-	_, err := runImg2Txt(context.Background(), zapNop(), newImg2TxtResolver(t),
-		newImg2TxtClient(t, "http://example.com", "m"),
+	_, err := img2txtHandlers(t, newImg2TxtClient(t, "http://example.com", "m")).runImg2Txt(
+		context.Background(),
 		img2txtInput{Image: "%%%not-an-image%%%", Prompt: "hi"})
 	if err == nil {
 		t.Fatal("runImg2Txt() expected error, got nil")
@@ -279,7 +285,7 @@ func TestImg2TxtCallToolEndToEnd(t *testing.T) {
 	imageServer := newImg2TxtImageServer(t)
 	visionServer, captured := newImg2TxtVisionServer(t, `{"choices":[{"message":{"content":"a red square"}}]}`)
 
-	srv, err := New(zapNop(), nil, nil, nil, newImg2TxtResolver(t), newImg2TxtClient(t, visionServer.URL, "vision-model"))
+	srv, err := New(zapNop(), nil, nil, nil, nil, newImg2TxtResolver(t), newImg2TxtClient(t, visionServer.URL, "vision-model"))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}

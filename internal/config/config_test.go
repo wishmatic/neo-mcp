@@ -70,6 +70,48 @@ func TestLoadS3UsePathStyleOverride(t *testing.T) {
 	}
 }
 
+func TestLoadNovelAIURLDefault(t *testing.T) {
+	prev, had := os.LookupEnv("NOVELAI_URL")
+	os.Unsetenv("NOVELAI_URL")
+
+	defer func() {
+		if had {
+			os.Setenv("NOVELAI_URL", prev)
+
+			return
+		}
+
+		os.Unsetenv("NOVELAI_URL")
+	}()
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	if cfg.NovelAIURL != "https://image.novelai.net" {
+		t.Fatalf("NovelAIURL = %q, want the default", cfg.NovelAIURL)
+	}
+}
+
+func TestLoadNovelAIVars(t *testing.T) {
+	t.Setenv("NOVELAI_URL", "http://localhost:9999")
+	t.Setenv("NOVELAI_API_KEY", "sk-test")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	if cfg.NovelAIURL != "http://localhost:9999" {
+		t.Errorf("NovelAIURL = %q, want http://localhost:9999", cfg.NovelAIURL)
+	}
+
+	if cfg.NovelAIAPIKey != "sk-test" {
+		t.Errorf("NovelAIAPIKey = %q, want sk-test", cfg.NovelAIAPIKey)
+	}
+}
+
 func TestLoadImg2TxtValues(t *testing.T) {
 	t.Setenv("IMG2TXT_BASE_URL", "https://api.example.com/v1")
 	t.Setenv("IMG2TXT_API_KEY", "secret")

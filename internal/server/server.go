@@ -14,6 +14,7 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/auth"
 	"github.com/wishmatic/neo-mcp/internal/config"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
+	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
@@ -112,7 +113,14 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		)
 	}
 
-	mcpSrv, err := mcpServer.New(log, sdClient, uploader, shortenerClient, resolver, openaiClient)
+	var novelaiClient *novelai.Client
+	if cfg.NovelAIAPIKey != "" {
+		novelaiClient = novelai.New(cfg.NovelAIURL, cfg.NovelAIAPIKey, cfg.ErrorDetail == "verbose")
+
+		log.Info("novelai enabled", zap.String("base_url", cfg.NovelAIURL))
+	}
+
+	mcpSrv, err := mcpServer.New(log, sdClient, novelaiClient, uploader, shortenerClient, resolver, openaiClient)
 	if err != nil {
 		return nil, fmt.Errorf("build mcp server: %w", err)
 	}

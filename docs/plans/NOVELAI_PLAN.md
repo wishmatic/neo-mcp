@@ -102,6 +102,8 @@ Maintainability:
 | `internal/novelai/model.go` | New | `IsModel` prefix routing |
 | `internal/novelai/params.go` | New | Shared parameter builder, seed resolution, dimension normalization |
 | `internal/novelai/stream.go` | New | Length-prefixed msgpack frame decoder |
+| `internal/novelai/account.go` | New | Anlas balance lookup |
+| `internal/mcp/anlas.go` | New | `anlas` tool |
 | `internal/novelai/txt2img.go` | New | `Txt2ImgRequest`, `Txt2Img` |
 | `internal/novelai/img2img.go` | New | `Img2ImgRequest`, `Img2Img` |
 | `internal/novelai/*_test.go` | New | Unit tests, one file per unit |
@@ -183,8 +185,8 @@ Also in this file:
   know, is used verbatim.
 - AC-1.8: `resolveSeed(-1)` returns a value in `[0, 4294967295]` (assert against a stubbed `randomSeed` and against
   the real one), and `resolveSeed(42)` returns 42.
-- AC-1.9: `normalizeDimensions(833, 1217)` returns `896, 1280`; `normalizeDimensions(32, 32)` errors;
-  `normalizeDimensions(4096, 4096)` errors.
+- AC-1.9: `normalizeDimensions(833, 1217)` returns `896, 1280` and `normalizeDimensions(64, 64)` succeeds; `normalizeDimensions(0, 0)`,
+  `normalizeDimensions(-64, 512)`, and `normalizeDimensions(4096, 4096)` error.
 - AC-1.10: A non-2xx response produces an error containing the status code, and, when `isVerboseErrors` is set, a
   truncated response body.
 
@@ -305,7 +307,7 @@ model id, and Forge-only options are ignored for NovelAI.
 
 - AC-5.1: `Load` with `NOVELAI_URL` unset yields `https://image.novelai.net`; with it set, yields that value.
 - AC-5.2: `Load` reads `NOVELAI_API_KEY` into the new field.
-- AC-5.3: Both tests restore the environment with `t.Setenv`.
+- AC-5.3: The default test unsets `NOVELAI_URL` and restores the previous value; the override test uses `t.Setenv`.
 - AC-5.4: `.env.example` lists `NOVELAI_API_KEY` and `NOVELAI_URL`.
 - AC-5.5: The README has a NovelAI section of at most a short paragraph, states that model ids come from the agent,
   and does not list models.
@@ -324,8 +326,8 @@ the OpenAI client.
 **Acceptance criteria**
 
 - AC-6.1: `server.New` with `NOVELAI_API_KEY` set and an otherwise valid config returns no error.
-- AC-6.2: `mcp.New(log, nil, novelaiClient, nil, nil, nil, nil)` registers `txt2img` and `img2img` but not `bgkill`,
-  verified by listing tools over an in-memory MCP transport.
+- AC-6.2: `mcp.New(log, nil, novelaiClient, nil, nil, nil, nil)` registers `txt2img`, `img2img`, and `anlas` but not
+  `bgkill`, verified by listing tools over an in-memory MCP transport.
 - AC-6.3: `mcp.New(log, forgeClient, nil, nil, nil, nil, nil)` still registers `txt2img`, `img2img`, and `bgkill`.
 - AC-6.4: `mcp.New(log, nil, nil, nil, nil, nil, nil)` registers no tools and returns no error.
 - AC-6.5: `mcp.New(log, nil, nil, nil, nil, nil, openaiClient)` still registers `img2txt` as it does today.
@@ -377,7 +379,8 @@ the OpenAI client.
 - AC-7.8: The `model` schema description mentions `nai-diffusion-` and the property has no `enum`.
 - AC-7.9: `img2imgSchema().Properties["noise"]` exists with a default of `0`, and a Forge `img2img` call that sets
   `noise` succeeds and the Forge payload contains no `noise` key.
-- AC-7.10: `TestSchemasIncludeSharedFields` is extended with `noise` and still passes.
+- AC-7.10: Both schemas set `sampler_name` and `scheduler` defaults to the empty string, and the txt2img schema has no
+  `noise` property.
 - AC-7.11: The generated images are returned through `publishImages`, so S3 upload, URL shortening, and inline
   `image/png` content behave identically for both backends.
 - AC-7.12: `img2txt` is unchanged by the refactor: an httptest image server plus an httptest vision endpoint still
@@ -387,12 +390,43 @@ the OpenAI client.
 
 **Human verification:** HV-1 to HV-6 exercise the routed tools against the live NovelAI and Forge backends.
 
+### Unit 8: Anlas balance tool
+
+**Files:** `internal/novelai/account.go`, `internal/novelai/account_test.go`, `internal/mcp/anlas.go`,
+`internal/mcp/anlas_test.go`, `internal/mcp/server.go`, `internal/mcp/server_test.go`, `README.md`
+
+**Work:** Add `Client.Anlas(ctx) (AnlasBalance, error)`, which GETs `{base}/user/subscription` with the Bearer token and
+bounded by a 30 second timeout. NovelAI moved this endpoint to the image host, so it reuses `baseURL` rather than
+needing another host setting. The response is flattened into `Total` (subscription plus purchased), `Subscription`
+(`trainingStepsLeft.fixedTrainingStepsLeft`), `Purchased` (`trainingStepsLeft.purchasedTrainingSteps`), and
+`UsagePercent` (`usage.percent`, present only when the account reports the V5 usage meter).
+
+Register an `anlas` tool, gated on the NovelAI client, that takes no input and returns those four values as structured
+output plus a short text summary. It is the only way to see the balance before spending Anlas, and it is what makes
+HV-1 to HV-5 measurable.
+
+**Acceptance criteria**
+
+- AC-8.1: `Anlas` issues a `GET` to `/user/subscription` with `Authorization: Bearer <key>` and no request body.
+- AC-8.2: `Total` equals subscription plus purchased, and the two are reported separately.
+- AC-8.3: `usage.percent` populates `UsagePercent` when present, and `UsagePercent` is nil when the account reports no
+  usage field.
+- AC-8.4: A non-2xx response returns an error containing the status and a truncated body; a malformed body returns a
+  decode error.
+- AC-8.5: The `anlas` tool is registered only when the NovelAI client is present, and it takes no input.
+- AC-8.6: The tool returns the balance as structured output and as a text summary usable on its own, and logs no API
+  key.
+- AC-8.7: An httptest-backed `CallTool` with no arguments returns the balance end to end.
+
+**Human verification:** HV-7 compares the reported balance against the NovelAI web UI.
+
 ## Out of Scope
 
 - Inpainting, vibe transfer, director tools, `enhance`, and NovelAI upscaling.
 - Hi-res fix and upscaling through `txt2img`/`img2img`: the fields are accepted and ignored for NovelAI.
 - Streaming intermediate steps to the agent; only the final image is returned.
 - Server-side model discovery or validation; the agent supplies model ids.
+- Anlas cost estimation for a request; the `anlas` tool only reports the current balance.
 - Per-user NovelAI keys; one `NOVELAI_API_KEY` serves the whole server, matching the Garagefront single-user model.
 - Deprecated models and any protocol that needs a different endpoint or response format.
 
@@ -428,6 +462,8 @@ The following cannot be verified by automated tests and must be completed by a h
   configured.
 - HV-6: Confirm a Forge checkpoint call is unaffected: `txt2img` with a real checkpoint filename still succeeds with
   the Forge backend.
+- HV-7: Call `anlas` and confirm `total` matches the Anlas shown in the NovelAI web UI (the web UI total is the sum of
+  subscription and purchased) and that `usage_percent` looks plausible for the V5 meter.
 
 ## Follow-ups
 

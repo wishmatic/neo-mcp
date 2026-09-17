@@ -24,6 +24,8 @@ actually something you expect the user will face in the future. For example, if 
 go to an img2img call to match Garagefront URLs, do not give a caveat saying this will not work for non-Garagefront
 URLs.
 
+Do not remind the user what you've done after you've done it unless they ask; they can see the diff.
+
 ## Callables
 
 Functions/methods should be kept short unless doing so would make the code less maintainable/harder to read. "Short"

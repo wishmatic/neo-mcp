@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
@@ -13,6 +14,7 @@ import (
 func New(
 	log *zap.Logger,
 	sdClient *sdwebui.Client,
+	novelaiClient *novelai.Client,
 	uploader *s3upload.Client,
 	shortenerClient *shortener.Client,
 	resolver *resolve.Resolver,
@@ -23,27 +25,34 @@ func New(
 		Version: "0.1.0",
 	}, nil)
 
-	registerTools(srv, log, sdClient, uploader, shortenerClient, resolver, openaiClient)
+	registerTools(srv, &handlers{
+		log:       log,
+		forge:     sdClient,
+		novelai:   novelaiClient,
+		uploader:  uploader,
+		shortener: shortenerClient,
+		resolver:  resolver,
+		openai:    openaiClient,
+	})
 
 	return srv, nil
 }
 
-func registerTools(
-	srv *mcp.Server,
-	log *zap.Logger,
-	sdClient *sdwebui.Client,
-	uploader *s3upload.Client,
-	shortenerClient *shortener.Client,
-	resolver *resolve.Resolver,
-	openaiClient *openai.Client,
-) {
-	if sdClient != nil {
-		registerTxt2Img(srv, log, sdClient, uploader, shortenerClient)
-		registerImg2Img(srv, log, sdClient, uploader, shortenerClient, resolver)
-		registerBgkill(srv, log, sdClient, uploader, shortenerClient, resolver)
+func registerTools(srv *mcp.Server, h *handlers) {
+	if h.forge != nil || h.novelai != nil {
+		registerTxt2Img(srv, h)
+		registerImg2Img(srv, h)
 	}
 
-	if openaiClient != nil {
-		registerImg2Txt(srv, log, resolver, openaiClient)
+	if h.novelai != nil {
+		registerAnlas(srv, h)
+	}
+
+	if h.forge != nil {
+		registerBgkill(srv, h)
+	}
+
+	if h.openai != nil {
+		registerImg2Txt(srv, h)
 	}
 }
