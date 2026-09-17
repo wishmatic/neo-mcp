@@ -14,13 +14,14 @@ func publishImages(
 	log *zap.Logger,
 	tool string,
 	images [][]byte,
+	public bool,
 	uploader *s3upload.Client,
 	shortenerClient *shortener.Client,
 ) (*mcp.CallToolResult, generationOutput, error) {
 	if uploader != nil {
 		urls := make([]string, 0, len(images))
 		for _, data := range images {
-			url, err := uploader.UploadImage(ctx, data)
+			url, err := uploader.UploadImage(ctx, data, public)
 			if err != nil {
 				log.Error(tool+" upload to s3 failed", zap.Error(err))
 

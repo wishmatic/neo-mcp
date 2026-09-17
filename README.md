@@ -22,7 +22,8 @@ Note that the only version of Forge we support is
     - Without this, they're returned as plain `image/png` content.
     - If you also provide `GARAGEFRONT_URL` and `GARAGEFRONT_USER_ID`, images are uploaded under that user's
       directory and returned as unsigned URLs served by [Garagefront](https://github.com/wishmatic/garagefront).
-      Super niche.
+      The image tools also accept a `public` flag that writes to Garagefront's world-readable `/i/public/` namespace
+      instead, for when you have explicitly asked for an image anyone can open. Super niche.
 - If you _also_ provide `SHORTENER_*` environment variables, any generated URLs are shortened first.
     - This assumes your URL shortener is [`chhoto-url`](https://github.com/SinTan1729/chhoto-url).
 

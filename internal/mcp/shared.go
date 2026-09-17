@@ -36,6 +36,12 @@ type generationInput struct {
 	HRUpscaler        string  `json:"hr_upscaler,omitempty" jsonschema:"if HR is enabled, the hi-res upscaler to use. Leave empty to disable upscaling; ignored by NovelAI"`
 	HRSecondPassSteps int     `json:"hr_second_pass_steps,omitempty" jsonschema:"if HR is enabled, the number of steps for the hi-res second pass; ignored by NovelAI"`
 	HRCFGScale        float64 `json:"hr_cfg,omitempty" jsonschema:"if HR is enabled, the CFG scale for the hi-res second pass; ignored by NovelAI"`
+
+	publishInput
+}
+
+type publishInput struct {
+	Public bool `json:"public,omitempty" jsonschema:"publish the output to a world-readable URL that anyone can open with no credentials, bypassing the normal access restrictions. Set this only when the user has explicitly asked for a public image and has been told anyone will be able to view it. Leave it false or unset otherwise, including when a call fails; never enable it to work around an error or an image the user cannot open"`
 }
 
 // generationOutput is the structured output shared by the image tools. The generated images always travel in the call

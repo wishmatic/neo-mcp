@@ -11,8 +11,8 @@ look like, and use the tools' own descriptions for how each field behaves.
 Pass these filenames exactly as written; if you are unsure which to use, ask me.
 
 - Checkpoints:
-  - `{{CHECKPOINT_A}}`: {{what it is good for}}
-  - `{{CHECKPOINT_B}}`: {{what it is good for}}
+    - `{{CHECKPOINT_A}}`: {{what it is good for}}
+    - `{{CHECKPOINT_B}}`: {{what it is good for}}
 - VAE: `{{VAE_FILENAME}}`
 - Text encoders: `{{TEXT_ENCODER_FILENAMES}}`
 - Hi-res upscalers: `{{UPSCALER_FILENAMES}}`
@@ -36,6 +36,7 @@ Pass these filenames exactly as written; if you are unsure which to use, ask me.
 - Default to {{PREFERRED_SIZE}} unless the request implies otherwise.
 - Use {{PREFERRED_STEPS}} steps and {{PREFERRED_CFG}} guidance unless I ask for something else.
 - {{STYLE_NOTES}}, for example {{STYLE_EXAMPLE}}.
+- Never set `public` unless I have explicitly asked for an image that anyone can open, and say so when you do.
 
 ## Prompting
 

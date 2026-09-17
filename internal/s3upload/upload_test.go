@@ -85,7 +85,7 @@ func TestUploadImage(t *testing.T) {
 	u := newTestUploader(t, rt)
 
 	want := []byte("pretend-png-bytes")
-	url, err := u.UploadImage(context.Background(), want)
+	url, err := u.UploadImage(context.Background(), want, false)
 	if err != nil {
 		t.Fatalf("UploadImage() error: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestUploadImagePublicBaseURL(t *testing.T) {
 	u.cfg.PublicBaseURL = "https://cdn.example.com"
 	u.cfg.KeyPrefix = "i/mcp"
 
-	url, err := u.UploadImage(context.Background(), []byte("pretend-png-bytes"))
+	url, err := u.UploadImage(context.Background(), []byte("pretend-png-bytes"), false)
 	if err != nil {
 		t.Fatalf("UploadImage() error: %v", err)
 	}
@@ -154,6 +154,88 @@ func TestUploadImagePublicBaseURL(t *testing.T) {
 
 	if !strings.HasPrefix(gotPath, "/test-bucket/i/mcp/") {
 		t.Fatalf("request path = %q, want /test-bucket/i/mcp/ prefix", gotPath)
+	}
+}
+
+func TestUploadImagePublicPrefix(t *testing.T) {
+	var gotPath string
+
+	rt := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		gotPath = r.URL.Path
+
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Header:     http.Header{},
+			Body:       io.NopCloser(bytes.NewReader(nil)),
+		}, nil
+	})
+
+	u := newTestUploader(t, rt)
+	u.cfg.PublicBaseURL = "https://cdn.example.com"
+	u.cfg.KeyPrefix = "i/images/user"
+
+	url, err := u.UploadImage(context.Background(), []byte("pretend-png-bytes"), true)
+	if err != nil {
+		t.Fatalf("UploadImage() error: %v", err)
+	}
+
+	if !strings.HasPrefix(url, "https://cdn.example.com/i/public/") || !strings.HasSuffix(url, ".png") {
+		t.Fatalf("URL = %q, want https://cdn.example.com/i/public/...png", url)
+	}
+
+	if strings.Contains(url, "i/images/user") {
+		t.Fatalf("URL = %q, want the user key prefix bypassed", url)
+	}
+
+	if !strings.HasPrefix(gotPath, "/test-bucket/i/public/") {
+		t.Fatalf("request path = %q, want /test-bucket/i/public/ prefix", gotPath)
+	}
+}
+
+func TestUploadImagePublicPresigned(t *testing.T) {
+	var gotPath string
+
+	rt := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		gotPath = r.URL.Path
+
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Header:     http.Header{},
+			Body:       io.NopCloser(bytes.NewReader(nil)),
+		}, nil
+	})
+
+	u := newTestUploader(t, rt)
+
+	url, err := u.UploadImage(context.Background(), []byte("pretend-png-bytes"), true)
+	if err != nil {
+		t.Fatalf("UploadImage() error: %v", err)
+	}
+
+	if !strings.HasPrefix(gotPath, "/test-bucket/i/public/") {
+		t.Fatalf("request path = %q, want /test-bucket/i/public/ prefix", gotPath)
+	}
+
+	if !strings.Contains(url, "X-Amz-Signature=") {
+		t.Fatalf("presigned URL %q missing X-Amz-Signature", url)
+	}
+}
+
+func TestObjectKeyPublic(t *testing.T) {
+	if PublicKeyPrefix != "i/public" {
+		t.Fatalf("PublicKeyPrefix = %q, want %q", PublicKeyPrefix, "i/public")
+	}
+
+	u := &Client{cfg: Config{PublicBaseURL: "https://cdn.example.com", KeyPrefix: "i/images/user"}}
+
+	if got := u.objectKey(true); !strings.HasPrefix(got, PublicKeyPrefix+"/") {
+		t.Errorf("objectKey(true) = %q, want %q prefix", got, PublicKeyPrefix)
+	}
+
+	if got := u.objectKey(false); !strings.HasPrefix(got, "i/images/user/") {
+		t.Errorf("objectKey(false) = %q, want i/images/user/ prefix", got)
 	}
 }
 

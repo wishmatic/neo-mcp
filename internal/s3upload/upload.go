@@ -16,8 +16,11 @@ import (
 
 const presignExpiry = 7 * 24 * time.Hour
 
-func (u *Client) UploadImage(ctx context.Context, data []byte) (string, error) {
-	key := u.objectKey()
+// PublicKeyPrefix is the object key prefix Garagefront serves without access checks.
+const PublicKeyPrefix = "i/public"
+
+func (u *Client) UploadImage(ctx context.Context, data []byte, public bool) (string, error) {
+	key := u.objectKey(public)
 
 	u.log.Info("uploading image", zap.String("key", key), zap.Int("bytes", len(data)))
 
@@ -44,8 +47,12 @@ func (u *Client) UploadImage(ctx context.Context, data []byte) (string, error) {
 	return u.presignedURL(ctx, key)
 }
 
-func (u *Client) objectKey() string {
+func (u *Client) objectKey(public bool) string {
 	key := fmt.Sprintf("%s/%s.png", time.Now().UTC().Format("2006-01"), uuid.NewString())
+	if public {
+		return PublicKeyPrefix + "/" + key
+	}
+
 	if u.cfg.PublicBaseURL == "" || u.cfg.KeyPrefix == "" {
 		return key
 	}

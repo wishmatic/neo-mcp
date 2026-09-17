@@ -50,6 +50,7 @@ func (h *handlers) txt2img(
 		zap.Int("hr_second_pass_steps", in.HRSecondPassSteps),
 		zap.Float64("denoising_strength", in.DenoisingStrength),
 		zap.Float64("hr_cfg", in.HRCFGScale),
+		zap.Bool("public", in.Public),
 	)
 
 	h.log.Info("txt2img generating synchronously",
@@ -67,7 +68,7 @@ func (h *handlers) txt2img(
 
 	h.log.Info("txt2img generation finished", zap.Int("images", len(images)))
 
-	return publishImages(ctx, h.log, "txt2img", images, h.uploader, h.shortener)
+	return publishImages(ctx, h.log, "txt2img", images, in.Public, h.uploader, h.shortener)
 }
 
 func txt2imgSchema() *jsonschema.Schema {
@@ -84,6 +85,7 @@ func txt2imgSchema() *jsonschema.Schema {
 	setDefault(s.Properties, "cfg_scale", 7.0)
 	setDefault(s.Properties, "sampler_name", "")
 	setDefault(s.Properties, "scheduler", "")
+	setDefault(s.Properties, "public", false)
 
 	return s
 }

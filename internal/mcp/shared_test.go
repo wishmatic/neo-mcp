@@ -35,9 +35,24 @@ func TestModelIsRequired(t *testing.T) {
 
 func TestSchemasIncludeSharedFields(t *testing.T) {
 	shared := []string{
-		"model", "forge_preset", "vae_and_text_models", "prompt", "negative_prompt",
-		"sampler_name", "scheduler", "steps", "width", "height", "cfg_scale", "seed",
-		"enable_hr", "hr_scale", "hr_upscaler", "hr_second_pass_steps", "hr_cfg",
+		"model",
+		"forge_preset",
+		"vae_and_text_models",
+		"prompt",
+		"negative_prompt",
+		"sampler_name",
+		"scheduler",
+		"steps",
+		"width",
+		"height",
+		"cfg_scale",
+		"seed",
+		"enable_hr",
+		"hr_scale",
+		"hr_upscaler",
+		"hr_second_pass_steps",
+		"hr_cfg",
+		"public",
 	}
 
 	for name, s := range schemas() {
@@ -46,6 +61,41 @@ func TestSchemasIncludeSharedFields(t *testing.T) {
 				t.Errorf("%s: missing shared field %q", name, field)
 			}
 		}
+	}
+}
+
+func TestPublicFlagSchema(t *testing.T) {
+	withFlag := schemas()
+	withFlag["bgkill"] = bgkillSchema()
+
+	for name, s := range withFlag {
+		prop := s.Properties["public"]
+		if prop == nil {
+			t.Errorf("%s: public property is missing", name)
+			continue
+		}
+
+		if prop.Type != "boolean" {
+			t.Errorf("%s: public type = %q, want boolean", name, prop.Type)
+		}
+
+		if string(prop.Default) != "false" {
+			t.Errorf("%s: public default = %s, want false", name, prop.Default)
+		}
+
+		if slices.Contains(s.Required, "public") {
+			t.Errorf("%s: public must not be required", name)
+		}
+
+		for _, want := range []string{"explicit", "anyone"} {
+			if !strings.Contains(prop.Description, want) {
+				t.Errorf("%s: public description %q does not mention %q", name, prop.Description, want)
+			}
+		}
+	}
+
+	if img2txtSchema().Properties["public"] != nil {
+		t.Error("img2txt: public property present, want none")
 	}
 }
 

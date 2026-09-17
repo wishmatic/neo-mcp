@@ -17,6 +17,9 @@ sense to do so. Each must have verifiable, specific, and complete acceptance cri
 consideration of non-functional requirements such as security, performance, and maintainability, and look for ways to
 test everything for confidence. Some tests will need to be completed by the human; mark where this is the case.
 
+Move plans to done when they are done, even without full human verification completed. When AC are finished, you must
+also mark those too as complete.
+
 ## Output
 
 Do not give caveats unless they are actually caveats. Err on the side of not presenting them; only if they are
