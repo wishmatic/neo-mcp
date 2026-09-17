@@ -107,7 +107,7 @@ Maintainability:
 | `internal/novelai/txt2img.go` | New | `Txt2ImgRequest`, `Txt2Img` |
 | `internal/novelai/img2img.go` | New | `Img2ImgRequest`, `Img2Img` |
 | `internal/novelai/*_test.go` | New | Unit tests, one file per unit |
-| `internal/config/config.go` | Edit | `NOVELAI_API_KEY`, `NOVELAI_URL` |
+| `internal/config/config.go` | Edit | `NOVELAI_API_KEY` |
 | `internal/server/server.go` | Edit | Build the NovelAI client, pass it to MCP |
 | `internal/mcp/server.go` | Edit | Accept the NovelAI client, gate registration |
 | `internal/mcp/handlers.go` | New | Dependency-holding handler struct |
@@ -140,10 +140,15 @@ type Client struct {
 
 func New(baseURL, apiKey string, isVerboseErrors bool) *Client
 
+const DefaultBaseURL = "https://image.novelai.net"
+
 const modelPrefix = "nai-diffusion-"
 
 func IsModel(model string) bool
 ```
+
+`DefaultBaseURL` is the official image host. It is deliberately not configurable, so `New` takes a base URL only so
+tests can point at an httptest server.
 
 `IsModel` trims surrounding whitespace and reports whether the result begins with `modelPrefix`. It holds no list of
 concrete ids, so `nai-diffusion-4-full.safetensors` and future ids both match.
@@ -163,16 +168,16 @@ Also in this file:
   const `k_euler_ancestral`. An empty sampler is replaced with `defaultSampler`.
 - `resolveSeed(requested int) uint32`: negative seeds become `randomSeed()` in `[0, 4294967295]`, non-negative seeds
   pass through unchanged.
-- `normalizeDimensions(width, height int) (int, int, error)`: round each axis up to the nearest multiple of 64, floor
-  at 64, and error when total pixels exceed 3047424 or fall below 4096.
+- `normalizeDimensions(width, height int) (int, int, error)`: round each axis up to the nearest multiple of 64 and
+  error when total pixels exceed 3047424 or fall below 4096. A zero or negative axis rounds to 0, which errors.
 - `httpError(method, path string, resp *http.Response) string` mirroring `sdwebui.Client.httpError`.
 
 **Acceptance criteria**
 
 - AC-1.1: `New("https://image.novelai.net/", "sk-x", false)` stores the base URL without the trailing slash and the
   key, and `New` accepts an empty key.
-- AC-1.2: `IsModel` is true for `nai-diffusion-5-full`, `nai-diffusion-4-full`, `nai-diffusion-5-anime`,
-  `nai-diffusion-furry-3`, and an unknown future id such as `nai-diffusion-9-experimental`.
+- AC-1.2: `IsModel` is true for `nai-diffusion-5-full`, `nai-diffusion-5-curated`, `nai-diffusion-4-5-full`, and
+  an unknown future id such as `nai-diffusion-9-experimental`.
 - AC-1.3: `IsModel` is false for `""`, `sd_xl_base_1.0.safetensors`, `nai_diffusion_5_full`, and
   `model-nai-diffusion-5-full`; surrounding whitespace is ignored so `"  nai-diffusion-5-full  "` is true.
 - AC-1.4: No concrete NovelAI model id appears in non-test code; routing is the single `modelPrefix` constant.
@@ -185,8 +190,8 @@ Also in this file:
   know, is used verbatim.
 - AC-1.8: `resolveSeed(-1)` returns a value in `[0, 4294967295]` (assert against a stubbed `randomSeed` and against
   the real one), and `resolveSeed(42)` returns 42.
-- AC-1.9: `normalizeDimensions(833, 1217)` returns `896, 1280` and `normalizeDimensions(64, 64)` succeeds; `normalizeDimensions(0, 0)`,
-  `normalizeDimensions(-64, 512)`, and `normalizeDimensions(4096, 4096)` error.
+- AC-1.9: `normalizeDimensions(833, 1217)` returns `896, 1280` and `normalizeDimensions(64, 64)` succeeds;
+  `normalizeDimensions(0, 0)`, `normalizeDimensions(-64, 512)`, and `normalizeDimensions(4096, 4096)` error.
 - AC-1.10: A non-2xx response produces an error containing the status code, and, when `isVerboseErrors` is set, a
   truncated response body.
 
@@ -297,19 +302,18 @@ only controls intermediate-step streaming.
 
 **Files:** `internal/config/config.go`, `internal/config/config_test.go`, `.env.example`, `README.md`
 
-**Work:** Add `NovelAIAPIKey string \`env:"NOVELAI_API_KEY"\`` and
-`NovelAIURL string \`env:"NOVELAI_URL" envDefault:"https://image.novelai.net"\``. Document both in `.env.example`
-under a "NovelAI (optional)" heading that states NovelAI is disabled without a key. Add a short NovelAI section to
-the README covering the key and that NovelAI models are selected through the `model` argument; the agent supplies the
-model id, and Forge-only options are ignored for NovelAI.
+**Work:** Add `NovelAIAPIKey string \`env:"NOVELAI_API_KEY"\``. The novelai client is built against
+`novelai.DefaultBaseURL`, which is not configurable because the image host is not expected to change. Document the key
+in `.env.example` under a "NovelAI (optional)" heading that states NovelAI is disabled without it. Add a short NovelAI
+section to the README covering the key and that NovelAI models are selected through the `model` argument; the agent
+supplies the model id, and Forge-only options are ignored for NovelAI.
 
 **Acceptance criteria**
 
-- AC-5.1: `Load` with `NOVELAI_URL` unset yields `https://image.novelai.net`; with it set, yields that value.
-- AC-5.2: `Load` reads `NOVELAI_API_KEY` into the new field.
-- AC-5.3: The default test unsets `NOVELAI_URL` and restores the previous value; the override test uses `t.Setenv`.
-- AC-5.4: `.env.example` lists `NOVELAI_API_KEY` and `NOVELAI_URL`.
-- AC-5.5: The README has a NovelAI section of at most a short paragraph, states that model ids come from the agent,
+- AC-5.1: `Load` reads `NOVELAI_API_KEY` into `NovelAIAPIKey`, asserted with `t.Setenv`.
+- AC-5.2: `.env.example` lists `NOVELAI_API_KEY` under a "NovelAI (optional)" heading, states NovelAI is disabled
+  without it, and has no `NOVELAI_URL` or other host setting.
+- AC-5.3: The README has a NovelAI section of at most a short paragraph, states that model ids come from the agent,
   and does not list models.
 
 ### Unit 6: Server wiring
@@ -325,7 +329,8 @@ the OpenAI client.
 
 **Acceptance criteria**
 
-- AC-6.1: `server.New` with `NOVELAI_API_KEY` set and an otherwise valid config returns no error.
+- AC-6.1: `server.New` with `NOVELAI_API_KEY` set and an otherwise valid config returns no error, builds the client
+  against `novelai.DefaultBaseURL`, and logs that address.
 - AC-6.2: `mcp.New(log, nil, novelaiClient, nil, nil, nil, nil)` registers `txt2img`, `img2img`, and `anlas` but not
   `bgkill`, verified by listing tools over an in-memory MCP transport.
 - AC-6.3: `mcp.New(log, forgeClient, nil, nil, nil, nil, nil)` still registers `txt2img`, `img2img`, and `bgkill`.

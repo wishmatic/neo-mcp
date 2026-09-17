@@ -115,9 +115,9 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 
 	var novelaiClient *novelai.Client
 	if cfg.NovelAIAPIKey != "" {
-		novelaiClient = novelai.New(cfg.NovelAIURL, cfg.NovelAIAPIKey, cfg.ErrorDetail == "verbose")
+		novelaiClient = novelai.New(novelai.DefaultBaseURL, cfg.NovelAIAPIKey, cfg.ErrorDetail == "verbose")
 
-		log.Info("novelai enabled", zap.String("base_url", cfg.NovelAIURL))
+		log.Info("novelai enabled", zap.String("base_url", novelai.DefaultBaseURL))
 	}
 
 	mcpSrv, err := mcpServer.New(log, sdClient, novelaiClient, uploader, shortenerClient, resolver, openaiClient)

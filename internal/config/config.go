@@ -19,7 +19,6 @@ type Config struct {
 	SDURL string `env:"SD_URL" envDefault:"http://127.0.0.1:7860"`
 
 	NovelAIAPIKey string `env:"NOVELAI_API_KEY"`
-	NovelAIURL    string `env:"NOVELAI_URL" envDefault:"https://image.novelai.net"`
 
 	S3Endpoint       string `env:"S3_ENDPOINT"`
 	S3PublicEndpoint string `env:"S3_PUBLIC_ENDPOINT"`

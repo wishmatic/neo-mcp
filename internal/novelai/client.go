@@ -12,7 +12,10 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/utils"
 )
 
-const generatePath = "/ai/generate-image-stream"
+const (
+	DefaultBaseURL = "https://image.novelai.net"
+	generatePath   = "/ai/generate-image-stream"
+)
 
 type Client struct {
 	baseURL         string

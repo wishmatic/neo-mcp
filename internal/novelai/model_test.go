@@ -5,9 +5,9 @@ import "testing"
 func TestIsModel(t *testing.T) {
 	models := []string{
 		"nai-diffusion-5-full",
+		"nai-diffusion-5-curated",
+		"nai-diffusion-4-5-full",
 		"nai-diffusion-4-full",
-		"nai-diffusion-5-anime",
-		"nai-diffusion-furry-3",
 		"nai-diffusion-9-experimental",
 		"nai-diffusion-4-full.safetensors",
 		"  nai-diffusion-5-full  ",
