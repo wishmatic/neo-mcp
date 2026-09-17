@@ -55,4 +55,8 @@ func registerTools(srv *mcp.Server, h *handlers) {
 	if h.openai != nil {
 		registerImg2Txt(srv, h)
 	}
+
+	if h.uploader != nil {
+		registerPublicize(srv, h)
+	}
 }

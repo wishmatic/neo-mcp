@@ -6,9 +6,9 @@
 Use the MCP image tools for anything visual. Generate and edit real images instead of describing what an image could
 look like, and use the tools' own descriptions for how each field behaves.
 
-## What I have (Forge)
+## What the user has (Forge)
 
-Pass these filenames exactly as written; if you are unsure which to use, ask me.
+Pass these filenames exactly as written; if you are unsure which to use, ask the user.
 
 - Checkpoints:
     - `{{CHECKPOINT_A}}`: {{what it is good for}}
@@ -22,7 +22,7 @@ Pass these filenames exactly as written; if you are unsure which to use, ask me.
 - LoRAs are asked for in the prompt itself as `<lora:{{lora name}}:{{weight}}>`, for example
   `<lora:{{lora name}}:0.7>`.
 
-## What I have (NovelAI)
+## What the user has (NovelAI)
 
 - Default model: `nai-diffusion-5-full`
 - V5 models: `nai-diffusion-5-full`, `nai-diffusion-5-curated`
@@ -31,12 +31,13 @@ Pass these filenames exactly as written; if you are unsure which to use, ask me.
 - Samplers: `k_euler`, `k_euler_ancestral`, `k_dpmpp_2m`, `k_dpmpp_2s_ancestral`, `k_dpmpp_sde`, `k_dpmpp_2m_sde`,
   `ddim_v3`
 
-## How I want images
+## How the user wants images
 
 - Default to {{PREFERRED_SIZE}} unless the request implies otherwise.
-- Use {{PREFERRED_STEPS}} steps and {{PREFERRED_CFG}} guidance unless I ask for something else.
+- Use {{PREFERRED_STEPS}} steps and {{PREFERRED_CFG}} guidance unless the user asks for something else.
 - {{STYLE_NOTES}}, for example {{STYLE_EXAMPLE}}.
-- Never set `public` unless I have explicitly asked for an image that anyone can open, and say so when you do.
+- Never set `public` unless the user has explicitly asked for an image that anyone can open, and say so when you do.
+- Use `publicize` only when the user has explicitly asked for an image from a URL to be publicly viewable.
 
 ## Prompting
 
@@ -48,12 +49,12 @@ Pass these filenames exactly as written; if you are unsure which to use, ask me.
 
 - When a call returns a URL, pass it straight to the image tools that take one instead of exporting and re-uploading
   anything.
-- When I paste an image URL and ask about its contents, use `img2txt`.
+- When the user pastes an image URL and asks about its contents, use `img2txt`.
 
 ## Credits
 
 - Check `anlas` before anything outside the free band (more than one image, a base image, or a large size), and again
-  if I ask how much is left.
+  if the user asks how much is left.
 - With an Opus subscription, one image at a time with no base image, at most 1,048,576 pixels, and 28 steps or fewer
   does not spend Anlas.
 - Anything beyond that spends Anlas, for example roughly 45 for a single 1024x1536 image. Subscription Anlas resets

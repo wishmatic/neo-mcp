@@ -6,6 +6,7 @@ import (
 
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
+	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"go.uber.org/zap"
 )
@@ -28,11 +29,12 @@ func TestToolRegistration(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		forge   *sdwebui.Client
-		novelai *novelai.Client
-		openai  *openai.Client
-		want    []string
+		name     string
+		forge    *sdwebui.Client
+		novelai  *novelai.Client
+		openai   *openai.Client
+		uploader *s3upload.Client
+		want     []string
 	}{
 		{
 			name:    "novelai only",
@@ -50,13 +52,18 @@ func TestToolRegistration(t *testing.T) {
 			want:   []string{"img2txt"},
 		},
 		{
+			name:     "uploader only",
+			uploader: newPublicizeUploader(t, &[]uploadCapture{}),
+			want:     []string{"publicize"},
+		},
+		{
 			name: "none",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			srv, err := New(zapNop(), tt.forge, tt.novelai, nil, nil, nil, tt.openai)
+			srv, err := New(zapNop(), tt.forge, tt.novelai, tt.uploader, nil, nil, tt.openai)
 			if err != nil {
 				t.Fatalf("New() error: %v", err)
 			}

@@ -230,12 +230,106 @@ func TestObjectKeyPublic(t *testing.T) {
 
 	u := &Client{cfg: Config{PublicBaseURL: "https://cdn.example.com", KeyPrefix: "i/images/user"}}
 
-	if got := u.objectKey(true); !strings.HasPrefix(got, PublicKeyPrefix+"/") {
+	if got := u.objectKey(true, "png"); !strings.HasPrefix(got, PublicKeyPrefix+"/") {
 		t.Errorf("objectKey(true) = %q, want %q prefix", got, PublicKeyPrefix)
 	}
 
-	if got := u.objectKey(false); !strings.HasPrefix(got, "i/images/user/") {
+	if got := u.objectKey(false, "png"); !strings.HasPrefix(got, "i/images/user/") {
 		t.Errorf("objectKey(false) = %q, want i/images/user/ prefix", got)
+	}
+}
+
+func TestUploadFileContentTypes(t *testing.T) {
+	tests := []struct {
+		name        string
+		contentType string
+		wantExt     string
+	}{
+		{name: "png", contentType: "image/png", wantExt: ".png"},
+		{name: "jpeg", contentType: "image/jpeg", wantExt: ".jpg"},
+		{name: "webp", contentType: "image/webp", wantExt: ".webp"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var (
+				gotPath string
+				gotCT   string
+			)
+
+			rt := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				gotPath = r.URL.Path
+				gotCT = r.Header.Get("Content-Type")
+
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Status:     "200 OK",
+					Header:     http.Header{},
+					Body:       io.NopCloser(bytes.NewReader(nil)),
+				}, nil
+			})
+
+			u := newTestUploader(t, rt)
+
+			if _, err := u.UploadFile(context.Background(), []byte("pretend-image-bytes"), tt.contentType, false); err != nil {
+				t.Fatalf("UploadFile() error: %v", err)
+			}
+
+			if !strings.HasSuffix(gotPath, tt.wantExt) {
+				t.Errorf("request path = %q, want %s suffix", gotPath, tt.wantExt)
+			}
+
+			if gotCT != tt.contentType {
+				t.Errorf("Content-Type = %q, want %q", gotCT, tt.contentType)
+			}
+		})
+	}
+}
+
+func TestUploadFilePublicPrefix(t *testing.T) {
+	var gotPath string
+
+	rt := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		gotPath = r.URL.Path
+
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Header:     http.Header{},
+			Body:       io.NopCloser(bytes.NewReader(nil)),
+		}, nil
+	})
+
+	u := newTestUploader(t, rt)
+	u.cfg.PublicBaseURL = "https://cdn.example.com"
+	u.cfg.KeyPrefix = "i/images/user"
+
+	url, err := u.UploadFile(context.Background(), []byte("pretend-image-bytes"), "image/jpeg", true)
+	if err != nil {
+		t.Fatalf("UploadFile() error: %v", err)
+	}
+
+	if !strings.HasPrefix(gotPath, "/test-bucket/i/public/") || !strings.HasSuffix(gotPath, ".jpg") {
+		t.Fatalf("request path = %q, want /test-bucket/i/public/...jpg", gotPath)
+	}
+
+	if !strings.HasPrefix(url, "https://cdn.example.com/i/public/") || !strings.HasSuffix(url, ".jpg") {
+		t.Fatalf("URL = %q, want https://cdn.example.com/i/public/...jpg", url)
+	}
+}
+
+func TestFileExtension(t *testing.T) {
+	tests := map[string]string{
+		"image/png":  "png",
+		"image/jpeg": "jpg",
+		"image/webp": "webp",
+		"text/plain": "png",
+	}
+
+	for contentType, want := range tests {
+		if got := fileExtension(contentType); got != want {
+			t.Errorf("fileExtension(%q) = %q, want %q", contentType, got, want)
+		}
 	}
 }
 

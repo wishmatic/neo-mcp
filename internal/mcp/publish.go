@@ -28,16 +28,7 @@ func publishImages(
 				return nil, generationOutput{}, err
 			}
 
-			if shortenerClient != nil {
-				short, err := shortenerClient.Shorten(ctx, url)
-				if err != nil {
-					log.Warn(tool+" url shortening failed; returning original url", zap.Error(err))
-				} else {
-					url = short
-				}
-			}
-
-			urls = append(urls, url)
+			urls = append(urls, shortenURL(ctx, log, tool, url, shortenerClient))
 		}
 
 		content := make([]mcp.Content, 0, len(urls))
@@ -57,4 +48,19 @@ func publishImages(
 	}
 
 	return &mcp.CallToolResult{Content: content}, generationOutput{Count: len(images)}, nil
+}
+
+func shortenURL(ctx context.Context, log *zap.Logger, tool, url string, shortenerClient *shortener.Client) string {
+	if shortenerClient == nil {
+		return url
+	}
+
+	short, err := shortenerClient.Shorten(ctx, url)
+	if err != nil {
+		log.Warn(tool+" url shortening failed; returning original url", zap.Error(err))
+
+		return url
+	}
+
+	return short
 }

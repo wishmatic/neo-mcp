@@ -20,15 +20,23 @@ const presignExpiry = 7 * 24 * time.Hour
 const PublicKeyPrefix = "i/public"
 
 func (u *Client) UploadImage(ctx context.Context, data []byte, public bool) (string, error) {
-	key := u.objectKey(public)
+	return u.UploadFile(ctx, data, "image/png", public)
+}
 
-	u.log.Info("uploading image", zap.String("key", key), zap.Int("bytes", len(data)))
+func (u *Client) UploadFile(ctx context.Context, data []byte, contentType string, public bool) (string, error) {
+	key := u.objectKey(public, fileExtension(contentType))
+
+	u.log.Info("uploading image",
+		zap.String("key", key),
+		zap.String("content_type", contentType),
+		zap.Int("bytes", len(data)),
+	)
 
 	_, err := u.writer.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(u.cfg.Bucket),
 		Key:         aws.String(key),
 		Body:        bytes.NewReader(data),
-		ContentType: aws.String("image/png"),
+		ContentType: aws.String(contentType),
 	})
 	if err != nil {
 		u.log.Error("s3 put object failed",
@@ -47,8 +55,19 @@ func (u *Client) UploadImage(ctx context.Context, data []byte, public bool) (str
 	return u.presignedURL(ctx, key)
 }
 
-func (u *Client) objectKey(public bool) string {
-	key := fmt.Sprintf("%s/%s.png", time.Now().UTC().Format("2006-01"), uuid.NewString())
+func fileExtension(contentType string) string {
+	switch contentType {
+	case "image/jpeg":
+		return "jpg"
+	case "image/webp":
+		return "webp"
+	default:
+		return "png"
+	}
+}
+
+func (u *Client) objectKey(public bool, ext string) string {
+	key := fmt.Sprintf("%s/%s.%s", time.Now().UTC().Format("2006-01"), uuid.NewString(), ext)
 	if public {
 		return PublicKeyPrefix + "/" + key
 	}

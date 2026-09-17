@@ -26,6 +26,8 @@ Note that the only version of Forge we support is
       instead, for when you have explicitly asked for an image anyone can open. Super niche.
 - If you _also_ provide `SHORTENER_*` environment variables, any generated URLs are shortened first.
     - This assumes your URL shortener is [`chhoto-url`](https://github.com/SinTan1729/chhoto-url).
+- `publicize` downloads an image from any URL and stores it in the public namespace, returning a URL anyone can open.
+  It needs `S3_*` configured; with Garagefront configured the URL is a durable `/i/public/...` one.
 
 ## Usage
 
