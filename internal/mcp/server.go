@@ -2,8 +2,10 @@ package mcp
 
 import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
+	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
@@ -34,8 +36,8 @@ func New(deps Deps) (*mcp.Server, error) {
 		log:       deps.Log,
 		forge:     deps.Forge,
 		novelai:   deps.NovelAI,
-		uploader:  deps.Uploader,
-		shortener: deps.Shortener,
+		gen:       imagegen.New(deps.Forge, deps.NovelAI),
+		publisher: publish.New(deps.Uploader, deps.Shortener, deps.Log),
 		resolver:  deps.Resolver,
 		openai:    deps.OpenAI,
 		store:     deps.Store,
@@ -63,7 +65,7 @@ func registerTools(srv *mcp.Server, h *handlers) {
 		registerImg2Txt(srv, h)
 	}
 
-	if h.uploader != nil {
+	if h.publisher.Enabled() {
 		registerPublicize(srv, h)
 	}
 
@@ -71,7 +73,7 @@ func registerTools(srv *mcp.Server, h *handlers) {
 		registerReviews(srv, h)
 	}
 
-	if h.examples.Enabled && h.store != nil && h.uploader != nil {
+	if h.examples.Enabled && h.store != nil && h.publisher.Enabled() {
 		registerGetExamples(srv, h)
 	}
 }

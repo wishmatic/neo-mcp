@@ -1,4 +1,4 @@
-package mcp
+package present
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/store"
 )
 
-func examplesMarkdown(model string, examples []store.Example) string {
+func Examples(model string, examples []store.Example) string {
 	if len(examples) == 0 {
 		return fmt.Sprintf("No examples saved for %s yet.", model)
 	}

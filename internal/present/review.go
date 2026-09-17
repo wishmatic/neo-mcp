@@ -1,4 +1,4 @@
-package mcp
+package present
 
 import (
 	"fmt"
@@ -12,20 +12,20 @@ type reviewGroup struct {
 	reviews []store.Review
 }
 
-func reviewsMarkdown(reviews []store.Review) string {
+func Reviews(reviews []store.Review) string {
 	if len(reviews) == 0 {
 		return "No reviews yet."
 	}
 
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "# Reviews\n\nAverage: %.1f/10 (%s)\n", averageRating(reviews), reviewCount(len(reviews)))
+	fmt.Fprintf(&b, "# Reviews\n\nAverage: %.1f/10 (%s)\n", ReviewAverage(reviews), reviewCount(len(reviews)))
 
 	for _, group := range groupReviewsByModel(reviews) {
 		fmt.Fprintf(
 			&b,
 			"\n## %s\n\nAverage: %.1f/10 (%s)\n",
-			group.model, averageRating(group.reviews), reviewCount(len(group.reviews)),
+			group.model, ReviewAverage(group.reviews), reviewCount(len(group.reviews)),
 		)
 
 		for _, review := range group.reviews {
@@ -38,7 +38,7 @@ func reviewsMarkdown(reviews []store.Review) string {
 	return b.String()
 }
 
-func averageRating(reviews []store.Review) float64 {
+func ReviewAverage(reviews []store.Review) float64 {
 	if len(reviews) == 0 {
 		return 0
 	}

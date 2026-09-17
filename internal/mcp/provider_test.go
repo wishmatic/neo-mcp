@@ -15,7 +15,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/vmihailenco/msgpack/v5"
+	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
+	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"go.uber.org/zap"
@@ -167,205 +169,6 @@ func numberField(t *testing.T, params map[string]any, key string) float64 {
 	return value
 }
 
-func TestTxt2ImgRoutesNovelAIModel(t *testing.T) {
-	forgeLog := &requestLog{}
-	novelaiLog := &requestLog{}
-
-	h := &handlers{
-		log:     zapNop(),
-		forge:   newForgeBackend(t, forgeLog),
-		novelai: newNovelAIBackend(t, novelaiLog),
-	}
-
-	result, out, err := h.txt2img(context.Background(), nil, txt2imgInput{
-		generationInput: generationInputFor("nai-diffusion-5-full"),
-	})
-	if err != nil {
-		t.Fatalf("txt2img() error: %v", err)
-	}
-
-	if out.Count != 1 {
-		t.Errorf("count = %d, want 1", out.Count)
-	}
-
-	if len(out.URLs) != 0 {
-		t.Errorf("urls = %v, want none without S3", out.URLs)
-	}
-
-	if len(result.Content) != 1 {
-		t.Fatalf("content = %d, want 1", len(result.Content))
-	}
-
-	image, ok := result.Content[0].(*mcp.ImageContent)
-	if !ok {
-		t.Fatalf("content type = %T, want *mcp.ImageContent", result.Content[0])
-	}
-
-	if string(image.Data) != "novelai-png" || image.MIMEType != "image/png" {
-		t.Errorf("image = %q (%s), want novelai-png (image/png)", image.Data, image.MIMEType)
-	}
-
-	if len(out.URLs) != 0 {
-		t.Errorf("urls = %v, want none without S3", out.URLs)
-	}
-
-	if paths, _ := forgeLog.snapshot(); len(paths) != 0 {
-		t.Errorf("forge received %v, want no requests", paths)
-	}
-
-	paths, bodies := novelaiLog.snapshot()
-	if len(paths) != 1 || paths[0] != "/ai/generate-image-stream" {
-		t.Fatalf("novelai received %v, want one stream request", paths)
-	}
-
-	if body := decodeJSONBody(t, bodies[0]); body["model"] != "nai-diffusion-5-full" {
-		t.Errorf("model = %v, want nai-diffusion-5-full", body["model"])
-	}
-}
-
-func TestTxt2ImgRoutesForgeModel(t *testing.T) {
-	forgeLog := &requestLog{}
-	novelaiLog := &requestLog{}
-
-	h := &handlers{
-		log:     zapNop(),
-		forge:   newForgeBackend(t, forgeLog),
-		novelai: newNovelAIBackend(t, novelaiLog),
-	}
-
-	_, _, err := h.txt2img(context.Background(), nil, txt2imgInput{
-		generationInput: generationInputFor("sd_xl_base_1.0.safetensors"),
-	})
-	if err != nil {
-		t.Fatalf("txt2img() error: %v", err)
-	}
-
-	if paths, _ := novelaiLog.snapshot(); len(paths) != 0 {
-		t.Errorf("novelai received %v, want no requests", paths)
-	}
-
-	paths, _ := forgeLog.snapshot()
-	if len(paths) != 1 || paths[0] != "/sdapi/v1/txt2img" {
-		t.Fatalf("forge received %v, want one txt2img request", paths)
-	}
-}
-
-func TestTxt2ImgNovelAIWithoutClient(t *testing.T) {
-	h := &handlers{log: zapNop()}
-
-	_, _, err := h.txt2img(context.Background(), nil, txt2imgInput{
-		generationInput: generationInputFor("nai-diffusion-5-full"),
-	})
-	if err == nil {
-		t.Fatal("txt2img() error = nil, want an error")
-	}
-
-	if !strings.Contains(err.Error(), "NOVELAI_API_KEY") {
-		t.Errorf("error = %q, want it to name NOVELAI_API_KEY", err.Error())
-	}
-}
-
-func TestTxt2ImgNovelAIIgnoresForgeOnlyFields(t *testing.T) {
-	novelaiLog := &requestLog{}
-
-	h := &handlers{log: zapNop(), novelai: newNovelAIBackend(t, novelaiLog)}
-
-	in := txt2imgInput{
-		generationInput:   generationInputFor("nai-diffusion-5-full"),
-		DenoisingStrength: 0.5,
-	}
-	in.ForgePreset = "krea"
-	in.VAEAndTextModels = []string{"vae.safetensors"}
-	in.ScheduleType = "Automatic"
-	in.EnableHR = true
-	in.HRScale = 2
-	in.HRUpscaler = "4x-AnimeSharp"
-	in.HRSecondPassSteps = 10
-	in.HRCFGScale = 5
-
-	if _, _, err := h.txt2img(context.Background(), nil, in); err != nil {
-		t.Fatalf("txt2img() error: %v", err)
-	}
-
-	_, bodies := novelaiLog.snapshot()
-	body := decodeJSONBody(t, bodies[0])
-	params := paramsOf(t, body)
-
-	dropped := []string{
-		"forge_preset", "vae_and_text_models", "scheduler", "enable_hr",
-		"hr_scale", "hr_upscaler", "hr_second_pass_steps", "hr_cfg",
-		"denoising_strength", "strength",
-	}
-
-	for _, key := range []string{"forge_preset", "scheduler", "enable_hr"} {
-		if _, ok := body[key]; ok {
-			t.Errorf("%s is present at the top level, want it dropped", key)
-		}
-	}
-
-	for _, key := range dropped {
-		if _, ok := params[key]; ok {
-			t.Errorf("%s is present in the NovelAI payload, want it dropped", key)
-		}
-	}
-}
-
-func TestTxt2ImgNovelAISampler(t *testing.T) {
-	tests := []struct {
-		name    string
-		sampler string
-		want    string
-	}{
-		{name: "empty uses the NovelAI default", sampler: "", want: "k_euler_ancestral"},
-		{name: "known sampler passes through", sampler: "k_dpmpp_2m", want: "k_dpmpp_2m"},
-		{name: "unknown sampler passes through", sampler: "some_future_sampler", want: "some_future_sampler"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			novelaiLog := &requestLog{}
-			h := &handlers{log: zapNop(), novelai: newNovelAIBackend(t, novelaiLog)}
-
-			in := txt2imgInput{generationInput: generationInputFor("nai-diffusion-5-full")}
-			in.SamplingMethod = tt.sampler
-
-			if _, _, err := h.txt2img(context.Background(), nil, in); err != nil {
-				t.Fatalf("txt2img() error: %v", err)
-			}
-
-			_, bodies := novelaiLog.snapshot()
-			params := paramsOf(t, decodeJSONBody(t, bodies[0]))
-
-			if params["sampler"] != tt.want {
-				t.Errorf("sampler = %v, want %s", params["sampler"], tt.want)
-			}
-		})
-	}
-}
-
-func TestTxt2ImgForgeSamplerDefaults(t *testing.T) {
-	forgeLog := &requestLog{}
-
-	h := &handlers{log: zapNop(), forge: newForgeBackend(t, forgeLog)}
-
-	if _, _, err := h.txt2img(context.Background(), nil, txt2imgInput{
-		generationInput: generationInputFor("sd_xl_base_1.0.safetensors"),
-	}); err != nil {
-		t.Fatalf("txt2img() error: %v", err)
-	}
-
-	_, bodies := forgeLog.snapshot()
-	body := decodeJSONBody(t, bodies[0])
-
-	if body["sampler_name"] != "DPM++ 2M" {
-		t.Errorf("sampler_name = %v, want DPM++ 2M", body["sampler_name"])
-	}
-
-	if body["scheduler"] != "Automatic" {
-		t.Errorf("scheduler = %v, want Automatic", body["scheduler"])
-	}
-}
-
 func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 	novelaiLog := &requestLog{}
 
@@ -409,79 +212,6 @@ func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 	}
 }
 
-func TestImg2ImgNovelAIMapsStrengthAndNoise(t *testing.T) {
-	novelaiLog := &requestLog{}
-
-	h := &handlers{
-		log:      zapNop(),
-		novelai:  newNovelAIBackend(t, novelaiLog),
-		resolver: newResolver(t),
-	}
-
-	in := img2imgInput{
-		generationInput:   generationInputFor("nai-diffusion-5-full"),
-		InitImageURL:      newInitImageURL(t),
-		DenoisingStrength: 0.6,
-		Noise:             0.1,
-	}
-	in.ScheduleType = "Automatic"
-	in.EnableHR = true
-
-	if _, _, err := h.img2img(context.Background(), nil, in); err != nil {
-		t.Fatalf("img2img() error: %v", err)
-	}
-
-	_, bodies := novelaiLog.snapshot()
-	body := decodeJSONBody(t, bodies[0])
-
-	if body["action"] != "img2img" {
-		t.Errorf("action = %v, want img2img", body["action"])
-	}
-
-	params := paramsOf(t, body)
-
-	if got := numberField(t, params, "strength"); got != 0.6 {
-		t.Errorf("strength = %v, want 0.6", got)
-	}
-
-	if got := numberField(t, params, "noise"); got != 0.1 {
-		t.Errorf("noise = %v, want 0.1", got)
-	}
-
-	if params["image"] != base64.StdEncoding.EncodeToString([]byte("\x89PNG\r\n\x1a\n")) {
-		t.Errorf("image = %v, want the raw base64 init image", params["image"])
-	}
-
-	for _, key := range []string{"scheduler", "enable_hr"} {
-		if _, ok := params[key]; ok {
-			t.Errorf("%s is present in the NovelAI payload, want it dropped", key)
-		}
-	}
-}
-
-func TestImg2ImgForgeIgnoresNoise(t *testing.T) {
-	forgeLog := &requestLog{}
-
-	h := &handlers{
-		log:      zapNop(),
-		forge:    newForgeBackend(t, forgeLog),
-		resolver: newResolver(t),
-	}
-
-	if _, _, err := h.img2img(context.Background(), nil, img2imgInput{
-		generationInput: generationInputFor("sd_xl_base_1.0.safetensors"),
-		InitImageURL:    newInitImageURL(t),
-		Noise:           0.1,
-	}); err != nil {
-		t.Fatalf("img2img() error: %v", err)
-	}
-
-	_, bodies := forgeLog.snapshot()
-	if body := decodeJSONBody(t, bodies[0]); body["noise"] != nil {
-		t.Errorf("noise = %v, want it dropped", body["noise"])
-	}
-}
-
 func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 	initImage := []byte("\x89PNG\r\n\x1a\n")
 	initBase64 := base64.StdEncoding.EncodeToString(initImage)
@@ -490,9 +220,10 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 	log, logs := observedLogger()
 
 	h := &handlers{
-		log:      log,
-		novelai:  newNovelAIBackend(t, novelaiLog),
-		resolver: newResolver(t),
+		log:       log,
+		gen:       imagegen.New(nil, newNovelAIBackend(t, novelaiLog)),
+		publisher: publish.New(nil, nil, zapNop()),
+		resolver:  newResolver(t),
 	}
 
 	in := img2imgInput{
@@ -505,13 +236,11 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 		t.Fatalf("img2img() error: %v", err)
 	}
 
-	failingLog := &requestLog{}
 	failing := &handlers{
-		log:      log,
-		novelai:  newNovelAIBackend(t, failingLog),
-		resolver: newResolver(t),
+		log:       log,
+		gen:       imagegen.New(nil, novelai.New("http://127.0.0.1:1", "sk-test", false)),
+		publisher: publish.New(nil, nil, zapNop()),
 	}
-	failing.novelai = novelai.New("http://127.0.0.1:1", "sk-test", false)
 
 	if _, _, err := failing.txt2img(context.Background(), nil, txt2imgInput{
 		generationInput: generationInputFor("nai-diffusion-5-full"),

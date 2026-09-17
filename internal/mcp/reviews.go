@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/present"
 	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
@@ -118,11 +119,11 @@ func (h *handlers) getReviews(
 		return nil, getReviewsOutput{}, fmt.Errorf("get_reviews: %w", err)
 	}
 
-	out := getReviewsOutput{Count: len(reviews), Average: averageRating(reviews)}
+	out := getReviewsOutput{Count: len(reviews), Average: present.ReviewAverage(reviews)}
 
 	h.log.Info("reviews listed", zap.Int("count", out.Count), zap.Float64("average", out.Average))
 
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: reviewsMarkdown(reviews)}}}, out, nil
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: present.Reviews(reviews)}}}, out, nil
 }
 
 func (h *handlers) deleteReview(

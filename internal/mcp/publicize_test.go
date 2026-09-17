@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/shortener"
@@ -96,9 +97,9 @@ func TestPublicizeUploadsWithMediaType(t *testing.T) {
 	imageServer := newPublicizeImageServer(t, publicizeJPEG)
 
 	h := &handlers{
-		log:      zapNop(),
-		resolver: newPublicizeResolver(t),
-		uploader: newPublicizeUploader(t, captured),
+		log:       zapNop(),
+		resolver:  newPublicizeResolver(t),
+		publisher: publish.New(newPublicizeUploader(t, captured), nil, zapNop()),
 	}
 
 	result, out, err := h.publicize(context.Background(), nil, publicizeInput{ImageURL: imageServer.URL + "/x.jpg"})
@@ -138,9 +139,9 @@ func TestPublicizePNG(t *testing.T) {
 	imageServer := newPublicizeImageServer(t, publicizePNG)
 
 	h := &handlers{
-		log:      zapNop(),
-		resolver: newPublicizeResolver(t),
-		uploader: newPublicizeUploader(t, captured),
+		log:       zapNop(),
+		resolver:  newPublicizeResolver(t),
+		publisher: publish.New(newPublicizeUploader(t, captured), nil, zapNop()),
 	}
 
 	if _, _, err := h.publicize(context.Background(), nil, publicizeInput{ImageURL: imageServer.URL + "/x.png"}); err != nil {
@@ -158,10 +159,13 @@ func TestPublicizeShortensURL(t *testing.T) {
 	imageServer := newPublicizeImageServer(t, publicizePNG)
 
 	h := &handlers{
-		log:       zapNop(),
-		resolver:  newPublicizeResolver(t),
-		uploader:  newPublicizeUploader(t, captured),
-		shortener: newPublicizeShortener(t, http.StatusOK, `{"success":true,"shorturl":"https://short.example/abc"}`),
+		log:      zapNop(),
+		resolver: newPublicizeResolver(t),
+		publisher: publish.New(
+			newPublicizeUploader(t, captured),
+			newPublicizeShortener(t, http.StatusOK, `{"success":true,"shorturl":"https://short.example/abc"}`),
+			zapNop(),
+		),
 	}
 
 	_, out, err := h.publicize(context.Background(), nil, publicizeInput{ImageURL: imageServer.URL + "/x.png"})
@@ -179,10 +183,13 @@ func TestPublicizeShortenerFailureFallsBack(t *testing.T) {
 	imageServer := newPublicizeImageServer(t, publicizePNG)
 
 	h := &handlers{
-		log:       zapNop(),
-		resolver:  newPublicizeResolver(t),
-		uploader:  newPublicizeUploader(t, captured),
-		shortener: newPublicizeShortener(t, http.StatusInternalServerError, "boom"),
+		log:      zapNop(),
+		resolver: newPublicizeResolver(t),
+		publisher: publish.New(
+			newPublicizeUploader(t, captured),
+			newPublicizeShortener(t, http.StatusInternalServerError, "boom"),
+			zapNop(),
+		),
 	}
 
 	_, out, err := h.publicize(context.Background(), nil, publicizeInput{ImageURL: imageServer.URL + "/x.png"})
@@ -196,7 +203,7 @@ func TestPublicizeShortenerFailureFallsBack(t *testing.T) {
 }
 
 func TestPublicizeWithoutUploader(t *testing.T) {
-	h := &handlers{log: zapNop(), resolver: newPublicizeResolver(t)}
+	h := &handlers{log: zapNop(), resolver: newPublicizeResolver(t), publisher: publish.New(nil, nil, zapNop())}
 
 	_, _, err := h.publicize(context.Background(), nil, publicizeInput{ImageURL: "https://example.com/x.png"})
 	if err == nil || !strings.Contains(err.Error(), "S3 upload is not configured") {
@@ -208,9 +215,9 @@ func TestPublicizeResolveError(t *testing.T) {
 	captured := &[]uploadCapture{}
 
 	h := &handlers{
-		log:      zapNop(),
-		resolver: newPublicizeResolver(t),
-		uploader: newPublicizeUploader(t, captured),
+		log:       zapNop(),
+		resolver:  newPublicizeResolver(t),
+		publisher: publish.New(newPublicizeUploader(t, captured), nil, zapNop()),
 	}
 
 	_, _, err := h.publicize(context.Background(), nil, publicizeInput{ImageURL: "%%%not-an-image%%%"})

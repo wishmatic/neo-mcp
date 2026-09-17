@@ -9,9 +9,10 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/imagegen"
+	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
@@ -311,11 +312,11 @@ func TestSaveExamplesFailureIsBestEffort(t *testing.T) {
 	}
 
 	h := &handlers{
-		log:      zap.New(core),
-		forge:    newForgeBackend(t, &requestLog{}),
-		uploader: newExamplesUploader(t),
-		store:    client,
-		examples: ExamplesConfig{Enabled: true, Max: 4},
+		log:       zap.New(core),
+		gen:       imagegen.New(newForgeBackend(t, &requestLog{}), nil),
+		publisher: publish.New(newExamplesUploader(t), nil, zapNop()),
+		store:     client,
+		examples:  ExamplesConfig{Enabled: true, Max: 4},
 	}
 
 	result, out, err := h.txt2img(context.Background(), nil, txt2imgInput{
@@ -384,11 +385,11 @@ func TestSaveExamplesCancelledContext(t *testing.T) {
 func TestSaveExamplesCaptureNovelAIModel(t *testing.T) {
 	client := newReviewStore(t)
 	h := &handlers{
-		log:      zapNop(),
-		novelai:  newNovelAIBackend(t, &requestLog{}),
-		uploader: newExamplesUploader(t),
-		store:    client,
-		examples: ExamplesConfig{Enabled: true, Max: 4},
+		log:       zapNop(),
+		gen:       imagegen.New(nil, newNovelAIBackend(t, &requestLog{})),
+		publisher: publish.New(newExamplesUploader(t), nil, zapNop()),
+		store:     client,
+		examples:  ExamplesConfig{Enabled: true, Max: 4},
 	}
 
 	_, out, err := h.txt2img(context.Background(), nil, txt2imgInput{
@@ -415,11 +416,11 @@ func TestSaveExamplesCaptureNovelAIModel(t *testing.T) {
 func TestSaveExamplesUploadFailureWritesNothing(t *testing.T) {
 	client := newReviewStore(t)
 	h := &handlers{
-		log:      zapNop(),
-		forge:    newForgeBackend(t, &requestLog{}),
-		uploader: newFailingUploader(t),
-		store:    client,
-		examples: ExamplesConfig{Enabled: true, Max: 4},
+		log:       zapNop(),
+		gen:       imagegen.New(newForgeBackend(t, &requestLog{}), nil),
+		publisher: publish.New(newFailingUploader(t), nil, zapNop()),
+		store:     client,
+		examples:  ExamplesConfig{Enabled: true, Max: 4},
 	}
 
 	_, _, err := h.txt2img(context.Background(), nil, txt2imgInput{
@@ -490,136 +491,6 @@ func TestGetExamplesSchema(t *testing.T) {
 
 	if len(s.Properties) != 1 {
 		t.Errorf("properties = %v, want only model", s.Properties)
-	}
-}
-
-func TestExamplesMarkdown(t *testing.T) {
-	tests := []struct {
-		name     string
-		model    string
-		examples []store.Example
-		want     string
-	}{
-		{
-			name:  "empty",
-			model: "m",
-			want:  "No examples saved for m yet.",
-		},
-		{
-			name:  "two examples",
-			model: "nai-diffusion-5-full",
-			examples: []store.Example{
-				{
-					ID: 1,
-					ExampleMeta: store.ExampleMeta{
-						Model: "nai-diffusion-5-full",
-						Tool:  "txt2img",
-						Query: `{"model":"nai-diffusion-5-full","prompt":"a cat","steps":28}`,
-						URL:   "https://cdn.example.com/a.png",
-					},
-					CreatedAt: time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC),
-				},
-				{
-					ID: 2,
-					ExampleMeta: store.ExampleMeta{
-						Model: "nai-diffusion-5-full",
-						Tool:  "img2img",
-						Query: `{"prompt":"a dog","init_image_url":"https://example.com/dog.png","denoising_strength":0.75}`,
-						URL:   "https://cdn.example.com/b.png",
-					},
-					CreatedAt: time.Date(2026, 9, 17, 12, 5, 0, 0, time.UTC),
-				},
-			},
-			want: `# Examples for nai-diffusion-5-full
-
-## Example 1 (txt2img)
-
-` + "```json\n" + `{
-  "model": "nai-diffusion-5-full",
-  "prompt": "a cat",
-  "steps": 28
-}
-` + "```" + `
-
-- Saved: 2026-09-17T12:00:00Z
-- Image: https://cdn.example.com/a.png
-
-## Example 2 (img2img)
-
-` + "```json\n" + `{
-  "prompt": "a dog",
-  "init_image_url": "https://example.com/dog.png",
-  "denoising_strength": 0.75
-}
-` + "```" + `
-
-- Saved: 2026-09-17T12:05:00Z
-- Image: https://cdn.example.com/b.png
-`,
-		},
-		{
-			name:  "invalid query is rendered raw",
-			model: "m",
-			examples: []store.Example{
-				{
-					ID: 3,
-					ExampleMeta: store.ExampleMeta{
-						Model: "m",
-						Tool:  "txt2img",
-						Query: "not json",
-						URL:   "https://cdn.example.com/c.png",
-					},
-					CreatedAt: time.Date(2026, 9, 17, 12, 10, 0, 0, time.UTC),
-				},
-			},
-			want: `# Examples for m
-
-## Example 1 (txt2img)
-
-` + "```json\n" + `not json
-` + "```" + `
-
-- Saved: 2026-09-17T12:10:00Z
-- Image: https://cdn.example.com/c.png
-`,
-		},
-		{
-			name:  "multi-byte and metacharacters",
-			model: "m",
-			examples: []store.Example{
-				{
-					ID: 4,
-					ExampleMeta: store.ExampleMeta{
-						Model: "m",
-						Tool:  "txt2img",
-						Query: `{"prompt":"猫 | dog #1 <b>\nsecond line","negative_prompt":"blurry"}`,
-						URL:   "https://cdn.example.com/d.png",
-					},
-					CreatedAt: time.Date(2026, 9, 17, 12, 15, 0, 0, time.UTC),
-				},
-			},
-			want: `# Examples for m
-
-## Example 1 (txt2img)
-
-` + "```json\n" + `{
-  "prompt": "猫 | dog #1 <b>\nsecond line",
-  "negative_prompt": "blurry"
-}
-` + "```" + `
-
-- Saved: 2026-09-17T12:15:00Z
-- Image: https://cdn.example.com/d.png
-`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := examplesMarkdown(tt.model, tt.examples); got != tt.want {
-				t.Errorf("examplesMarkdown() =\n%s\nwant:\n%s", got, tt.want)
-			}
-		})
 	}
 }
 

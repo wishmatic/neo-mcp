@@ -37,7 +37,7 @@ func (h *handlers) publicize(
 		zap.String("image_url", in.ImageURL),
 	)
 
-	if h.uploader == nil {
+	if !h.publisher.Enabled() {
 		return nil, publicizeOutput{}, fmt.Errorf("publicize: S3 upload is not configured")
 	}
 
@@ -56,14 +56,10 @@ func (h *handlers) publicize(
 		zap.Int("image_bytes", len(image.Data)),
 	)
 
-	url, err := h.uploader.UploadFile(ctx, image.Data, image.MediaType, true)
+	url, err := h.publisher.File(ctx, "publicize", image.Data, image.MediaType, true)
 	if err != nil {
-		h.log.Error("publicize upload to s3 failed", zap.Error(err))
-
 		return nil, publicizeOutput{}, fmt.Errorf("publicize: %w", err)
 	}
-
-	url = shortenURL(ctx, h.log, "publicize", url, h.shortener)
 
 	h.log.Info("publicize finished", zap.String("url", url))
 

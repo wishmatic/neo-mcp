@@ -11,8 +11,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const defaultSquarePadding = 32
-
 type bgkillInput struct {
 	ModelName string `json:"model_name" jsonschema:"BiRefNet model to load"`
 
@@ -85,7 +83,7 @@ func (h *handlers) bgkill(
 		return nil, generationOutput{}, fmt.Errorf("bgkill: %w", err)
 	}
 
-	if opts, ok := bgkillCropOptions(in); ok {
+	if opts, ok := crop.OptionsFor(in.IsCrop, in.IsSquare, in.Padding); ok {
 		out, err = crop.ToContent(out, opts)
 		if err != nil {
 			h.log.Error("bgkill failed to crop foreground", zap.Error(err))
@@ -94,23 +92,7 @@ func (h *handlers) bgkill(
 		}
 	}
 
-	return publishImages(ctx, h.log, "bgkill", [][]byte{out}, in.Public, h.uploader, h.shortener)
-}
-
-func bgkillCropOptions(in bgkillInput) (crop.Options, bool) {
-	if !in.IsCrop && !in.IsSquare {
-		return crop.Options{}, false
-	}
-
-	var padding int
-	switch {
-	case in.Padding != nil:
-		padding = *in.Padding
-	case in.IsSquare:
-		padding = defaultSquarePadding
-	}
-
-	return crop.Options{IsSquare: in.IsSquare, Padding: padding}, true
+	return h.publishImages(ctx, "bgkill", [][]byte{out}, in.Public)
 }
 
 func bgkillSchema() *jsonschema.Schema {

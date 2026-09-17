@@ -7,11 +7,6 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 )
 
-const (
-	defaultSampler   = "DPM++ 2M"
-	defaultScheduler = "Automatic"
-)
-
 type generationInput struct {
 	Model       string `json:"model" jsonschema:"checkpoint (model) filename to load, or a NovelAI model id starting with nai-diffusion- for the NovelAI backend; the id is passed through as-is"`
 	ForgePreset string `json:"forge_preset,omitempty" jsonschema:"Forge UI preset; ignored by NovelAI"`

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/present"
 	"go.uber.org/zap"
 )
 
@@ -47,18 +48,7 @@ func (h *handlers) anlas(
 
 	h.log.Info("anlas balance fetched", zap.Int("total", out.Total))
 
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: anlasSummary(out)}}}, out, nil
-}
-
-func anlasSummary(out anlasOutput) string {
-	summary := fmt.Sprintf(
-		"Anlas: %d (subscription %d, purchased %d)",
-		out.Total, out.Subscription, out.Purchased,
-	)
-
-	if out.UsagePercent != nil {
-		summary += fmt.Sprintf("; V5 usage %d%%", *out.UsagePercent)
-	}
-
-	return summary
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: present.Anlas(
+		out.Total, out.Subscription, out.Purchased, out.UsagePercent,
+	)}}}, out, nil
 }

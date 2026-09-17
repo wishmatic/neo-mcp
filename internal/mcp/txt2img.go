@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"go.uber.org/zap"
 )
 
@@ -29,7 +30,7 @@ func (h *handlers) txt2img(
 	_ *mcp.CallToolRequest,
 	in txt2imgInput,
 ) (*mcp.CallToolResult, generationOutput, error) {
-	provider := providerOf(in.Model)
+	provider := imagegen.ProviderOf(in.Model)
 
 	h.log.Debug("tool called",
 		zap.String("tool", "txt2img"),
@@ -61,14 +62,14 @@ func (h *handlers) txt2img(
 		zap.Int("height", in.Height),
 	)
 
-	images, err := h.generateTxt2Img(ctx, in)
+	images, err := h.gen.Txt2Img(ctx, imagegenTxt2ImgRequest(in))
 	if err != nil {
 		return nil, generationOutput{}, h.generationFailure(ctx, "txt2img", err)
 	}
 
 	h.log.Info("txt2img generation finished", zap.Int("images", len(images)))
 
-	result, out, err := publishImages(ctx, h.log, "txt2img", images, in.Public, h.uploader, h.shortener)
+	result, out, err := h.publishImages(ctx, "txt2img", images, in.Public)
 	if err != nil {
 		return nil, generationOutput{}, err
 	}

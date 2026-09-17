@@ -366,6 +366,128 @@ func TestRandomExamplesValidation(t *testing.T) {
 	}
 }
 
+func TestSaveExamplesWritesEachURL(t *testing.T) {
+	client := newTestClient(t)
+	ctx := context.Background()
+
+	meta := exampleMeta("m", "ignored")
+
+	urls := []string{"https://cdn.example.com/a.png", "https://cdn.example.com/b.png"}
+	if err := client.SaveExamples(ctx, meta, urls, 16); err != nil {
+		t.Fatalf("SaveExamples() error: %v", err)
+	}
+
+	examples, err := client.RandomExamples(ctx, "m", 10)
+	if err != nil {
+		t.Fatalf("RandomExamples() error: %v", err)
+	}
+
+	if len(examples) != 2 {
+		t.Fatalf("examples = %d, want 2", len(examples))
+	}
+
+	stored := make(map[string]bool, len(examples))
+	for _, example := range examples {
+		if example.Model != "m" || example.Tool != "txt2img" || example.Query != meta.Query {
+			t.Errorf("example = %+v, want the shared metadata", example)
+		}
+
+		stored[example.URL] = true
+	}
+
+	for _, url := range urls {
+		if !stored[url] {
+			t.Errorf("url %q was not saved", url)
+		}
+	}
+}
+
+func TestSaveExamplesEmptyURLsIsNoOp(t *testing.T) {
+	client := newTestClient(t)
+	ctx := context.Background()
+
+	if err := client.SaveExamples(ctx, exampleMeta("m", ""), nil, 4); err != nil {
+		t.Fatalf("SaveExamples() error: %v", err)
+	}
+
+	examples, err := client.RandomExamples(ctx, "m", 10)
+	if err != nil {
+		t.Fatalf("RandomExamples() error: %v", err)
+	}
+
+	if len(examples) != 0 {
+		t.Fatalf("examples = %d, want none", len(examples))
+	}
+}
+
+func TestSaveExamplesRetention(t *testing.T) {
+	client := newTestClient(t)
+	ctx := context.Background()
+
+	urls := []string{
+		"https://cdn.example.com/1.png",
+		"https://cdn.example.com/2.png",
+		"https://cdn.example.com/3.png",
+	}
+
+	if err := client.SaveExamples(ctx, exampleMeta("m", ""), urls, 2); err != nil {
+		t.Fatalf("SaveExamples() error: %v", err)
+	}
+
+	examples, err := client.RandomExamples(ctx, "m", 10)
+	if err != nil {
+		t.Fatalf("RandomExamples() error: %v", err)
+	}
+
+	if len(examples) != 2 {
+		t.Fatalf("examples = %d, want the newest 2", len(examples))
+	}
+
+	for _, example := range examples {
+		if example.URL == urls[0] {
+			t.Error("the oldest example was kept")
+		}
+	}
+}
+
+func TestSaveExamplesInvalidURLStillWritesValid(t *testing.T) {
+	client := newTestClient(t)
+	ctx := context.Background()
+
+	urls := []string{"", "https://cdn.example.com/a.png"}
+	if err := client.SaveExamples(ctx, exampleMeta("m", ""), urls, 4); err == nil {
+		t.Fatal("SaveExamples() error = nil, want the invalid URL error")
+	}
+
+	examples, err := client.RandomExamples(ctx, "m", 10)
+	if err != nil {
+		t.Fatalf("RandomExamples() error: %v", err)
+	}
+
+	if len(examples) != 1 || examples[0].URL != "https://cdn.example.com/a.png" {
+		t.Fatalf("examples = %+v, want the valid URL written", examples)
+	}
+}
+
+func TestSaveExamplesInvalidRetention(t *testing.T) {
+	client := newTestClient(t)
+	ctx := context.Background()
+
+	err := client.SaveExamples(ctx, exampleMeta("m", ""), []string{"https://cdn.example.com/a.png"}, 0)
+	if err == nil {
+		t.Fatal("SaveExamples() error = nil, want an error")
+	}
+
+	examples, err := client.RandomExamples(ctx, "m", 10)
+	if err != nil {
+		t.Fatalf("RandomExamples() error: %v", err)
+	}
+
+	if len(examples) != 0 {
+		t.Fatalf("examples = %d, want nothing written", len(examples))
+	}
+}
+
 func TestSaveExampleConcurrent(t *testing.T) {
 	client := newTestClient(t)
 	ctx := context.Background()

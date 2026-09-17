@@ -89,6 +89,25 @@ func (c *Client) SaveExample(ctx context.Context, meta ExampleMeta, retainPerMod
 	return id, nil
 }
 
+func (c *Client) SaveExamples(ctx context.Context, meta ExampleMeta, urls []string, retainPerModel int) error {
+	if retainPerModel < 1 {
+		return errors.New("store: example retention must be at least 1")
+	}
+
+	var errs []error
+
+	for _, url := range urls {
+		single := meta
+		single.URL = url
+
+		if _, err := c.SaveExample(ctx, single, retainPerModel); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
 func (c *Client) RandomExamples(ctx context.Context, model string, count int) ([]Example, error) {
 	model = strings.TrimSpace(model)
 

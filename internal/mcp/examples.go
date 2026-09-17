@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/present"
 	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
@@ -54,7 +55,7 @@ func (h *handlers) getExamples(
 
 	h.log.Info("examples fetched", zap.String("model", out.Model), zap.Int("count", out.Count))
 
-	text := examplesMarkdown(in.Model, examples)
+	text := present.Examples(in.Model, examples)
 
 	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}, out, nil
 }
@@ -76,16 +77,14 @@ func (h *handlers) saveExamples(ctx context.Context, tool, model string, query a
 		return
 	}
 
-	for _, url := range urls {
-		meta := store.ExampleMeta{Model: model, Tool: tool, Query: string(raw), URL: url}
+	meta := store.ExampleMeta{Model: model, Tool: tool, Query: string(raw)}
 
-		if _, err := h.store.SaveExample(ctx, meta, h.examples.Max); err != nil {
-			h.log.Warn("examples: saving failed",
-				zap.String("tool", tool),
-				zap.String("model", model),
-				zap.Error(err),
-			)
-		}
+	if err := h.store.SaveExamples(ctx, meta, urls, h.examples.Max); err != nil {
+		h.log.Warn("examples: saving failed",
+			zap.String("tool", tool),
+			zap.String("model", model),
+			zap.Error(err),
+		)
 	}
 }
 

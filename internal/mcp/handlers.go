@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
+	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
-	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
-	"github.com/wishmatic/neo-mcp/internal/shortener"
 	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
@@ -18,8 +18,8 @@ type handlers struct {
 	log       *zap.Logger
 	forge     *sdwebui.Client
 	novelai   *novelai.Client
-	uploader  *s3upload.Client
-	shortener *shortener.Client
+	gen       *imagegen.Generator
+	publisher *publish.Publisher
 	resolver  *resolve.Resolver
 	openai    *openai.Client
 	store     *store.Client

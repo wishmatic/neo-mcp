@@ -4,7 +4,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/wishmatic/neo-mcp/internal/crop"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 )
 
@@ -52,67 +51,5 @@ func TestBgkillCropSchema(t *testing.T) {
 
 	if padding.Default != nil {
 		t.Errorf("bgkill: padding default = %s, want none", padding.Default)
-	}
-}
-
-func TestBgkillCropOptions(t *testing.T) {
-	var (
-		five = 5
-		zero = 0
-	)
-
-	tests := []struct {
-		name string
-		in   bgkillInput
-		want crop.Options
-		ok   bool
-	}{
-		{
-			name: "crop disabled",
-			in:   bgkillInput{},
-		},
-		{
-			name: "crop only",
-			in:   bgkillInput{IsCrop: true},
-			want: crop.Options{},
-			ok:   true,
-		},
-		{
-			name: "square implies crop and defaults the padding",
-			in:   bgkillInput{IsSquare: true},
-			want: crop.Options{IsSquare: true, Padding: defaultSquarePadding},
-			ok:   true,
-		},
-		{
-			name: "square with explicit padding",
-			in:   bgkillInput{IsCrop: true, IsSquare: true, Padding: &five},
-			want: crop.Options{IsSquare: true, Padding: 5},
-			ok:   true,
-		},
-		{
-			name: "crop with explicit padding",
-			in:   bgkillInput{IsCrop: true, Padding: &five},
-			want: crop.Options{Padding: 5},
-			ok:   true,
-		},
-		{
-			name: "square with zero padding",
-			in:   bgkillInput{IsCrop: true, IsSquare: true, Padding: &zero},
-			want: crop.Options{IsSquare: true, Padding: 0},
-			ok:   true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, ok := bgkillCropOptions(tt.in)
-			if ok != tt.ok {
-				t.Fatalf("bgkillCropOptions() ok = %v, want %v", ok, tt.ok)
-			}
-
-			if got != tt.want {
-				t.Errorf("bgkillCropOptions() = %+v, want %+v", got, tt.want)
-			}
-		})
 	}
 }
