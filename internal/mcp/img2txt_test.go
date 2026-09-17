@@ -53,7 +53,7 @@ func newImg2TxtVisionServer(t *testing.T, response string) (*httptest.Server, *i
 func newImg2TxtClient(t *testing.T, baseURL, model string) *openai.Client {
 	t.Helper()
 
-	client, err := openai.New(baseURL, "", model)
+	client, err := openai.New(baseURL, "", model, "")
 	if err != nil {
 		t.Fatalf("openai.New() error: %v", err)
 	}
@@ -265,6 +265,46 @@ func TestRunImg2TxtResolvesAndForwards(t *testing.T) {
 
 	if parts[1].ImageURL.Detail != "high" {
 		t.Errorf("detail = %q, want high", parts[1].ImageURL.Detail)
+	}
+}
+
+func TestRunImg2TxtUsesDefaultSystemPrompt(t *testing.T) {
+	imageServer := newImg2TxtImageServer(t)
+	visionServer, captured := newImg2TxtVisionServer(t, `{"choices":[{"message":{"content":"ok"}}]}`)
+
+	client, err := openai.New(visionServer.URL, "", "m", "be terse")
+	if err != nil {
+		t.Fatalf("openai.New() error: %v", err)
+	}
+
+	if _, err := img2txtHandlers(t, client).runImg2Txt(context.Background(), img2txtInput{
+		Image:  imageServer.URL + "/x.png",
+		Prompt: "hi",
+	}); err != nil {
+		t.Fatalf("runImg2Txt() error: %v", err)
+	}
+
+	var payload struct {
+		Messages []struct {
+			Role    string          `json:"role"`
+			Content json.RawMessage `json:"content"`
+		} `json:"messages"`
+	}
+	if err := json.Unmarshal(captured.body, &payload); err != nil {
+		t.Fatalf("decode vision payload: %v", err)
+	}
+
+	if len(payload.Messages) != 2 || payload.Messages[0].Role != "system" {
+		t.Fatalf("messages = %+v, want a leading system message", payload.Messages)
+	}
+
+	var systemText string
+	if err := json.Unmarshal(payload.Messages[0].Content, &systemText); err != nil {
+		t.Fatalf("decode system content: %v", err)
+	}
+
+	if systemText != "be terse" {
+		t.Errorf("system content = %q, want be terse", systemText)
 	}
 }
 

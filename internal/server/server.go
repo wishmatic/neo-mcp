@@ -102,6 +102,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 			cfg.Img2TxtBaseURL,
 			cfg.Img2TxtAPIKey,
 			cfg.Img2TxtModel,
+			cfg.Img2TxtSystemPrompt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("build img2txt client: %w", err)

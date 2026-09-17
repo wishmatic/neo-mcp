@@ -72,6 +72,10 @@ func (c *Client) Describe(ctx context.Context, req DescribeRequest) (Result, err
 		return Result{}, fmt.Errorf("openai: no model configured")
 	}
 
+	if strings.TrimSpace(req.SystemPrompt) == "" {
+		req.SystemPrompt = c.defaultSystemPrompt
+	}
+
 	if len(req.ImageData) == 0 {
 		return Result{}, fmt.Errorf("openai: empty image data")
 	}

@@ -87,6 +87,7 @@ func TestLoadImg2TxtValues(t *testing.T) {
 	t.Setenv("IMG2TXT_BASE_URL", "https://api.example.com/v1")
 	t.Setenv("IMG2TXT_API_KEY", "secret")
 	t.Setenv("IMG2TXT_MODEL", "vision")
+	t.Setenv("IMG2TXT_SYSTEM_PROMPT", "be terse")
 
 	cfg, err := Load()
 	if err != nil {
@@ -103,5 +104,9 @@ func TestLoadImg2TxtValues(t *testing.T) {
 
 	if cfg.Img2TxtModel != "vision" {
 		t.Errorf("Img2TxtModel = %q", cfg.Img2TxtModel)
+	}
+
+	if cfg.Img2TxtSystemPrompt != "be terse" {
+		t.Errorf("Img2TxtSystemPrompt = %q", cfg.Img2TxtSystemPrompt)
 	}
 }

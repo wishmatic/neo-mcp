@@ -62,7 +62,7 @@ func decodePayload(t *testing.T, body []byte) decodedPayload {
 func TestDescribeSendsExpectedRequest(t *testing.T) {
 	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"a cat"}}]}`)
 
-	c, err := New(server.URL+"/", "secret", "default-model")
+	c, err := New(server.URL+"/", "secret", "default-model", "")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestDescribeSendsExpectedRequest(t *testing.T) {
 func TestDescribeOmitsAuthAndSystemWhenUnset(t *testing.T) {
 	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
 
-	c, err := New(server.URL, "", "")
+	c, err := New(server.URL, "", "", "")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestDescribeOmitsAuthAndSystemWhenUnset(t *testing.T) {
 func TestDescribeModelOverride(t *testing.T) {
 	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
 
-	c, err := New(server.URL, "", "default")
+	c, err := New(server.URL, "", "default", "")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -217,8 +217,58 @@ func TestDescribeModelOverride(t *testing.T) {
 	}
 }
 
+func TestDescribeDefaultSystemPrompt(t *testing.T) {
+	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
+
+	c, err := New(server.URL, "", "m", "be a botanist")
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	if _, err := c.Describe(context.Background(), DescribeRequest{
+		ImageData: []byte("x"),
+		MediaType: "image/png",
+		Prompt:    "hi",
+	}); err != nil {
+		t.Fatalf("Describe() error: %v", err)
+	}
+
+	if got := systemMessage(t, captured.body); got != "be a botanist" {
+		t.Errorf("system content = %q, want the configured default", got)
+	}
+
+	if _, err := c.Describe(context.Background(), DescribeRequest{
+		ImageData:    []byte("x"),
+		MediaType:    "image/png",
+		Prompt:       "hi",
+		SystemPrompt: "be terse",
+	}); err != nil {
+		t.Fatalf("Describe() error: %v", err)
+	}
+
+	if got := systemMessage(t, captured.body); got != "be terse" {
+		t.Errorf("system content = %q, want the per-call override", got)
+	}
+}
+
+func systemMessage(t *testing.T, body []byte) string {
+	t.Helper()
+
+	payload := decodePayload(t, body)
+	if len(payload.Messages) != 2 || payload.Messages[0].Role != "system" {
+		t.Fatalf("messages = %+v, want a leading system message", payload.Messages)
+	}
+
+	var text string
+	if err := json.Unmarshal(payload.Messages[0].Content, &text); err != nil {
+		t.Fatalf("decode system content: %v", err)
+	}
+
+	return text
+}
+
 func TestDescribeNoModel(t *testing.T) {
-	c, err := New("http://example.com", "", "")
+	c, err := New("http://example.com", "", "", "")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -233,7 +283,7 @@ func TestDescribeNoModel(t *testing.T) {
 }
 
 func TestDescribeEmptyImage(t *testing.T) {
-	c, err := New("http://example.com", "", "m")
+	c, err := New("http://example.com", "", "m", "")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -247,7 +297,7 @@ func TestDescribeArrayContent(t *testing.T) {
 	response := `{"choices":[{"message":{"content":[{"type":"text","text":"hello "},{"type":"text","text":"world"}]}}]}`
 	server, _ := newCaptureServer(t, http.StatusOK, response)
 
-	c, err := New(server.URL, "", "m")
+	c, err := New(server.URL, "", "m", "")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -285,7 +335,7 @@ func TestDescribeErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server, _ := newCaptureServer(t, tt.status, tt.response)
 
-			c, err := New(server.URL, "", "m")
+			c, err := New(server.URL, "", "m", "")
 			if err != nil {
 				t.Fatalf("New() error: %v", err)
 			}
@@ -309,7 +359,7 @@ func TestDescribeErrors(t *testing.T) {
 func TestDescribeContextCancelled(t *testing.T) {
 	server, _ := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"x"}}]}`)
 
-	c, err := New(server.URL, "", "m")
+	c, err := New(server.URL, "", "m", "")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -334,7 +384,7 @@ func TestNewValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := New(tt.baseURL, "", "m"); err == nil {
+			if _, err := New(tt.baseURL, "", "m", ""); err == nil {
 				t.Fatal("New() expected error, got nil")
 			}
 		})
