@@ -31,7 +31,6 @@ func newTestUploader(t *testing.T, rt http.RoundTripper) *Client {
 		SecretKey:         "write-secret",
 		ReadonlyAccessKey: "read-key",
 		ReadonlySecretKey: "read-secret",
-		PresignExpiry:     defaultPresignExpiry,
 	}
 
 	httpClient := &http.Client{Transport: rt}

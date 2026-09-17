@@ -80,10 +80,10 @@ flowchart TD
 | `IMG2TXT_BASE_URL` | No | empty | OpenAI-compatible base URL; tool is enabled only when set |
 | `IMG2TXT_API_KEY` | No | empty | Sent as `Authorization: Bearer` only when non-empty |
 | `IMG2TXT_MODEL` | No | empty | Default model; may be overridden per call |
-| `IMG2TXT_TIMEOUT_SECONDS` | No | `180` | Per-call HTTP timeout for the vision endpoint |
 
 `IMG2TXT_BASE_URL` should include any prefix the endpoint needs (for example `https://api.openai.com/v1`); the client
-appends `/chat/completions`.
+appends `/chat/completions`. The vision request timeout is a package const (`openai.requestTimeout`, 3 minutes) rather
+than an env var.
 
 ## Implementation Units
 
@@ -159,7 +159,7 @@ API:
 ```go
 type Client struct { /* baseURL, apiKey, defaultModel, http */ }
 
-func New(baseURL, apiKey, defaultModel string, timeout time.Duration) (*Client, error)
+func New(baseURL, apiKey, defaultModel string) (*Client, error)
 
 type DescribeRequest struct {
     ImageData    []byte
@@ -183,8 +183,8 @@ func (c *Client) Describe(ctx context.Context, req DescribeRequest) (Result, err
 
 Behaviour:
 
-- `New` trims trailing `/` from `baseURL`, requires a non-empty http(s) `baseURL` and a positive timeout, and returns a
-  wrapped error otherwise.
+- `New` trims trailing `/` from `baseURL`, requires a non-empty http(s) `baseURL`, and returns a wrapped error otherwise.
+  The HTTP client timeout is the package-level `requestTimeout` const.
 - `Describe` resolves the model as request `Model`, else the client default, else an error.
 - It builds `data:{mediaType};base64,{data}` from the image bytes and posts to `{baseURL}/chat/completions`.
 - `Authorization: Bearer <apiKey>` is set only when the key is non-empty; `Content-Type` is always `application/json`.
@@ -198,7 +198,7 @@ Behaviour:
 Acceptance criteria:
 
 - AC-2.1: `New` normalises a trailing slash so the request path is exactly `{baseURL}/chat/completions`; an empty or
-  non-http(s) base URL and a non-positive timeout each return an error.
+  non-http(s) base URL returns an error.
 - AC-2.2: The request is a `POST` to `/chat/completions` with `Content-Type: application/json`; `Authorization:
   Bearer <key>` is present when the key is set and absent when it is empty.
 - AC-2.3: The `image_url.url` value is `data:{MediaType};base64,{base64data}` and the part also carries
@@ -227,12 +227,11 @@ Files:
 
 Acceptance criteria:
 
-- AC-3.1: `Config` gains `Img2TxtBaseURL`, `Img2TxtAPIKey`, `Img2TxtModel`, and `Img2TxtTimeoutSeconds` with the env
-  tags and defaults from the configuration table.
-- AC-3.2: A test asserts `IMG2TXT_TIMEOUT_SECONDS` defaults to `180` when unset and honours an override, following the
-  existing `S3_USE_PATH_STYLE` test style.
-- AC-3.3: `.env.example` lists all four vars under an `img2txt (optional)` heading with a one-line comment each and a
-  note that the base URL should include any prefix such as `/v1`.
+- AC-3.1: `Config` gains `Img2TxtBaseURL`, `Img2TxtAPIKey`, and `Img2TxtModel` with the env tags from the
+  configuration table.
+- AC-3.2: A test asserts the three values load from their env vars.
+- AC-3.3: `.env.example` lists the three vars under an `img2txt (optional)` heading, noting that `/chat/completions` is
+  appended to the base URL.
 
 ### Unit 4: `img2txt` MCP tool
 
@@ -303,8 +302,8 @@ Files:
 Acceptance criteria:
 
 - AC-5.1: When `IMG2TXT_BASE_URL` is empty, no client is built, `img2txt` is not registered, and startup succeeds.
-- AC-5.2: When `IMG2TXT_BASE_URL` is set, a client is built with the configured key, model, and timeout, and `img2txt`
-  is registered.
+- AC-5.2: When `IMG2TXT_BASE_URL` is set, a client is built with the configured key and model, and `img2txt` is
+  registered.
 - AC-5.3: An invalid base URL fails startup with a `build img2txt client: %w` error.
 - AC-5.4: `IMG2TXT_API_KEY` remaining empty is valid (for keyless local endpoints) and does not block startup.
 - AC-5.5: Enabling `img2txt` logs an info line with the base URL and default model; disabling it does not.

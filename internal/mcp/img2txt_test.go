@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/openai"
@@ -54,7 +53,7 @@ func newImg2TxtVisionServer(t *testing.T, response string) (*httptest.Server, *i
 func newImg2TxtClient(t *testing.T, baseURL, model string) *openai.Client {
 	t.Helper()
 
-	client, err := openai.New(baseURL, "", model, 5*time.Second)
+	client, err := openai.New(baseURL, "", model)
 	if err != nil {
 		t.Fatalf("openai.New() error: %v", err)
 	}

@@ -4,15 +4,12 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"go.uber.org/zap"
 )
-
-const defaultPresignExpiry = 7 * 24 * time.Hour
 
 type Config struct {
 	Endpoint          string
@@ -23,7 +20,6 @@ type Config struct {
 	SecretKey         string
 	ReadonlyAccessKey string
 	ReadonlySecretKey string
-	PresignExpiry     time.Duration
 	UsePathStyle      bool
 
 	// PublicBaseURL, when set, replaces presigned URLs with durable unsigned ones of the form PublicBaseURL/<key>.
@@ -66,10 +62,6 @@ func New(cfg Config, log *zap.Logger) (*Client, error) {
 		return nil, fmt.Errorf(
 			"s3upload: S3_READONLY_ACCESS_KEY and S3_READONLY_SECRET_KEY are required unless a public base URL is set",
 		)
-	}
-
-	if cfg.PresignExpiry <= 0 {
-		cfg.PresignExpiry = defaultPresignExpiry
 	}
 
 	if cfg.PublicEndpoint == "" {

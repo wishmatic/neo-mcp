@@ -14,6 +14,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const presignExpiry = 7 * 24 * time.Hour
+
 func (u *Client) UploadImage(ctx context.Context, data []byte) (string, error) {
 	key := u.objectKey()
 
@@ -67,7 +69,7 @@ func (u *Client) presignedURL(ctx context.Context, key string) (string, error) {
 	req, err := presigner.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(u.cfg.Bucket),
 		Key:    aws.String(key),
-	}, s3.WithPresignExpires(u.cfg.PresignExpiry))
+	}, s3.WithPresignExpires(presignExpiry))
 	if err != nil {
 		u.log.Error("s3 presign failed",
 			zap.String("bucket", u.cfg.Bucket),

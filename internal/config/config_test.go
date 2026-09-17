@@ -70,43 +70,6 @@ func TestLoadS3UsePathStyleOverride(t *testing.T) {
 	}
 }
 
-func TestLoadImg2TxtTimeoutDefault(t *testing.T) {
-	prev, had := os.LookupEnv("IMG2TXT_TIMEOUT_SECONDS")
-	os.Unsetenv("IMG2TXT_TIMEOUT_SECONDS")
-
-	defer func() {
-		if had {
-			os.Setenv("IMG2TXT_TIMEOUT_SECONDS", prev)
-
-			return
-		}
-
-		os.Unsetenv("IMG2TXT_TIMEOUT_SECONDS")
-	}()
-
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	if cfg.Img2TxtTimeoutSeconds != 180 {
-		t.Fatalf("Img2TxtTimeoutSeconds = %d, want 180 when unset", cfg.Img2TxtTimeoutSeconds)
-	}
-}
-
-func TestLoadImg2TxtTimeoutOverride(t *testing.T) {
-	t.Setenv("IMG2TXT_TIMEOUT_SECONDS", "30")
-
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	if cfg.Img2TxtTimeoutSeconds != 30 {
-		t.Fatalf("Img2TxtTimeoutSeconds = %d, want 30 when set", cfg.Img2TxtTimeoutSeconds)
-	}
-}
-
 func TestLoadImg2TxtValues(t *testing.T) {
 	t.Setenv("IMG2TXT_BASE_URL", "https://api.example.com/v1")
 	t.Setenv("IMG2TXT_API_KEY", "secret")

@@ -1,5 +1,22 @@
 # AGENTS.md
 
+## PLAN.md files
+
+Any "large" work needs a `_PLAN.md` prefixed file in `docs/plans`. "Large" is defined as anything that has more than
+two implementation units. An implementation unit is a self-contained piece of work that has clear review signals and
+is usually what would be implemented as one pull request. However, do not commit, create pull requests, or do any `git`
+write operations without explicit instructions.
+
+When making changes, you must always read the plans first. You may need to update them. Do not update `docs/plans/done`
+however, as these files are historical record and can be deleted at any time. You may read them when you believe them
+to be relevant. Use done plans as secondary reference for how to create new plans if this `AGENTS.md` file does not
+specify updated ways to do the same thing.
+
+Plan documents must have implementation units that are self-contained and could be reviewable by themselves and make
+sense to do so. Each must have verifiable, specific, and complete acceptance criteria, focusing on correctness. Make
+consideration of non-functional requirements such as security, performance, and maintainability, and look for ways to
+test everything for confidence. Some tests will need to be completed by the human; mark where this is the case.
+
 ## Output
 
 Do not give caveats unless they are actually caveats. Err on the side of not presenting them; only if they are

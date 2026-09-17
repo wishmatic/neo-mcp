@@ -22,6 +22,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const writeTimeout = 10 * time.Minute
+
 type Server struct {
 	cfg    config.Config
 	log    *zap.Logger
@@ -63,7 +65,6 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		SecretKey:         cfg.S3SecretKey,
 		ReadonlyAccessKey: cfg.S3ReadonlyAccessKey,
 		ReadonlySecretKey: cfg.S3ReadonlySecretKey,
-		PresignExpiry:     time.Duration(cfg.S3PresignExpiry) * time.Second,
 		UsePathStyle:      cfg.S3UsePathStyle,
 		PublicBaseURL:     cfg.GaragefrontURL,
 		KeyPrefix:         cfg.GaragefrontPrefix(),
@@ -100,7 +101,6 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 			cfg.Img2TxtBaseURL,
 			cfg.Img2TxtAPIKey,
 			cfg.Img2TxtModel,
-			time.Duration(cfg.Img2TxtTimeoutSeconds)*time.Second,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("build img2txt client: %w", err)
@@ -138,7 +138,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 			Handler:           router,
 			ReadHeaderTimeout: 10 * time.Second,
 			ReadTimeout:       30 * time.Second,
-			WriteTimeout:      time.Duration(cfg.WriteTimeoutSeconds) * time.Second,
+			WriteTimeout:      writeTimeout,
 			IdleTimeout:       60 * time.Second,
 		},
 	}, nil

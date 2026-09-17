@@ -9,10 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 )
-
-const testTimeout = 5 * time.Second
 
 type capturedRequest struct {
 	method string
@@ -65,7 +62,7 @@ func decodePayload(t *testing.T, body []byte) decodedPayload {
 func TestDescribeSendsExpectedRequest(t *testing.T) {
 	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"a cat"}}]}`)
 
-	c, err := New(server.URL+"/", "secret", "default-model", testTimeout)
+	c, err := New(server.URL+"/", "secret", "default-model")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -169,7 +166,7 @@ func TestDescribeSendsExpectedRequest(t *testing.T) {
 func TestDescribeOmitsAuthAndSystemWhenUnset(t *testing.T) {
 	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
 
-	c, err := New(server.URL, "", "", testTimeout)
+	c, err := New(server.URL, "", "")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -196,7 +193,7 @@ func TestDescribeOmitsAuthAndSystemWhenUnset(t *testing.T) {
 func TestDescribeModelOverride(t *testing.T) {
 	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
 
-	c, err := New(server.URL, "", "default", testTimeout)
+	c, err := New(server.URL, "", "default")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -221,7 +218,7 @@ func TestDescribeModelOverride(t *testing.T) {
 }
 
 func TestDescribeNoModel(t *testing.T) {
-	c, err := New("http://example.com", "", "", testTimeout)
+	c, err := New("http://example.com", "", "")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -236,7 +233,7 @@ func TestDescribeNoModel(t *testing.T) {
 }
 
 func TestDescribeEmptyImage(t *testing.T) {
-	c, err := New("http://example.com", "", "m", testTimeout)
+	c, err := New("http://example.com", "", "m")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -250,7 +247,7 @@ func TestDescribeArrayContent(t *testing.T) {
 	response := `{"choices":[{"message":{"content":[{"type":"text","text":"hello "},{"type":"text","text":"world"}]}}]}`
 	server, _ := newCaptureServer(t, http.StatusOK, response)
 
-	c, err := New(server.URL, "", "m", testTimeout)
+	c, err := New(server.URL, "", "m")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -288,7 +285,7 @@ func TestDescribeErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server, _ := newCaptureServer(t, tt.status, tt.response)
 
-			c, err := New(server.URL, "", "m", testTimeout)
+			c, err := New(server.URL, "", "m")
 			if err != nil {
 				t.Fatalf("New() error: %v", err)
 			}
@@ -312,7 +309,7 @@ func TestDescribeErrors(t *testing.T) {
 func TestDescribeContextCancelled(t *testing.T) {
 	server, _ := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"x"}}]}`)
 
-	c, err := New(server.URL, "", "m", testTimeout)
+	c, err := New(server.URL, "", "m")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -329,18 +326,15 @@ func TestNewValidation(t *testing.T) {
 	tests := []struct {
 		name    string
 		baseURL string
-		timeout time.Duration
 	}{
-		{"empty base url", "", testTimeout},
-		{"missing scheme", "example.com", testTimeout},
-		{"unsupported scheme", "ftp://example.com", testTimeout},
-		{"zero timeout", "http://example.com", 0},
-		{"negative timeout", "http://example.com", -time.Second},
+		{"empty base url", ""},
+		{"missing scheme", "example.com"},
+		{"unsupported scheme", "ftp://example.com"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := New(tt.baseURL, "", "m", tt.timeout); err == nil {
+			if _, err := New(tt.baseURL, "", "m"); err == nil {
 				t.Fatal("New() expected error, got nil")
 			}
 		})

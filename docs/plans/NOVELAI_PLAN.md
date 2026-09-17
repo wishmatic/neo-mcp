@@ -83,6 +83,7 @@ Empty `negative_prompt` falls back to a package-level default negative prompt co
 | `internal/mcp/txt2img.go` | Edit | Route by model |
 | `internal/mcp/img2img.go` | Edit | Route by model, add `noise` |
 | `internal/mcp/bgkill.go` | Edit | Move the handler into `handlers` |
+| `internal/mcp/img2txt.go` | Edit | Move the handler into `handlers` |
 | `internal/mcp/shared.go` | Edit | Provider-resolved sampler and scheduler defaults |
 | `go.mod`, `go.sum` | Edit | Add `github.com/vmihailenco/msgpack/v5` |
 | `.env.example`, `README.md` | Edit | Document NovelAI configuration |
@@ -332,27 +333,32 @@ the README covering the key, the model list, and that NovelAI models are selecte
 **Files:** `internal/server/server.go`, `internal/mcp/server.go`, `internal/mcp/server_test.go`
 
 **Work:** Build the NovelAI client in `server.New` when `cfg.NovelAIAPIKey != ""`, log whether it is enabled, and pass
-it to `mcp.New`. Change `mcp.New` and `registerTools` to accept both clients. Register `txt2img` and `img2img` when
-either client is present, and `bgkill` only when the Forge client is present.
+it to `mcp.New`. `mcp.New` and `registerTools` already take the resolver and OpenAI clients, so add
+`novelaiClient *novelai.Client` between `sdClient` and `uploader`; the resulting signature is
+`New(log, sdClient, novelaiClient, uploader, shortenerClient, resolver, openaiClient)`. Register `txt2img` and `img2img`
+when either generation client is present, `bgkill` only when the Forge client is present, and leave `img2txt` gated on
+the OpenAI client.
 
 **Acceptance criteria**
 
 - AC-8.1: `server.New` with `NOVELAI_API_KEY` set and an otherwise valid config returns no error.
-- AC-8.2: `mcp.New(log, nil, novelaiClient, nil, nil, nil)` registers `txt2img` and `img2img` but not `bgkill`,
+- AC-8.2: `mcp.New(log, nil, novelaiClient, nil, nil, nil, nil)` registers `txt2img` and `img2img` but not `bgkill`,
   verified by listing tools over an in-memory MCP transport.
-- AC-8.3: `mcp.New(log, forgeClient, nil, nil, nil, nil)` still registers all three tools.
-- AC-8.4: `mcp.New(log, nil, nil, nil, nil, nil)` registers no tools and returns no error.
+- AC-8.3: `mcp.New(log, forgeClient, nil, nil, nil, nil, nil)` still registers `txt2img`, `img2img`, and `bgkill`.
+- AC-8.4: `mcp.New(log, nil, nil, nil, nil, nil, nil)` registers no tools and returns no error.
+- AC-8.5: `mcp.New(log, nil, nil, nil, nil, nil, openaiClient)` still registers `img2txt` as it does today.
 
 ### Unit 9: MCP handler refactor, routing, and schemas
 
 **Files:** `internal/mcp/handlers.go` (new), `internal/mcp/provider.go` (new), `internal/mcp/txt2img.go`,
-`internal/mcp/img2img.go`, `internal/mcp/bgkill.go`, `internal/mcp/shared.go`, `internal/mcp/shared_test.go`,
-`internal/mcp/provider_test.go`
+`internal/mcp/img2img.go`, `internal/mcp/bgkill.go`, `internal/mcp/img2txt.go`, `internal/mcp/shared.go`,
+`internal/mcp/shared_test.go`, `internal/mcp/img2txt_test.go`, `internal/mcp/provider_test.go`
 
 **Work:**
 
 1. Introduce `type handlers struct` holding `log`, `forge *sdwebui.Client`, `novelai *novelai.Client`, `uploader`,
-   `shortener`, and `resolver`, with `txt2img`, `img2img`, and `bgkill` methods. `register*` functions become thin
+   `shortener`, `resolver`, and `openai *openai.Client`, with `txt2img`, `img2img`, `bgkill`, and `img2txt` methods.
+   `runImg2Txt` becomes the `img2txt` method so every handler has the same shape, and `register*` functions become thin
    `mcp.AddTool` wrappers around those methods, which keeps the handlers directly unit testable without an MCP
    client.
 2. Add request mappers in `provider.go`:
@@ -386,6 +392,8 @@ either client is present, and `bgkill` only when the Forge client is present.
 - AC-9.9: `TestSchemasIncludeSharedFields` is extended with `noise` and still passes.
 - AC-9.10: The generated images are returned through `publishImages`, so S3 upload, URL shortening, and inline
   `image/png` content behave identically for both backends.
+- AC-9.11: `img2txt` is unchanged by the refactor: an httptest image server plus an httptest vision endpoint still
+  produce the same text and structured output through the `img2txt` handler method.
 
 ## Out of Scope
 

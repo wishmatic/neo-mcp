@@ -14,8 +14,6 @@ type Config struct {
 	LogLevel    string `env:"LOG_LEVEL" envDefault:"info"`
 	ErrorDetail string `env:"ERROR_DETAIL" envDefault:"useful"`
 
-	WriteTimeoutSeconds int `env:"WRITE_TIMEOUT_SECONDS" envDefault:"600"`
-
 	APIKey string `env:"API_KEY"`
 
 	SDURL string `env:"SD_URL" envDefault:"http://127.0.0.1:7860"`
@@ -29,7 +27,6 @@ type Config struct {
 	S3SecretKey         string `env:"S3_SECRET_KEY"`
 	S3ReadonlyAccessKey string `env:"S3_READONLY_ACCESS_KEY"`
 	S3ReadonlySecretKey string `env:"S3_READONLY_SECRET_KEY"`
-	S3PresignExpiry     int    `env:"S3_PRESIGN_EXPIRY" envDefault:"604800"`
 	S3UsePathStyle      bool   `env:"S3_USE_PATH_STYLE" envDefault:"true"`
 
 	GaragefrontURL    string `env:"GARAGEFRONT_URL"`
@@ -39,10 +36,9 @@ type Config struct {
 	ShortenerAPIKey string `env:"SHORTENER_API_KEY"`
 	ShortenerExpiry int    `env:"SHORTENER_EXPIRY_SECONDS" envDefault:"0"`
 
-	Img2TxtBaseURL        string `env:"IMG2TXT_BASE_URL"`
-	Img2TxtAPIKey         string `env:"IMG2TXT_API_KEY"`
-	Img2TxtModel          string `env:"IMG2TXT_MODEL"`
-	Img2TxtTimeoutSeconds int    `env:"IMG2TXT_TIMEOUT_SECONDS" envDefault:"180"`
+	Img2TxtBaseURL string `env:"IMG2TXT_BASE_URL"`
+	Img2TxtAPIKey  string `env:"IMG2TXT_API_KEY"`
+	Img2TxtModel   string `env:"IMG2TXT_MODEL"`
 }
 
 func Load() (Config, error) {

@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const requestTimeout = 3 * time.Minute
+
 type Client struct {
 	baseURL      string
 	apiKey       string
@@ -15,7 +17,7 @@ type Client struct {
 	http         *http.Client
 }
 
-func New(baseURL, apiKey, defaultModel string, timeout time.Duration) (*Client, error) {
+func New(baseURL, apiKey, defaultModel string) (*Client, error) {
 	trimmed := strings.TrimRight(strings.TrimSpace(baseURL), "/")
 
 	u, err := url.Parse(trimmed)
@@ -23,14 +25,10 @@ func New(baseURL, apiKey, defaultModel string, timeout time.Duration) (*Client, 
 		return nil, fmt.Errorf("openai: invalid base URL %q", baseURL)
 	}
 
-	if timeout <= 0 {
-		return nil, fmt.Errorf("openai: timeout must be positive, got %s", timeout)
-	}
-
 	return &Client{
 		baseURL:      trimmed,
 		apiKey:       apiKey,
 		defaultModel: defaultModel,
-		http:         &http.Client{Timeout: timeout},
+		http:         &http.Client{Timeout: requestTimeout},
 	}, nil
 }
