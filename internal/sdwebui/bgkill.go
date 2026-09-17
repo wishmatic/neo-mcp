@@ -24,9 +24,9 @@ var BgkillModels = []string{
 }
 
 type BgkillRequest struct {
-	ModelName string
-	ImageData []byte
-	FullMode  bool
+	ModelName  string
+	ImageData  []byte
+	IsFullMode bool
 }
 
 type birefnetResponse struct {
@@ -42,7 +42,7 @@ func (c *Client) Bgkill(ctx context.Context, req BgkillRequest) ([]byte, error) 
 		"return_mask":       false,
 		"return_edge_mask":  false,
 		"send_output":       true,
-		"use_fp16":          !req.FullMode,
+		"use_fp16":          !req.IsFullMode,
 	}
 
 	out, err := postJSON[birefnetResponse](ctx, c, "bgkill", "/birefnet/single", payload)

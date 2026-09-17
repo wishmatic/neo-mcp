@@ -18,8 +18,8 @@ type newRequest struct {
 }
 
 type newResponse struct {
-	Success    bool   `json:"success"`
-	Error      bool   `json:"error"`
+	IsSuccess  bool   `json:"success"`
+	IsError    bool   `json:"error"`
 	ShortURL   string `json:"shorturl"`
 	ExpiryTime int64  `json:"expiry_time"`
 	Reason     string `json:"reason"`
@@ -58,7 +58,7 @@ func (c *Client) Shorten(ctx context.Context, longURL string) (string, error) {
 		return "", fmt.Errorf("decode shorten response: %w", err)
 	}
 
-	if !out.Success || out.Error {
+	if !out.IsSuccess || out.IsError {
 		reason := strings.TrimSpace(out.Reason)
 		if reason == "" {
 			reason = "unknown error"

@@ -12,16 +12,16 @@ import (
 )
 
 type Client struct {
-	baseURL       string
-	http          *http.Client
-	verboseErrors bool
+	baseURL         string
+	http            *http.Client
+	isVerboseErrors bool
 }
 
-func New(baseURL string, verboseErrors bool) *Client {
+func New(baseURL string, isVerboseErrors bool) *Client {
 	return &Client{
-		baseURL:       strings.TrimRight(baseURL, "/"),
-		http:          &http.Client{},
-		verboseErrors: verboseErrors,
+		baseURL:         strings.TrimRight(baseURL, "/"),
+		http:            &http.Client{},
+		isVerboseErrors: isVerboseErrors,
 	}
 }
 
@@ -71,7 +71,7 @@ func (c *Client) postImages(ctx context.Context, label, path string, payload any
 func (c *Client) httpError(method, path string, resp *http.Response) string {
 	body := utils.ReadLimited(resp.Body)
 
-	if c.verboseErrors {
+	if c.isVerboseErrors {
 		return fmt.Sprintf(
 			"%s %s returned HTTP %d (%s): %s",
 			method, path, resp.StatusCode, resp.Status, body,

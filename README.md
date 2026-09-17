@@ -9,7 +9,8 @@ Note that the only version of Forge we support is
 
 - Core feature: `txt2img` and `img2img` tools are implemented with full control of knobs to adjust image generation.
 - `bgkill` removes the background from an image via the
-  [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension.
+  [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
+  foreground and produce a padded square, which is handy for logo generation.
 - If you provide `S3_*` environment variables, generated images are uploaded to an S3-compatible object store and
   returned as presigned URLs.
     - Without this, they're returned as plain `image/png` content.

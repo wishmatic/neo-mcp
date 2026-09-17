@@ -25,11 +25,11 @@ type bgkillPayload struct {
 func TestBgkillPayload(t *testing.T) {
 	tests := []struct {
 		name        string
-		fullMode    bool
+		isFullMode  bool
 		wantUseFP16 bool
 	}{
-		{name: "full mode off", fullMode: false, wantUseFP16: true},
-		{name: "full mode on", fullMode: true, wantUseFP16: false},
+		{name: "full mode off", isFullMode: false, wantUseFP16: true},
+		{name: "full mode on", isFullMode: true, wantUseFP16: false},
 	}
 
 	for _, tt := range tests {
@@ -50,9 +50,9 @@ func TestBgkillPayload(t *testing.T) {
 			c := New(server.URL, false)
 
 			out, err := c.Bgkill(context.Background(), BgkillRequest{
-				ModelName: "General",
-				ImageData: []byte("png"),
-				FullMode:  tt.fullMode,
+				ModelName:  "General",
+				ImageData:  []byte("png"),
+				IsFullMode: tt.isFullMode,
 			})
 			if err != nil {
 				t.Fatalf("Bgkill() error: %v", err)

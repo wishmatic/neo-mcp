@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/crop"
 	"github.com/wishmatic/neo-mcp/internal/imageresolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
@@ -13,12 +14,20 @@ import (
 	"go.uber.org/zap"
 )
 
+const defaultSquarePadding = 32
+
 type bgkillInput struct {
 	ModelName string `json:"model_name" jsonschema:"BiRefNet model to load"`
 
 	ImageURL string `json:"image_url" jsonschema:"URL of the image to remove the background from; the service downloads it (following redirects)"`
 
-	FullMode bool `json:"full_mode,omitempty" jsonschema:"run the model in fp32 instead of fp16; slower and uses more VRAM"`
+	IsFullMode bool `json:"full_mode,omitempty" jsonschema:"run the model in fp32 instead of fp16; slower and uses more VRAM"`
+
+	IsCrop bool `json:"crop,omitempty" jsonschema:"crop the output to the bounding box of the foreground"`
+
+	IsSquare bool `json:"square,omitempty" jsonschema:"make the cropped output square by centering the foreground on a transparent canvas; implies crop"`
+
+	Padding *int `json:"padding,omitempty" jsonschema:"transparent padding in pixels added around the cropped foreground; defaults to 32 when the output is square"`
 }
 
 func registerBgkill(
@@ -42,7 +51,9 @@ func registerBgkill(
 			zap.String("tool", "bgkill"),
 			zap.String("model_name", in.ModelName),
 			zap.String("image_url", in.ImageURL),
-			zap.Bool("full_mode", in.FullMode),
+			zap.Bool("full_mode", in.IsFullMode),
+			zap.Bool("crop", in.IsCrop),
+			zap.Bool("square", in.IsSquare),
 		)
 
 		image, err := resolver.Fetch(ctx, in.ImageURL)
@@ -57,13 +68,13 @@ func registerBgkill(
 
 		log.Info("bgkill removing background",
 			zap.String("model_name", in.ModelName),
-			zap.Bool("full_mode", in.FullMode),
+			zap.Bool("full_mode", in.IsFullMode),
 		)
 
 		out, err := client.Bgkill(ctx, sdwebui.BgkillRequest{
-			ModelName: in.ModelName,
-			ImageData: image,
-			FullMode:  in.FullMode,
+			ModelName:  in.ModelName,
+			ImageData:  image,
+			IsFullMode: in.IsFullMode,
 		})
 		if err != nil {
 			if ctxErr := ctx.Err(); ctxErr != nil {
@@ -78,8 +89,33 @@ func registerBgkill(
 			return nil, generationOutput{}, fmt.Errorf("bgkill: %w", err)
 		}
 
+		if opts, ok := bgkillCropOptions(in); ok {
+			out, err = crop.ToContent(out, opts)
+			if err != nil {
+				log.Error("bgkill failed to crop foreground", zap.Error(err))
+
+				return nil, generationOutput{}, fmt.Errorf("bgkill: %w", err)
+			}
+		}
+
 		return publishImages(ctx, log, "bgkill", [][]byte{out}, uploader, shortenerClient)
 	})
+}
+
+func bgkillCropOptions(in bgkillInput) (crop.Options, bool) {
+	if !in.IsCrop && !in.IsSquare {
+		return crop.Options{}, false
+	}
+
+	var padding int
+	switch {
+	case in.Padding != nil:
+		padding = *in.Padding
+	case in.IsSquare:
+		padding = defaultSquarePadding
+	}
+
+	return crop.Options{IsSquare: in.IsSquare, Padding: padding}, true
 }
 
 func bgkillSchema() *jsonschema.Schema {
@@ -95,6 +131,8 @@ func bgkillSchema() *jsonschema.Schema {
 
 	s.Properties["model_name"].Enum = models
 	setDefault(s.Properties, "full_mode", false)
+	setDefault(s.Properties, "crop", false)
+	setDefault(s.Properties, "square", false)
 
 	return s
 }

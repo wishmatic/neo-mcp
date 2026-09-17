@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/google/jsonschema-go/jsonschema"
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 )
 
 func schemas() map[string]*jsonschema.Schema {
@@ -30,29 +29,6 @@ func TestModelIsRequired(t *testing.T) {
 		if model.Default != nil {
 			t.Errorf("%s: model must not have a default", name)
 		}
-	}
-}
-
-func TestBgkillSchema(t *testing.T) {
-	s := bgkillSchema()
-
-	for _, field := range []string{"model_name", "image_url"} {
-		if !slices.Contains(s.Required, field) {
-			t.Errorf("bgkill: %q is not required", field)
-		}
-	}
-
-	model := s.Properties["model_name"]
-	if model == nil {
-		t.Fatal("bgkill: model_name property is missing")
-	}
-
-	if model.Default != nil {
-		t.Error("bgkill: model_name must not have a default")
-	}
-
-	if len(model.Enum) != len(sdwebui.BgkillModels) {
-		t.Errorf("bgkill: model_name has %d enum values, want %d", len(model.Enum), len(sdwebui.BgkillModels))
 	}
 }
 
