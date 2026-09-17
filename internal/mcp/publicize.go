@@ -6,10 +6,13 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"go.uber.org/zap"
 )
 
 type publicizeInput struct {
+	formatInput
+
 	ImageURL string `json:"image_url" jsonschema:"URL of the image to publish; the service downloads it (following redirects)"`
 }
 
@@ -21,9 +24,9 @@ func registerPublicize(srv *mcp.Server, h *handlers) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "publicize",
 		Description: "Publish an image to the world-readable public namespace and return a URL anyone can open. " +
-			"Downloads the input image from a URL (following redirects), then stores it unchanged. Only use this when " +
-			"the user has explicitly asked for a publicly viewable image.",
-		InputSchema: publicizeSchema(),
+			"Downloads the input image from a URL (following redirects), re-encodes it to the requested output format, and " +
+			"stores it. Only use this when the user has explicitly asked for a publicly viewable image.",
+		InputSchema: publicizeSchema(h.defaultFormat),
 	}, h.publicize)
 }
 
@@ -32,9 +35,15 @@ func (h *handlers) publicize(
 	_ *mcp.CallToolRequest,
 	in publicizeInput,
 ) (*mcp.CallToolResult, publicizeOutput, error) {
+	format, err := h.outputFormat(in.Format)
+	if err != nil {
+		return nil, publicizeOutput{}, fmt.Errorf("publicize: %w", err)
+	}
+
 	h.log.Debug("tool called",
 		zap.String("tool", "publicize"),
 		zap.String("image_url", in.ImageURL),
+		zap.String("format", format.String()),
 	)
 
 	if !h.publisher.Enabled() {
@@ -51,12 +60,17 @@ func (h *handlers) publicize(
 		return nil, publicizeOutput{}, fmt.Errorf("publicize: fetch image: %w", err)
 	}
 
+	data, err := imgfmt.Convert(image.Data, format)
+	if err != nil {
+		return nil, publicizeOutput{}, fmt.Errorf("publicize: %w", err)
+	}
+
 	h.log.Info("publicize uploading image",
-		zap.String("media_type", image.MediaType),
-		zap.Int("image_bytes", len(image.Data)),
+		zap.String("media_type", format.MediaType()),
+		zap.Int("image_bytes", len(data)),
 	)
 
-	url, err := h.publisher.File(ctx, "publicize", image.Data, image.MediaType, true)
+	url, err := h.publisher.File(ctx, "publicize", data, format.MediaType(), true)
 	if err != nil {
 		return nil, publicizeOutput{}, fmt.Errorf("publicize: %w", err)
 	}
@@ -66,11 +80,13 @@ func (h *handlers) publicize(
 	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: url}}}, publicizeOutput{URL: url}, nil
 }
 
-func publicizeSchema() *jsonschema.Schema {
+func publicizeSchema(def imgfmt.Format) *jsonschema.Schema {
 	s, err := jsonschema.For[publicizeInput](nil)
 	if err != nil {
 		panic(fmt.Sprintf("publicize: infer input schema: %v", err))
 	}
+
+	setFormatSchema(s, def)
 
 	return s
 }

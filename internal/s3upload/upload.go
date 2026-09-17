@@ -19,10 +19,6 @@ const presignExpiry = 7 * 24 * time.Hour
 // PublicKeyPrefix is the object key prefix Garagefront serves without access checks.
 const PublicKeyPrefix = "i/public"
 
-func (u *Client) UploadImage(ctx context.Context, data []byte, public bool) (string, error) {
-	return u.UploadFile(ctx, data, "image/png", public)
-}
-
 func (u *Client) UploadFile(ctx context.Context, data []byte, contentType string, public bool) (string, error) {
 	key := u.objectKey(public, fileExtension(contentType))
 
@@ -59,6 +55,8 @@ func fileExtension(contentType string) string {
 	switch contentType {
 	case "image/jpeg":
 		return "jpg"
+	case "image/jxl":
+		return "jxl"
 	case "image/webp":
 		return "webp"
 	default:

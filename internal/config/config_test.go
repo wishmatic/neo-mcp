@@ -88,6 +88,42 @@ func TestLoadExamples(t *testing.T) {
 	}
 }
 
+func TestLoadOutputFormatDefaults(t *testing.T) {
+	unsetEnv(t, "OUTPUT_FORMAT")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	if cfg.OutputFormat != "webp" {
+		t.Errorf("OutputFormat = %q, want webp", cfg.OutputFormat)
+	}
+}
+
+func TestLoadOutputFormat(t *testing.T) {
+	tests := map[string]string{
+		"jxl":  "jxl",
+		"jpeg": "jpeg",
+		"JPEG": "JPEG",
+	}
+
+	for value, want := range tests {
+		t.Run(value, func(t *testing.T) {
+			t.Setenv("OUTPUT_FORMAT", value)
+
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load() error: %v", err)
+			}
+
+			if cfg.OutputFormat != want {
+				t.Errorf("OutputFormat = %q, want %q", cfg.OutputFormat, want)
+			}
+		})
+	}
+}
+
 func TestGaragefrontPrefix(t *testing.T) {
 	tests := []struct {
 		name   string

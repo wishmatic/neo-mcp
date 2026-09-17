@@ -4,6 +4,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
@@ -24,6 +25,8 @@ type Deps struct {
 	Store     *store.Client
 	Shortener *shortener.Client
 	Examples  ExamplesConfig
+
+	OutputFormat imgfmt.Format
 }
 
 func New(deps Deps) (*mcp.Server, error) {
@@ -39,16 +42,17 @@ func New(deps Deps) (*mcp.Server, error) {
 
 func buildHandlers(deps Deps) *handlers {
 	h := &handlers{
-		log:       deps.Log,
-		gen:       deps.Generator,
-		bgkillSvc: deps.Bgkill,
-		publisher: deps.Publisher,
-		novelai:   deps.NovelAI,
-		resolver:  deps.Resolver,
-		openai:    deps.OpenAI,
-		store:     deps.Store,
-		shortener: deps.Shortener,
-		examples:  deps.Examples,
+		log:           deps.Log,
+		gen:           deps.Generator,
+		bgkillSvc:     deps.Bgkill,
+		publisher:     deps.Publisher,
+		novelai:       deps.NovelAI,
+		resolver:      deps.Resolver,
+		openai:        deps.OpenAI,
+		store:         deps.Store,
+		shortener:     deps.Shortener,
+		examples:      deps.Examples,
+		defaultFormat: deps.OutputFormat,
 	}
 
 	if h.gen == nil {
@@ -61,6 +65,10 @@ func buildHandlers(deps Deps) *handlers {
 
 	if h.publisher == nil {
 		h.publisher = publish.New(nil, nil, deps.Log)
+	}
+
+	if h.defaultFormat == "" {
+		h.defaultFormat = imgfmt.Default
 	}
 
 	return h

@@ -6,6 +6,7 @@ import (
 
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
@@ -16,16 +17,29 @@ import (
 )
 
 type handlers struct {
-	log       *zap.Logger
-	gen       *imagegen.Generator
-	bgkillSvc *bgkill.Service
-	publisher *publish.Publisher
-	novelai   *novelai.Client
-	resolver  *resolve.Resolver
-	openai    *openai.Client
-	store     *store.Client
-	shortener *shortener.Client
-	examples  ExamplesConfig
+	log           *zap.Logger
+	gen           *imagegen.Generator
+	bgkillSvc     *bgkill.Service
+	publisher     *publish.Publisher
+	novelai       *novelai.Client
+	resolver      *resolve.Resolver
+	openai        *openai.Client
+	store         *store.Client
+	shortener     *shortener.Client
+	examples      ExamplesConfig
+	defaultFormat imgfmt.Format
+}
+
+func (h *handlers) outputFormat(name string) (imgfmt.Format, error) {
+	if name == "" {
+		if h.defaultFormat != "" {
+			return h.defaultFormat, nil
+		}
+
+		return imgfmt.Default, nil
+	}
+
+	return imgfmt.Parse(name)
 }
 
 func (h *handlers) generationFailure(ctx context.Context, tool string, err error) error {

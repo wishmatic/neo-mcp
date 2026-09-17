@@ -9,14 +9,10 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
-)
-
-var (
-	publicizeJPEG = []byte("\xff\xd8\xff\xe0 pretend jpeg bytes")
-	publicizePNG  = []byte("\x89PNG\r\n\x1a\n pretend png bytes")
 )
 
 type uploadCapture struct {
@@ -79,7 +75,7 @@ func newPublicizeImageServer(t *testing.T, data []byte) *httptest.Server {
 }
 func TestPublicizeUploadsWithMediaType(t *testing.T) {
 	captured := &[]uploadCapture{}
-	imageServer := newPublicizeImageServer(t, publicizeJPEG)
+	imageServer := newPublicizeImageServer(t, testImageJPEG(t))
 
 	h := &handlers{
 		log:       zapNop(),
@@ -87,7 +83,10 @@ func TestPublicizeUploadsWithMediaType(t *testing.T) {
 		publisher: publish.New(newPublicizeUploader(t, captured), nil, zapNop()),
 	}
 
-	result, out, err := h.publicize(context.Background(), nil, publicizeInput{ImageURL: imageServer.URL + "/x.jpg"})
+	result, out, err := h.publicize(context.Background(), nil, publicizeInput{
+		ImageURL: imageServer.URL + "/x.jpg",
+		Format:   "jpeg",
+	})
 	if err != nil {
 		t.Fatalf("publicize() error: %v", err)
 	}
@@ -121,7 +120,7 @@ func TestPublicizeUploadsWithMediaType(t *testing.T) {
 
 func TestPublicizePNG(t *testing.T) {
 	captured := &[]uploadCapture{}
-	imageServer := newPublicizeImageServer(t, publicizePNG)
+	imageServer := newPublicizeImageServer(t, testImagePNG(t))
 
 	h := &handlers{
 		log:       zapNop(),
@@ -129,7 +128,9 @@ func TestPublicizePNG(t *testing.T) {
 		publisher: publish.New(newPublicizeUploader(t, captured), nil, zapNop()),
 	}
 
-	if _, _, err := h.publicize(context.Background(), nil, publicizeInput{ImageURL: imageServer.URL + "/x.png"}); err != nil {
+	call := publicizeInput{ImageURL: imageServer.URL + "/x.png", Format: "png"}
+
+	if _, _, err := h.publicize(context.Background(), nil, call); err != nil {
 		t.Fatalf("publicize() error: %v", err)
 	}
 
@@ -139,9 +140,36 @@ func TestPublicizePNG(t *testing.T) {
 	}
 }
 
+func TestPublicizeUsesHandlerDefaultFormat(t *testing.T) {
+	captured := &[]uploadCapture{}
+	imageServer := newPublicizeImageServer(t, testImagePNG(t))
+
+	h := &handlers{
+		log:           zapNop(),
+		resolver:      newPublicizeResolver(t),
+		publisher:     publish.New(newPublicizeUploader(t, captured), nil, zapNop()),
+		defaultFormat: imgfmt.JXL,
+	}
+
+	call := publicizeInput{ImageURL: imageServer.URL + "/x.png"}
+	_, out, err := h.publicize(context.Background(), nil, call)
+	if err != nil {
+		t.Fatalf("publicize() error: %v", err)
+	}
+
+	upload := (*captured)[0]
+	if !strings.HasSuffix(upload.path, ".jxl") || upload.contentType != "image/jxl" {
+		t.Errorf("upload = %+v, want .jxl and image/jxl", upload)
+	}
+
+	if !strings.HasSuffix(out.URL, ".jxl") {
+		t.Errorf("URL = %q, want a .jxl suffix", out.URL)
+	}
+}
+
 func TestPublicizeShortensURL(t *testing.T) {
 	captured := &[]uploadCapture{}
-	imageServer := newPublicizeImageServer(t, publicizePNG)
+	imageServer := newPublicizeImageServer(t, testImagePNG(t))
 
 	h := &handlers{
 		log:      zapNop(),
@@ -165,7 +193,7 @@ func TestPublicizeShortensURL(t *testing.T) {
 
 func TestPublicizeShortenerFailureFallsBack(t *testing.T) {
 	captured := &[]uploadCapture{}
-	imageServer := newPublicizeImageServer(t, publicizePNG)
+	imageServer := newPublicizeImageServer(t, testImagePNG(t))
 
 	h := &handlers{
 		log:      zapNop(),
@@ -256,7 +284,7 @@ func TestPublicizeRegistration(t *testing.T) {
 }
 
 func TestPublicizeSchema(t *testing.T) {
-	s := publicizeSchema()
+	s := publicizeSchema(imgfmt.Default)
 
 	if !slices.Contains(s.Required, "image_url") {
 		t.Error("image_url is not required")
@@ -266,7 +294,7 @@ func TestPublicizeSchema(t *testing.T) {
 		t.Error("image_url must not have a default")
 	}
 
-	if len(s.Properties) != 1 {
-		t.Errorf("properties = %v, want only image_url", s.Properties)
+	if len(s.Properties) != 2 {
+		t.Errorf("properties = %v, want image_url and format", s.Properties)
 	}
 }

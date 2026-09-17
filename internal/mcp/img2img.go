@@ -7,6 +7,7 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"go.uber.org/zap"
 )
 
@@ -26,7 +27,7 @@ func registerImg2Img(srv *mcp.Server, h *handlers) {
 		Description: "Transform an existing image, via the local Stable Diffusion WebUI (Forge Neo) instance or " +
 			"via NovelAI when the model is a NovelAI model id. Downloads the input image from a URL (following redirects), " +
 			"then blocks until generation completes and returns the image.",
-		InputSchema: img2imgSchema(),
+		InputSchema: img2imgSchema(h.defaultFormat),
 	}, h.img2img)
 }
 
@@ -37,9 +38,15 @@ func (h *handlers) img2img(
 ) (*mcp.CallToolResult, generationOutput, error) {
 	provider := imagegen.ProviderOf(in.Model)
 
+	format, err := h.outputFormat(in.Format)
+	if err != nil {
+		return nil, generationOutput{}, fmt.Errorf("img2img: %w", err)
+	}
+
 	h.log.Debug("tool called",
 		zap.String("tool", "img2img"),
 		zap.String("provider", provider),
+		zap.String("format", format.String()),
 		zap.String("model", in.Model),
 		zap.String("forge_preset", in.ForgePreset),
 		zap.Strings("vae_and_text_models", in.VAEAndTextModels),
@@ -86,7 +93,7 @@ func (h *handlers) img2img(
 
 	h.log.Info("img2img generation finished", zap.Int("images", len(images)))
 
-	result, out, err := h.publishImages(ctx, "img2img", images, in.Public)
+	result, out, err := h.publishImages(ctx, "img2img", images, in.Public, format)
 	if err != nil {
 		return nil, generationOutput{}, err
 	}
@@ -96,7 +103,7 @@ func (h *handlers) img2img(
 	return result, out, nil
 }
 
-func img2imgSchema() *jsonschema.Schema {
+func img2imgSchema(def imgfmt.Format) *jsonschema.Schema {
 	s, err := jsonschema.For[img2imgInput](nil)
 	if err != nil {
 		panic(fmt.Sprintf("img2img: infer input schema: %v", err))
@@ -113,6 +120,7 @@ func img2imgSchema() *jsonschema.Schema {
 	setDefault(s.Properties, "sampler_name", "")
 	setDefault(s.Properties, "scheduler", "")
 	setDefault(s.Properties, "public", false)
+	setFormatSchema(s, def)
 
 	return s
 }

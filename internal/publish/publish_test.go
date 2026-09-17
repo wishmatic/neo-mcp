@@ -77,7 +77,7 @@ func TestImagesPublicNamespace(t *testing.T) {
 	captured := &[]uploadCapture{}
 	p := New(newUploader(t, captured), nil, zap.NewNop())
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("pretend-png-bytes")}, true)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("pretend-png-bytes")}, "image/png", true)
 	if err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestImagesPrivateNamespace(t *testing.T) {
 	captured := &[]uploadCapture{}
 	p := New(newUploader(t, captured), nil, zap.NewNop())
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("pretend-png-bytes")}, false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("pretend-png-bytes")}, "image/png", false)
 	if err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestImagesKeepsOrderAndCount(t *testing.T) {
 	captured := &[]uploadCapture{}
 	p := New(newUploader(t, captured), nil, zap.NewNop())
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a"), []byte("b"), []byte("c")}, false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a"), []byte("b"), []byte("c")}, "image/png", false)
 	if err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
@@ -127,6 +127,40 @@ func TestImagesKeepsOrderAndCount(t *testing.T) {
 	}
 }
 
+func TestImagesUploadsWithContentType(t *testing.T) {
+	tests := []struct {
+		contentType string
+		wantExt     string
+	}{
+		{contentType: "image/png", wantExt: ".png"},
+		{contentType: "image/jpeg", wantExt: ".jpg"},
+		{contentType: "image/jxl", wantExt: ".jxl"},
+		{contentType: "image/webp", wantExt: ".webp"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.contentType, func(t *testing.T) {
+			captured := &[]uploadCapture{}
+			p := New(newUploader(t, captured), nil, zap.NewNop())
+
+			images := [][]byte{[]byte("bytes")}
+
+			urls, err := p.Images(context.Background(), "txt2img", images, tt.contentType, false)
+			if err != nil {
+				t.Fatalf("Images() error: %v", err)
+			}
+
+			if len(*captured) != 1 || (*captured)[0].contentType != tt.contentType {
+				t.Fatalf("uploads = %+v, want content type %s", *captured, tt.contentType)
+			}
+
+			if !strings.HasSuffix((*captured)[0].path, tt.wantExt) || !strings.HasSuffix(urls[0], tt.wantExt) {
+				t.Errorf("path = %q, url = %q, want %s suffix", (*captured)[0].path, urls[0], tt.wantExt)
+			}
+		})
+	}
+}
+
 func TestImagesShortens(t *testing.T) {
 	p := New(
 		newUploader(t, &[]uploadCapture{}),
@@ -134,7 +168,7 @@ func TestImagesShortens(t *testing.T) {
 		zap.NewNop(),
 	)
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a"), []byte("b")}, false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a"), []byte("b")}, "image/png", false)
 	if err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
@@ -154,7 +188,7 @@ func TestImagesShortenerFailureFallsBack(t *testing.T) {
 		zap.New(core),
 	)
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, "image/png", false)
 	if err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
@@ -197,7 +231,7 @@ func newFailingUploader(t *testing.T) *s3upload.Client {
 func TestImagesUploadFailure(t *testing.T) {
 	p := New(newFailingUploader(t), nil, zap.NewNop())
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, "image/png", false)
 	if err == nil {
 		t.Fatal("Images() error = nil, want the upload failure")
 	}

@@ -66,7 +66,7 @@ func novelaiFrame(t *testing.T, image []byte) []byte {
 func newForgeBackend(t *testing.T, log *requestLog) *sdwebui.Client {
 	t.Helper()
 
-	image := base64.StdEncoding.EncodeToString([]byte("forge-png"))
+	image := base64.StdEncoding.EncodeToString(testImagePNG(t))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.add(r)
@@ -83,7 +83,7 @@ func newForgeBackend(t *testing.T, log *requestLog) *sdwebui.Client {
 func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {
 	t.Helper()
 
-	frame := novelaiFrame(t, []byte("novelai-png"))
+	frame := novelaiFrame(t, testImagePNG(t))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.add(r)
@@ -99,7 +99,7 @@ func newInitImageURL(t *testing.T) string {
 	t.Helper()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("\x89PNG\r\n\x1a\n"))
+		_, _ = w.Write(testImagePNG(t))
 	}))
 
 	t.Cleanup(server.Close)

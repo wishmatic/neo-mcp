@@ -7,6 +7,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.112.0
 	github.com/caarlos0/env/v11 v11.4.1
+	github.com/gen2brain/jxl v0.2.0
+	github.com/gen2brain/vpx v0.2.0
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-chi/cors v1.2.2
 	github.com/google/jsonschema-go v0.4.3

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 )
 
 type generationInput struct {
@@ -32,7 +33,12 @@ type generationInput struct {
 	HRSecondPassSteps int     `json:"hr_second_pass_steps,omitempty" jsonschema:"if HR is enabled, the number of steps for the hi-res second pass; ignored by NovelAI"`
 	HRCFGScale        float64 `json:"hr_cfg,omitempty" jsonschema:"if HR is enabled, the CFG scale for the hi-res second pass; ignored by NovelAI"`
 
+	formatInput
 	publishInput
+}
+
+type formatInput struct {
+	Format string `json:"format,omitempty" jsonschema:"output image format: png, jpeg, jxl (JPEG XL), or webp; defaults to the server's configured output format"`
 }
 
 type publishInput struct {
@@ -54,4 +60,15 @@ func setDefault(props map[string]*jsonschema.Schema, name string, value any) {
 	}
 
 	props[name].Default = raw
+}
+
+func setFormatSchema(s *jsonschema.Schema, def imgfmt.Format) {
+	setDefault(s.Properties, "format", def.String())
+
+	names := make([]any, 0, len(imgfmt.Names()))
+	for _, name := range imgfmt.Names() {
+		names = append(names, name)
+	}
+
+	s.Properties["format"].Enum = names
 }

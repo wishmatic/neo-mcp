@@ -22,11 +22,11 @@ func (p *Publisher) Enabled() bool {
 	return p.uploader != nil
 }
 
-func (p *Publisher) Images(ctx context.Context, label string, images [][]byte, public bool) ([]string, error) {
+func (p *Publisher) Images(ctx context.Context, label string, images [][]byte, contentType string, public bool) ([]string, error) {
 	urls := make([]string, 0, len(images))
 
 	for _, data := range images {
-		url, err := p.uploader.UploadImage(ctx, data, public)
+		url, err := p.uploader.UploadFile(ctx, data, contentType, public)
 		if err != nil {
 			p.log.Error(label+" upload to s3 failed", zap.Error(err))
 

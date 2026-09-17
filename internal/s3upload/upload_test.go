@@ -85,7 +85,7 @@ func TestUploadImage(t *testing.T) {
 	u := newTestUploader(t, rt)
 
 	want := []byte("pretend-png-bytes")
-	url, err := u.UploadImage(context.Background(), want, false)
+	url, err := u.UploadFile(context.Background(), want, "image/png", false)
 	if err != nil {
 		t.Fatalf("UploadImage() error: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestUploadImagePublicBaseURL(t *testing.T) {
 	u.cfg.PublicBaseURL = "https://cdn.example.com"
 	u.cfg.KeyPrefix = "i/mcp"
 
-	url, err := u.UploadImage(context.Background(), []byte("pretend-png-bytes"), false)
+	url, err := u.UploadFile(context.Background(), []byte("pretend-png-bytes"), "image/png", false)
 	if err != nil {
 		t.Fatalf("UploadImage() error: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestUploadImagePublicPrefix(t *testing.T) {
 	u.cfg.PublicBaseURL = "https://cdn.example.com"
 	u.cfg.KeyPrefix = "i/images/user"
 
-	url, err := u.UploadImage(context.Background(), []byte("pretend-png-bytes"), true)
+	url, err := u.UploadFile(context.Background(), []byte("pretend-png-bytes"), "image/png", true)
 	if err != nil {
 		t.Fatalf("UploadImage() error: %v", err)
 	}
@@ -209,7 +209,7 @@ func TestUploadImagePublicPresigned(t *testing.T) {
 
 	u := newTestUploader(t, rt)
 
-	url, err := u.UploadImage(context.Background(), []byte("pretend-png-bytes"), true)
+	url, err := u.UploadFile(context.Background(), []byte("pretend-png-bytes"), "image/png", true)
 	if err != nil {
 		t.Fatalf("UploadImage() error: %v", err)
 	}
@@ -247,6 +247,7 @@ func TestUploadFileContentTypes(t *testing.T) {
 	}{
 		{name: "png", contentType: "image/png", wantExt: ".png"},
 		{name: "jpeg", contentType: "image/jpeg", wantExt: ".jpg"},
+		{name: "jxl", contentType: "image/jxl", wantExt: ".jxl"},
 		{name: "webp", contentType: "image/webp", wantExt: ".webp"},
 	}
 
@@ -322,6 +323,7 @@ func TestFileExtension(t *testing.T) {
 	tests := map[string]string{
 		"image/png":  "png",
 		"image/jpeg": "jpg",
+		"image/jxl":  "jxl",
 		"image/webp": "webp",
 		"text/plain": "png",
 	}

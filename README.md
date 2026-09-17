@@ -11,6 +11,9 @@ Note that the only version of Forge we support is
     - They also route to NovelAI when `model` starts with `nai-diffusion-`. Set `NOVELAI_API_KEY` to enable it. Forge-only
       options such as hi-res fix, presets, and VAE/text encoders are ignored for NovelAI requests.
     - With NovelAI enabled, `anlas` reports the account's credit balance and the V5 usage meter.
+- Output images are WebP by default. `OUTPUT_FORMAT` sets the format for every tool (`png`, `jpeg`, `jxl`, or `webp`),
+  and the `format` input overrides it for a single call. `txt2img`, `img2img`, `bgkill`, and `publicize` all take it.
+  Transparency is kept for every format except JPEG, which composites onto white.
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
   foreground and produce a padded square, which is handy for logo generation.
@@ -20,7 +23,7 @@ Note that the only version of Forge we support is
   JPEG, or WebP data.
 - If you provide `S3_*` environment variables, generated images are uploaded to an S3-compatible object store and
   returned as presigned URLs.
-    - Without this, they're returned as plain `image/png` content.
+    - Without this, they're returned inline with the configured output format's media type.
     - If you also provide `GARAGEFRONT_URL` and `GARAGEFRONT_USER_ID`, images are uploaded under that user's
       directory and returned as unsigned URLs served by [Garagefront](https://github.com/wishmatic/garagefront).
       The image tools also accept a `public` flag that writes to Garagefront's world-readable `/i/public/` namespace
@@ -94,7 +97,7 @@ Some extensions I use will be supported over time if they can be called via the 
 Right now, this is only [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet), which provides the
 `bgkill` tool.
 
-## Warning
+## Warnings
 
 This MCP will be available and maintained so long as I use it, and is built for my own purposes. Extending features via
 issue requests and PRs will be _considered_ but unless I find use out of it myself, I probably won't work on those
@@ -102,6 +105,8 @@ features.
 
 This is also very bespoke to my use case. I recommend forking this and adjusting features to your needs if it doesn't
 quite fit your own.
+
+Current human understanding of this codebase is: 50%.
 
 ## License
 

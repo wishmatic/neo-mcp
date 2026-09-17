@@ -15,6 +15,7 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/config"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
@@ -48,6 +49,11 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 
 	if cfg.ExamplesEnabled && cfg.ExamplesMax < 1 {
 		return nil, fmt.Errorf("EXAMPLES_MAX must be at least 1 when EXAMPLES_ENABLED is set")
+	}
+
+	outputFormat, err := outputFormatFrom(cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	storeClient, err := store.New(cfg.DBPath)
@@ -156,6 +162,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 			Enabled: cfg.ExamplesEnabled,
 			Max:     cfg.ExamplesMax,
 		},
+		OutputFormat: outputFormat,
 	})
 	if err != nil {
 		_ = storeClient.Close()
@@ -189,6 +196,19 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 			IdleTimeout:       60 * time.Second,
 		},
 	}, nil
+}
+
+func outputFormatFrom(cfg config.Config) (imgfmt.Format, error) {
+	if cfg.OutputFormat == "" {
+		return imgfmt.Default, nil
+	}
+
+	format, err := imgfmt.Parse(cfg.OutputFormat)
+	if err != nil {
+		return "", fmt.Errorf("OUTPUT_FORMAT: %w", err)
+	}
+
+	return format, nil
 }
 
 func (s *Server) Run() error {

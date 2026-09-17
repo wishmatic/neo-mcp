@@ -36,6 +36,8 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 - Default to {{PREFERRED_SIZE}} unless the request implies otherwise.
 - Use {{PREFERRED_STEPS}} steps and {{PREFERRED_CFG}} guidance unless the user asks for something else.
 - {{STYLE_NOTES}}, for example {{STYLE_EXAMPLE}}.
+- Images come back as WebP unless the server sets `OUTPUT_FORMAT`; pass `format` (`png`, `jpeg`, `jxl`, or `webp`) only
+  when the user wants a different file type.
 - Never set `public` unless the user has explicitly asked for an image that anyone can open, and say so when you do.
 - Use `publicize` only when the user has explicitly asked for an image from a URL to be publicly viewable.
 

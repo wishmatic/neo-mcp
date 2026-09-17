@@ -7,10 +7,13 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"go.uber.org/zap"
 )
 
 type bgkillInput struct {
+	formatInput
+
 	ModelName string `json:"model_name" jsonschema:"BiRefNet model to load"`
 
 	ImageURL string `json:"image_url" jsonschema:"URL of the image to remove the background from; the service downloads it (following redirects)"`
@@ -30,7 +33,7 @@ func registerBgkill(srv *mcp.Server, h *handlers) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "bgkill",
 		Description: "Remove the background from an image via the BiRefNet extension. Downloads the input image from a URL (following redirects), then returns the foreground with a transparent background.",
-		InputSchema: bgkillSchema(),
+		InputSchema: bgkillSchema(h.defaultFormat),
 	}, h.bgkill)
 }
 
@@ -39,8 +42,14 @@ func (h *handlers) bgkill(
 	_ *mcp.CallToolRequest,
 	in bgkillInput,
 ) (*mcp.CallToolResult, generationOutput, error) {
+	format, err := h.outputFormat(in.Format)
+	if err != nil {
+		return nil, generationOutput{}, fmt.Errorf("bgkill: %w", err)
+	}
+
 	h.log.Debug("tool called",
 		zap.String("tool", "bgkill"),
+		zap.String("format", format.String()),
 		zap.String("model_name", in.ModelName),
 		zap.String("image_url", in.ImageURL),
 		zap.Bool("full_mode", in.IsFullMode),
@@ -69,7 +78,7 @@ func (h *handlers) bgkill(
 		return nil, generationOutput{}, h.generationFailure(ctx, "bgkill", err)
 	}
 
-	return h.publishImages(ctx, "bgkill", [][]byte{out}, in.Public)
+	return h.publishImages(ctx, "bgkill", [][]byte{out}, in.Public, format)
 }
 
 func bgkillRequest(in bgkillInput, image []byte) bgkill.Request {
@@ -83,7 +92,7 @@ func bgkillRequest(in bgkillInput, image []byte) bgkill.Request {
 	}
 }
 
-func bgkillSchema() *jsonschema.Schema {
+func bgkillSchema(def imgfmt.Format) *jsonschema.Schema {
 	s, err := jsonschema.For[bgkillInput](nil)
 	if err != nil {
 		panic(fmt.Sprintf("bgkill: infer input schema: %v", err))
@@ -99,6 +108,7 @@ func bgkillSchema() *jsonschema.Schema {
 	setDefault(s.Properties, "crop", false)
 	setDefault(s.Properties, "square", false)
 	setDefault(s.Properties, "public", false)
+	setFormatSchema(s, def)
 
 	return s
 }

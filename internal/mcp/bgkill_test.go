@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 )
 
 func TestBgkillRequestMapsInput(t *testing.T) {
@@ -35,7 +36,7 @@ func TestBgkillRequestMapsInput(t *testing.T) {
 }
 
 func TestBgkillSchema(t *testing.T) {
-	s := bgkillSchema()
+	s := bgkillSchema(imgfmt.Default)
 
 	for _, field := range []string{"model_name", "image_url"} {
 		if !slices.Contains(s.Required, field) {
@@ -58,7 +59,7 @@ func TestBgkillSchema(t *testing.T) {
 }
 
 func TestBgkillCropSchema(t *testing.T) {
-	s := bgkillSchema()
+	s := bgkillSchema(imgfmt.Default)
 
 	for _, field := range []string{"full_mode", "crop", "square"} {
 		prop := s.Properties[field]

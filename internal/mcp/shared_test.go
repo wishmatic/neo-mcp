@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 )
 
 func schemas() map[string]*jsonschema.Schema {
 	return map[string]*jsonschema.Schema{
-		"txt2img": txt2imgSchema(),
-		"img2img": img2imgSchema(),
+		"txt2img": txt2imgSchema(imgfmt.Default),
+		"img2img": img2imgSchema(imgfmt.Default),
 	}
 }
 
@@ -52,6 +53,7 @@ func TestSchemasIncludeSharedFields(t *testing.T) {
 		"hr_upscaler",
 		"hr_second_pass_steps",
 		"hr_cfg",
+		"format",
 		"public",
 	}
 
@@ -66,7 +68,7 @@ func TestSchemasIncludeSharedFields(t *testing.T) {
 
 func TestPublicFlagSchema(t *testing.T) {
 	withFlag := schemas()
-	withFlag["bgkill"] = bgkillSchema()
+	withFlag["bgkill"] = bgkillSchema(imgfmt.Default)
 
 	for name, s := range withFlag {
 		prop := s.Properties["public"]
@@ -99,6 +101,69 @@ func TestPublicFlagSchema(t *testing.T) {
 	}
 }
 
+func TestFormatFlagSchema(t *testing.T) {
+	withFlag := schemas()
+	withFlag["bgkill"] = bgkillSchema(imgfmt.Default)
+	withFlag["publicize"] = publicizeSchema(imgfmt.Default)
+
+	for tool, s := range withFlag {
+		prop := s.Properties["format"]
+		if prop == nil {
+			t.Errorf("%s: format property is missing", tool)
+			continue
+		}
+
+		if prop.Type != "string" {
+			t.Errorf("%s: format type = %q, want string", tool, prop.Type)
+		}
+
+		names := imgfmt.Names()
+		if len(prop.Enum) != len(names) {
+			t.Errorf("%s: format enum = %v, want %v", tool, prop.Enum, names)
+		}
+
+		for i, name := range names {
+			if i < len(prop.Enum) && prop.Enum[i] != name {
+				t.Errorf("%s: format enum[%d] = %v, want %q", tool, i, prop.Enum[i], name)
+			}
+		}
+
+		if string(prop.Default) != `"webp"` {
+			t.Errorf("%s: format default = %s, want webp", tool, prop.Default)
+		}
+
+		if slices.Contains(s.Required, "format") {
+			t.Errorf("%s: format must not be required", tool)
+		}
+	}
+
+	if img2txtSchema().Properties["format"] != nil {
+		t.Error("img2txt: format property present, want none")
+	}
+}
+
+func TestFormatFlagSchemaFollowsConfiguredDefault(t *testing.T) {
+	for _, name := range imgfmt.Names() {
+		format, err := imgfmt.Parse(name)
+		if err != nil {
+			t.Fatalf("Parse(%q) error: %v", name, err)
+		}
+
+		want := `"` + name + `"`
+
+		for tool, prop := range map[string]*jsonschema.Schema{
+			"txt2img":   txt2imgSchema(format).Properties["format"],
+			"img2img":   img2imgSchema(format).Properties["format"],
+			"bgkill":    bgkillSchema(format).Properties["format"],
+			"publicize": publicizeSchema(format).Properties["format"],
+		} {
+			if string(prop.Default) != want {
+				t.Errorf("%s with default %s: format default = %s, want %s", tool, name, prop.Default, want)
+			}
+		}
+	}
+}
+
 func TestModelDescriptionRoutesNovelAI(t *testing.T) {
 	for name, s := range schemas() {
 		model := s.Properties["model"]
@@ -126,7 +191,7 @@ func TestSamplerDefaultsAreEmpty(t *testing.T) {
 }
 
 func TestImg2ImgNoiseDefault(t *testing.T) {
-	noise := img2imgSchema().Properties["noise"]
+	noise := img2imgSchema(imgfmt.Default).Properties["noise"]
 	if noise == nil {
 		t.Fatal("noise property is missing")
 	}
@@ -135,7 +200,7 @@ func TestImg2ImgNoiseDefault(t *testing.T) {
 		t.Errorf("noise default = %s, want 0", noise.Default)
 	}
 
-	if txt2imgSchema().Properties["noise"] != nil {
+	if txt2imgSchema(imgfmt.Default).Properties["noise"] != nil {
 		t.Error("txt2img has a noise property, want none")
 	}
 }

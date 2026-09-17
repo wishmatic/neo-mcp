@@ -7,6 +7,7 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"go.uber.org/zap"
 )
 
@@ -21,7 +22,7 @@ func registerTxt2Img(srv *mcp.Server, h *handlers) {
 		Name: "txt2img",
 		Description: "Generate images synchronously via the local Stable Diffusion WebUI (Forge Neo) instance, " +
 			"or via NovelAI when the model is a NovelAI model id. Blocks until generation completes and returns the image(s).",
-		InputSchema: txt2imgSchema(),
+		InputSchema: txt2imgSchema(h.defaultFormat),
 	}, h.txt2img)
 }
 
@@ -32,9 +33,15 @@ func (h *handlers) txt2img(
 ) (*mcp.CallToolResult, generationOutput, error) {
 	provider := imagegen.ProviderOf(in.Model)
 
+	format, err := h.outputFormat(in.Format)
+	if err != nil {
+		return nil, generationOutput{}, fmt.Errorf("txt2img: %w", err)
+	}
+
 	h.log.Debug("tool called",
 		zap.String("tool", "txt2img"),
 		zap.String("provider", provider),
+		zap.String("format", format.String()),
 		zap.String("model", in.Model),
 		zap.String("forge_preset", in.ForgePreset),
 		zap.Strings("vae_and_text_models", in.VAEAndTextModels),
@@ -69,7 +76,7 @@ func (h *handlers) txt2img(
 
 	h.log.Info("txt2img generation finished", zap.Int("images", len(images)))
 
-	result, out, err := h.publishImages(ctx, "txt2img", images, in.Public)
+	result, out, err := h.publishImages(ctx, "txt2img", images, in.Public, format)
 	if err != nil {
 		return nil, generationOutput{}, err
 	}
@@ -79,7 +86,7 @@ func (h *handlers) txt2img(
 	return result, out, nil
 }
 
-func txt2imgSchema() *jsonschema.Schema {
+func txt2imgSchema(def imgfmt.Format) *jsonschema.Schema {
 	s, err := jsonschema.For[txt2imgInput](nil)
 	if err != nil {
 		panic(fmt.Sprintf("txt2img: infer input schema: %v", err))
@@ -94,6 +101,7 @@ func txt2imgSchema() *jsonschema.Schema {
 	setDefault(s.Properties, "sampler_name", "")
 	setDefault(s.Properties, "scheduler", "")
 	setDefault(s.Properties, "public", false)
+	setFormatSchema(s, def)
 
 	return s
 }

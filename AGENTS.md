@@ -69,6 +69,7 @@ flowchart TD
         present["internal/present"]
         publish["internal/publish"]
         crop["internal/crop"]
+        imgfmt["internal/imgfmt"]
     end
 
     subgraph clientLibraries[Backend and infrastructure clients]
@@ -103,11 +104,13 @@ flowchart TD
     server --> s3upload
     server --> shortener
     server --> store
+    server --> imgfmt
 
     mcp --> imagegen
     mcp --> bgkill
     mcp --> present
     mcp --> publish
+    mcp --> imgfmt
     mcp --> novelai
     mcp --> openai
     mcp --> resolve

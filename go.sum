@@ -28,6 +28,10 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
+github.com/gen2brain/jxl v0.2.0 h1:cXSQnfbcC0JGFzaI344VzPMbe7mh6rYc0tjPcBUsE4U=
+github.com/gen2brain/jxl v0.2.0/go.mod h1:VjJHRai/8I8Es01mULqyiOihRBOjJr1Zo+NoN/MyIwo=
+github.com/gen2brain/vpx v0.2.0 h1:j0qYK4A/PzUpxOEFt3QSUFG4gQpO2XsLwo+3EmjRNlE=
+github.com/gen2brain/vpx v0.2.0/go.mod h1:EVIdqguMSiapbtjDm4AWgFgYYJ4d+k8trXqjxYZ/4XE=
 github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
 github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto=
 github.com/go-chi/cors v1.2.2 h1:Jmey33TE+b+rB7fT8MUy1u0I4L+NARQlK6LhzKPSyQE=
