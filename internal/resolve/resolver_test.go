@@ -1,4 +1,4 @@
-package imageresolve
+package resolve
 
 import (
 	"context"

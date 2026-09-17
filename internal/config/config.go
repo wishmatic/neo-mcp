@@ -38,6 +38,11 @@ type Config struct {
 	ShortenerAPIURL string `env:"SHORTENER_API_URL"`
 	ShortenerAPIKey string `env:"SHORTENER_API_KEY"`
 	ShortenerExpiry int    `env:"SHORTENER_EXPIRY_SECONDS" envDefault:"0"`
+
+	Img2TxtBaseURL        string `env:"IMG2TXT_BASE_URL"`
+	Img2TxtAPIKey         string `env:"IMG2TXT_API_KEY"`
+	Img2TxtModel          string `env:"IMG2TXT_MODEL"`
+	Img2TxtTimeoutSeconds int    `env:"IMG2TXT_TIMEOUT_SECONDS" envDefault:"180"`
 }
 
 func Load() (Config, error) {

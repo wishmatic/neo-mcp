@@ -1,4 +1,4 @@
-package imageresolve
+package resolve
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func New(store ObjectStore, publicBase string) (*Resolver, error) {
 	if publicBase != "" {
 		base, err := url.Parse(publicBase)
 		if err != nil || base.Scheme == "" || base.Host == "" {
-			return nil, fmt.Errorf("imageresolve: invalid public base URL %q", publicBase)
+			return nil, fmt.Errorf("resolve: invalid public base URL %q", publicBase)
 		}
 
 		r.publicBase = base
@@ -56,13 +56,13 @@ func New(store ObjectStore, publicBase string) (*Resolver, error) {
 func (r *Resolver) Fetch(ctx context.Context, rawURL string) ([]byte, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, fmt.Errorf("imageresolve: parse URL %q: %w", rawURL, err)
+		return nil, fmt.Errorf("resolve: parse URL %q: %w", rawURL, err)
 	}
 
 	for hop := 0; ; hop++ {
 		if key, ok := r.objectKey(u); ok {
 			if r.store == nil {
-				return nil, fmt.Errorf("imageresolve: %s resolves to an S3 object but S3 is not configured", u)
+				return nil, fmt.Errorf("resolve: %s resolves to an S3 object but S3 is not configured", u)
 			}
 
 			return r.store.GetObject(ctx, key)
@@ -81,16 +81,16 @@ func (r *Resolver) Fetch(ctx context.Context, rawURL string) ([]byte, error) {
 		resp.Body.Close()
 
 		if location == "" {
-			return nil, fmt.Errorf("imageresolve: %s returned HTTP %d without a Location header", u, resp.StatusCode)
+			return nil, fmt.Errorf("resolve: %s returned HTTP %d without a Location header", u, resp.StatusCode)
 		}
 
 		if hop >= maxRedirects {
-			return nil, fmt.Errorf("imageresolve: too many redirects fetching %q", rawURL)
+			return nil, fmt.Errorf("resolve: too many redirects fetching %q", rawURL)
 		}
 
 		next, err := u.Parse(location)
 		if err != nil {
-			return nil, fmt.Errorf("imageresolve: invalid redirect location %q: %w", location, err)
+			return nil, fmt.Errorf("resolve: invalid redirect location %q: %w", location, err)
 		}
 
 		u = next
@@ -100,12 +100,12 @@ func (r *Resolver) Fetch(ctx context.Context, rawURL string) ([]byte, error) {
 func (r *Resolver) get(ctx context.Context, u *url.URL) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("imageresolve: build request for %s: %w", u, err)
+		return nil, fmt.Errorf("resolve: build request for %s: %w", u, err)
 	}
 
 	resp, err := r.http.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("imageresolve: fetch %s: %w", u, err)
+		return nil, fmt.Errorf("resolve: fetch %s: %w", u, err)
 	}
 
 	return resp, nil
@@ -159,12 +159,12 @@ func readResponse(u *url.URL, resp *http.Response) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("imageresolve: %s returned HTTP %d: %s", u, resp.StatusCode, utils.ReadLimited(resp.Body))
+		return nil, fmt.Errorf("resolve: %s returned HTTP %d: %s", u, resp.StatusCode, utils.ReadLimited(resp.Body))
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("imageresolve: read %s: %w", u, err)
+		return nil, fmt.Errorf("resolve: read %s: %w", u, err)
 	}
 
 	return data, nil

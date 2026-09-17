@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewRegistersTools(t *testing.T) {
-	srv, err := New(zapNop(), nil, nil, nil, nil)
+	srv, err := New(zapNop(), nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("New() unexpected error: %v", err)
 	}

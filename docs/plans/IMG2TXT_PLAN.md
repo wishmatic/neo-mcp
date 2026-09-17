@@ -11,7 +11,7 @@ base64 data URI, or raw base64 data, in PNG, JPEG, or WebP.
 In scope:
 
 - New `img2txt` MCP tool.
-- Reuse of the existing resource fetching stack (`internal/imageresolve`) so URLs, shortener redirects, and Garagefront
+- Reuse of the existing resource fetching stack (`internal/resolve`) so URLs, shortener redirects, and Garagefront
   S3 reads keep working with no duplicated logic.
 - New OpenAI-compatible vision client.
 - Config, wiring, docs, and tests.
@@ -27,27 +27,27 @@ Out of scope:
 
 ### Reuse strategy
 
-The existing `imageresolve.Resolver` already resolves an http(s) URL to bytes, following redirects and short-circuiting
+The existing `resolve.Resolver` already resolves an http(s) URL to bytes, following redirects and short-circuiting
 Garagefront URLs by reading them straight from S3 (`Resolver.Fetch`). The new image input also accepts base64, which is
-not a fetch. Rather than duplicating fetch logic, we extend `imageresolve` with a higher-level `Resolve` that normalises
+not a fetch. Rather than duplicating fetch logic, we extend `resolve` with a higher-level `Resolve` that normalises
 all three input forms (URL, data URI, raw base64) into `Image{Data, MediaType}`. `Resolve` calls the existing `Fetch`
 for URL inputs, so the redirect and Garagefront behaviour is shared, and `Fetch` itself is left unchanged for
 `img2img`/`bgkill`.
 
-The OpenAI client lives in a new `internal/img2txt` package and only knows about raw image bytes plus a media type. It
-does not import `imageresolve`, so resolution and provider concerns stay separate.
+The OpenAI client lives in a new `internal/openai` package and only knows about raw image bytes plus a media type. It
+does not import `resolve`, so resolution and provider concerns stay separate.
 
 ### Data flow
 
 ```mermaid
 flowchart TD
     A[Agent] -->|image, prompt, tuning| B[MCP img2txt tool]
-    B --> C{imageresolve.Resolve}
+    B --> C{resolve.Resolve}
     C -->|http(s) URL| D[Resolver.Fetch: redirects + Garagefront S3]
     C -->|data URI or raw base64| E[decode base64]
     D --> F[sniff png/jpeg/webp]
     E --> F
-    F --> G[img2txt.Describe]
+    F --> G[openai.Describe]
     G -->|POST /chat/completions| H[OpenAI-compatible endpoint]
     H --> G
     G --> B
@@ -58,14 +58,14 @@ flowchart TD
 
 | Path | Change | Purpose |
 | --- | --- | --- |
-| `internal/imageresolve/input.go` | New | `Image` type, media type constants, `Resolve` |
-| `internal/imageresolve/input_test.go` | New | Tests for `Resolve` |
-| `internal/img2txt/client.go` | New | `Client`, `New`, HTTP plumbing |
-| `internal/img2txt/describe.go` | New | `DescribeRequest`, `Describe`, payload and response building |
-| `internal/img2txt/describe_test.go` | New | Tests for the client |
+| `internal/resolve/input.go` | New | `Image` type, media type constants, `Resolve` |
+| `internal/resolve/input_test.go` | New | Tests for `Resolve` |
+| `internal/openai/client.go` | New | `Client`, `New`, HTTP plumbing |
+| `internal/openai/describe.go` | New | `DescribeRequest`, `Describe`, payload and response building |
+| `internal/openai/describe_test.go` | New | Tests for the client |
 | `internal/mcp/img2txt.go` | New | Tool registration, input schema, `runImg2Txt` handler |
 | `internal/mcp/img2txt_test.go` | New | Handler and registration tests |
-| `internal/mcp/server.go` | Edit | Accept and gate on `*img2txt.Client` |
+| `internal/mcp/server.go` | Edit | Accept and gate on `*openai.Client` |
 | `internal/mcp/server_test.go` | Edit | Update `New` call |
 | `internal/config/config.go` | Edit | New env vars |
 | `internal/config/config_test.go` | Edit | Tests for new env vars |
@@ -87,15 +87,15 @@ appends `/chat/completions`.
 
 ## Implementation Units
 
-### Unit 1: Resolve image inputs in `imageresolve`
+### Unit 1: Resolve image inputs in `resolve`
 
 Add a unified resolution entry point that turns any supported image reference into bytes plus a media type.
 
 Files:
 
-- `internal/imageresolve/input.go` (new)
-- `internal/imageresolve/input_test.go` (new)
-- `internal/imageresolve/resolver.go` (no behaviour change; only adjust if a shared helper is extracted)
+- `internal/resolve/input.go` (new)
+- `internal/resolve/input_test.go` (new)
+- `internal/resolve/resolver.go` (no behaviour change; only adjust if a shared helper is extracted)
 
 API:
 
@@ -140,19 +140,19 @@ Acceptance criteria:
 - AC-1.5: Input whose sniffed or declared type is unsupported (for example GIF or BMP) returns an error that includes
   the offending type.
 - AC-1.6: Empty input, malformed base64, and a `data:` URI without `;base64` each return a distinct error, all wrapped
-  with an `imageresolve:` prefix.
+  with an `resolve:` prefix.
 - AC-1.7: Base64 and data URI inputs perform no network I/O; URL inputs do.
-- AC-1.8: Existing `internal/imageresolve/resolver_test.go` passes unmodified, proving `Fetch` behaviour is unchanged.
+- AC-1.8: Existing `internal/resolve/resolver_test.go` passes unmodified, proving `Fetch` behaviour is unchanged.
 
 ### Unit 2: OpenAI-compatible vision client
 
-Add `internal/img2txt` with a small client that sends a single-image chat completion request and returns the text.
+Add `internal/openai` with a small client that sends a single-image chat completion request and returns the text.
 
 Files:
 
-- `internal/img2txt/client.go` (new)
-- `internal/img2txt/describe.go` (new)
-- `internal/img2txt/describe_test.go` (new)
+- `internal/openai/client.go` (new)
+- `internal/openai/describe.go` (new)
+- `internal/openai/describe_test.go` (new)
 
 API:
 
@@ -271,24 +271,24 @@ The handler is factored into `runImg2Txt(ctx, log, resolver, client, in) (img2tx
 tested directly. The registered closure logs the call, invokes `runImg2Txt`, and returns a `CallToolResult` whose content
 is a single `TextContent` carrying `Text`.
 
-Registration is gated on `img2txtClient != nil` and is independent of the `sdClient` gate that currently wraps the
+Registration is gated on `openaiClient != nil` and is independent of the `sdClient` gate that currently wraps the
 three SD tools.
 
 Acceptance criteria:
 
-- AC-4.1: `New` and `registerTools` accept a `*img2txt.Client`; `img2txt` is registered when it is non-nil and is absent
+- AC-4.1: `New` and `registerTools` accept a `*openai.Client`; `img2txt` is registered when it is non-nil and is absent
   when it is nil. Absence is asserted by connecting an in-memory MCP client session and listing tools.
 - AC-4.2: The registered tool is named `img2txt`; `image` is required with no default; `prompt`, `temperature`,
   `max_tokens`, `top_p`, and `detail` have the defaults in the table; `detail` has the enum `auto|low|high`; `model` and
   `system_prompt` have no default.
-- AC-4.3: `runImg2Txt` resolves the image with `imageresolve.Resolve`, so URL inputs (including shortened and Garagefront
+- AC-4.3: `runImg2Txt` resolves the image with `resolve.Resolve`, so URL inputs (including shortened and Garagefront
   URLs) and base64 inputs both reach the client as raw bytes with the correct media type.
 - AC-4.4: `runImg2Txt` forwards `prompt`, `system_prompt`, `model`, and the tuning values to `Describe` and returns the
   resolved model in `img2txtOutput.Model`.
 - AC-4.5: Image resolution failure returns `img2txt: resolve image: %w`; a client failure returns `img2txt: %w`; the
   registered closure surfaces these as tool errors.
 - AC-4.6: An end-to-end test wires an `httptest` image server and an `httptest` OpenAI-compatible server into a real
-  `img2txt.Client` and `Resolver`, calls the tool through an in-memory MCP session, and asserts the returned text, plus
+  `openai.Client` and `Resolver`, calls the tool through an in-memory MCP session, and asserts the returned text, plus
   that the image bytes and prompt arrived correctly at the vision endpoint.
 - AC-4.7: `internal/mcp/server_test.go` is updated to the new `New` signature, and `go test ./internal/mcp/...` passes.
 

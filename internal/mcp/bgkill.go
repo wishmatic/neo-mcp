@@ -7,7 +7,7 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/crop"
-	"github.com/wishmatic/neo-mcp/internal/imageresolve"
+	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"github.com/wishmatic/neo-mcp/internal/shortener"
@@ -36,7 +36,7 @@ func registerBgkill(
 	client *sdwebui.Client,
 	uploader *s3upload.Client,
 	shortenerClient *shortener.Client,
-	resolver *imageresolve.Resolver,
+	resolver *resolve.Resolver,
 ) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "bgkill",

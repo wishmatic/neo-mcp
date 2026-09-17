@@ -13,8 +13,9 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/auth"
 	"github.com/wishmatic/neo-mcp/internal/config"
-	"github.com/wishmatic/neo-mcp/internal/imageresolve"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
+	"github.com/wishmatic/neo-mcp/internal/openai"
+	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"github.com/wishmatic/neo-mcp/internal/shortener"
@@ -83,17 +84,35 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		)
 	}
 
-	var store imageresolve.ObjectStore
+	var store resolve.ObjectStore
 	if uploader != nil {
 		store = uploader
 	}
 
-	resolver, err := imageresolve.New(store, cfg.GaragefrontURL)
+	resolver, err := resolve.New(store, cfg.GaragefrontURL)
 	if err != nil {
 		return nil, fmt.Errorf("build image resolver: %w", err)
 	}
 
-	mcpSrv, err := mcpServer.New(log, sdClient, uploader, shortenerClient, resolver)
+	var openaiClient *openai.Client
+	if cfg.Img2TxtBaseURL != "" {
+		openaiClient, err = openai.New(
+			cfg.Img2TxtBaseURL,
+			cfg.Img2TxtAPIKey,
+			cfg.Img2TxtModel,
+			time.Duration(cfg.Img2TxtTimeoutSeconds)*time.Second,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("build img2txt client: %w", err)
+		}
+
+		log.Info("img2txt enabled",
+			zap.String("base_url", cfg.Img2TxtBaseURL),
+			zap.String("model", cfg.Img2TxtModel),
+		)
+	}
+
+	mcpSrv, err := mcpServer.New(log, sdClient, uploader, shortenerClient, resolver, openaiClient)
 	if err != nil {
 		return nil, fmt.Errorf("build mcp server: %w", err)
 	}
