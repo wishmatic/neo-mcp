@@ -15,7 +15,7 @@ const defaultImg2TxtPrompt = "Describe this image in detail."
 type img2txtInput struct {
 	Image        string  `json:"image" jsonschema:"image to recognise: an http(s) URL, a base64 data URI, or raw base64 PNG, JPEG, or WebP data"`
 	Prompt       string  `json:"prompt,omitempty" jsonschema:"what to ask about the image"`
-	SystemPrompt string  `json:"system_prompt,omitempty" jsonschema:"system instruction steering the model's response"`
+	SystemPrompt string  `json:"system_prompt,omitempty" jsonschema:"system instruction steering the model's response; defaults to the system instruction the server ships with"`
 	Model        string  `json:"model,omitempty" jsonschema:"vision model to use; defaults to the server-configured model"`
 	Temperature  float64 `json:"temperature,omitempty" jsonschema:"sampling temperature"`
 	MaxTokens    int     `json:"max_tokens,omitempty" jsonschema:"maximum tokens in the response"`

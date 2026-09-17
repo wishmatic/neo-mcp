@@ -163,7 +163,7 @@ func TestDescribeSendsExpectedRequest(t *testing.T) {
 	}
 }
 
-func TestDescribeOmitsAuthAndSystemWhenUnset(t *testing.T) {
+func TestDescribeOmitsAuthWhenUnset(t *testing.T) {
 	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
 
 	c, err := New(server.URL, "", "", "")
@@ -185,8 +185,8 @@ func TestDescribeOmitsAuthAndSystemWhenUnset(t *testing.T) {
 	}
 
 	payload := decodePayload(t, captured.body)
-	if len(payload.Messages) != 1 || payload.Messages[0].Role != "user" {
-		t.Errorf("messages = %+v, want a single user message", payload.Messages)
+	if len(payload.Messages) == 0 || payload.Messages[len(payload.Messages)-1].Role != "user" {
+		t.Errorf("messages = %+v, want a trailing user message", payload.Messages)
 	}
 }
 

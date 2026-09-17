@@ -73,7 +73,7 @@ func (c *Client) Describe(ctx context.Context, req DescribeRequest) (Result, err
 	}
 
 	if strings.TrimSpace(req.SystemPrompt) == "" {
-		req.SystemPrompt = c.defaultSystemPrompt
+		req.SystemPrompt = c.systemPrompt()
 	}
 
 	if len(req.ImageData) == 0 {

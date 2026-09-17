@@ -377,20 +377,29 @@ func TestImg2TxtCallToolEndToEnd(t *testing.T) {
 
 	var payload struct {
 		Messages []struct {
-			Content []struct {
-				Type     string `json:"type"`
-				Text     string `json:"text"`
-				ImageURL struct {
-					URL string `json:"url"`
-				} `json:"image_url"`
-			} `json:"content"`
+			Role    string          `json:"role"`
+			Content json.RawMessage `json:"content"`
 		} `json:"messages"`
 	}
 	if err := json.Unmarshal(captured.body, &payload); err != nil {
 		t.Fatalf("decode vision payload: %v", err)
 	}
 
-	parts := payload.Messages[0].Content
+	if len(payload.Messages) == 0 || payload.Messages[len(payload.Messages)-1].Role != "user" {
+		t.Fatalf("messages = %+v, want a trailing user message", payload.Messages)
+	}
+
+	var parts []struct {
+		Type     string `json:"type"`
+		Text     string `json:"text"`
+		ImageURL struct {
+			URL string `json:"url"`
+		} `json:"image_url"`
+	}
+	if err := json.Unmarshal(payload.Messages[len(payload.Messages)-1].Content, &parts); err != nil {
+		t.Fatalf("decode user content: %v", err)
+	}
+
 	if len(parts) != 2 {
 		t.Fatalf("content parts = %d, want 2", len(parts))
 	}
