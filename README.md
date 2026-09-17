@@ -1,6 +1,6 @@
 # Neo MCP
 
-A thin MCP wrapper around a local Stable Diffusion WebUI (Forge Neo) instance.
+A thin MCP wrapper exposing image capabilities to LLM agents. Main functionality leans on SD WebUI Forge.
 
 ## Features
 
