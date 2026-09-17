@@ -73,9 +73,10 @@ func TestAnlasToolError(t *testing.T) {
 }
 
 func TestAnlasCallToolWithoutInput(t *testing.T) {
-	srv, err := New(zapNop(), nil,
-		newNovelAIAccountBackend(t, `{"trainingStepsLeft":{"fixedTrainingStepsLeft":7}}`),
-		nil, nil, nil, nil)
+	srv, err := New(Deps{
+		Log:     zapNop(),
+		NovelAI: newNovelAIAccountBackend(t, `{"trainingStepsLeft":{"fixedTrainingStepsLeft":7}}`),
+	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}

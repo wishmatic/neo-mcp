@@ -26,6 +26,16 @@ Note that the only version of Forge we support is
       instead, for when you have explicitly asked for an image anyone can open. Super niche.
 - If you _also_ provide `SHORTENER_*` environment variables, any generated URLs are shortened first.
     - This assumes your URL shortener is [`chhoto-url`](https://github.com/SinTan1729/chhoto-url).
+- `add_review`, `get_reviews`, and `delete_review` record a rating from 1 to 10 with one line of commentary per model,
+  stored in a local SQLite database.
+    - Created automatically at `DB_PATH` (`neo-mcp.db`; `/data/neo-mcp.db` in Docker).
+- If you set `EXAMPLES_ENABLED=true`, every `txt2img`/`img2img` query and the URL of the image it produced are saved per
+  model, and `get_examples` returns two random ones. Only the newest `EXAMPLES_MAX` examples per model are kept.
+    - This only works when generated images are uploaded, so `S3_*` must be configured; without it nothing is saved and
+      `get_examples` is not registered. That is expected rather than a bug: a saved example is the query plus a URL, not
+      a copy of the image.
+    - A presigned URL expires after 7 days. Configure `GARAGEFRONT_URL`, or let the tools upload with `public`, for
+      example links that stay open.
 - `publicize` downloads an image from any URL and stores it in the public namespace, returning a URL anyone can open.
   It needs `S3_*` configured; with Garagefront configured the URL is a durable `/i/public/...` one.
 
@@ -38,10 +48,13 @@ docker run -d \
   -p 8080:8080 \
   -e API_KEY=change-me \
   -e SD_URL=http://host.docker.internal:7860 \
+  -v /mnt/user/appdata/neo-mcp:/data \
   ghcr.io/wishmatic/neo-mcp:latest
 ```
 
 The MCP endpoint is served at `/mcp`.
+
+`/data` holds the SQLite database, so bind-mount a host directory there to keep it across container replacements; the container runs as uid 65532, so that directory must be writable by it.
 
 All other configuration is optional but strongly recommended; see [.env.example](.env.example).
 

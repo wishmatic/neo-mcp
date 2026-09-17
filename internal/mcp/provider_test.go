@@ -369,7 +369,7 @@ func TestTxt2ImgForgeSamplerDefaults(t *testing.T) {
 func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 	novelaiLog := &requestLog{}
 
-	srv, err := New(zapNop(), nil, newNovelAIBackend(t, novelaiLog), nil, nil, nil, nil)
+	srv, err := New(Deps{Log: zapNop(), NovelAI: newNovelAIBackend(t, novelaiLog)})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}

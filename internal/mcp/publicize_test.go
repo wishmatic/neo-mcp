@@ -222,7 +222,11 @@ func TestPublicizeResolveError(t *testing.T) {
 func TestPublicizeRegistration(t *testing.T) {
 	captured := &[]uploadCapture{}
 
-	withUploader, err := New(zapNop(), nil, nil, newPublicizeUploader(t, captured), nil, newPublicizeResolver(t), nil)
+	withUploader, err := New(Deps{
+		Log:      zapNop(),
+		Uploader: newPublicizeUploader(t, captured),
+		Resolver: newPublicizeResolver(t),
+	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -249,7 +253,7 @@ func TestPublicizeRegistration(t *testing.T) {
 		}
 	}
 
-	withoutUploader, err := New(zapNop(), nil, nil, nil, nil, newPublicizeResolver(t), nil)
+	withoutUploader, err := New(Deps{Log: zapNop(), Resolver: newPublicizeResolver(t)})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}

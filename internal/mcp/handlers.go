@@ -10,6 +10,7 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"github.com/wishmatic/neo-mcp/internal/shortener"
+	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
 
@@ -21,6 +22,8 @@ type handlers struct {
 	shortener *shortener.Client
 	resolver  *resolve.Resolver
 	openai    *openai.Client
+	store     *store.Client
+	examples  ExamplesConfig
 }
 
 func (h *handlers) generationFailure(ctx context.Context, tool string, err error) error {

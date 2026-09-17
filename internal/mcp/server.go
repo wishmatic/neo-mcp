@@ -8,31 +8,38 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"github.com/wishmatic/neo-mcp/internal/shortener"
+	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
 
-func New(
-	log *zap.Logger,
-	sdClient *sdwebui.Client,
-	novelaiClient *novelai.Client,
-	uploader *s3upload.Client,
-	shortenerClient *shortener.Client,
-	resolver *resolve.Resolver,
-	openaiClient *openai.Client,
-) (*mcp.Server, error) {
+type Deps struct {
+	Log       *zap.Logger
+	Forge     *sdwebui.Client
+	NovelAI   *novelai.Client
+	Uploader  *s3upload.Client
+	Shortener *shortener.Client
+	Resolver  *resolve.Resolver
+	OpenAI    *openai.Client
+	Store     *store.Client
+	Examples  ExamplesConfig
+}
+
+func New(deps Deps) (*mcp.Server, error) {
 	srv := mcp.NewServer(&mcp.Implementation{
 		Name:    "neo-mcp",
 		Version: "0.1.0",
 	}, nil)
 
 	registerTools(srv, &handlers{
-		log:       log,
-		forge:     sdClient,
-		novelai:   novelaiClient,
-		uploader:  uploader,
-		shortener: shortenerClient,
-		resolver:  resolver,
-		openai:    openaiClient,
+		log:       deps.Log,
+		forge:     deps.Forge,
+		novelai:   deps.NovelAI,
+		uploader:  deps.Uploader,
+		shortener: deps.Shortener,
+		resolver:  deps.Resolver,
+		openai:    deps.OpenAI,
+		store:     deps.Store,
+		examples:  deps.Examples,
 	})
 
 	return srv, nil
@@ -58,5 +65,13 @@ func registerTools(srv *mcp.Server, h *handlers) {
 
 	if h.uploader != nil {
 		registerPublicize(srv, h)
+	}
+
+	if h.store != nil {
+		registerReviews(srv, h)
+	}
+
+	if h.examples.Enabled && h.store != nil && h.uploader != nil {
+		registerGetExamples(srv, h)
 	}
 }

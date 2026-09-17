@@ -20,6 +20,7 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"github.com/wishmatic/neo-mcp/internal/shortener"
+	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
 
@@ -28,6 +29,7 @@ const writeTimeout = 10 * time.Minute
 type Server struct {
 	cfg    config.Config
 	log    *zap.Logger
+	store  *store.Client
 	router *chi.Mux
 	http   *http.Server
 }
@@ -40,6 +42,17 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	if cfg.GaragefrontURL != "" && cfg.GaragefrontUserID == "" {
 		return nil, fmt.Errorf("GARAGEFRONT_USER_ID is required when GARAGEFRONT_URL is set")
 	}
+
+	if cfg.ExamplesEnabled && cfg.ExamplesMax < 1 {
+		return nil, fmt.Errorf("EXAMPLES_MAX must be at least 1 when EXAMPLES_ENABLED is set")
+	}
+
+	storeClient, err := store.New(cfg.DBPath)
+	if err != nil {
+		return nil, fmt.Errorf("open database: %w", err)
+	}
+
+	log.Info("database opened", zap.String("path", cfg.DBPath))
 
 	router := chi.NewRouter()
 
@@ -86,12 +99,12 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		)
 	}
 
-	var store resolve.ObjectStore
+	var objectStore resolve.ObjectStore
 	if uploader != nil {
-		store = uploader
+		objectStore = uploader
 	}
 
-	resolver, err := resolve.New(store, cfg.GaragefrontURL)
+	resolver, err := resolve.New(objectStore, cfg.GaragefrontURL)
 	if err != nil {
 		return nil, fmt.Errorf("build image resolver: %w", err)
 	}
@@ -121,8 +134,28 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		log.Info("novelai enabled", zap.String("base_url", novelai.DefaultBaseURL))
 	}
 
-	mcpSrv, err := mcpServer.New(log, sdClient, novelaiClient, uploader, shortenerClient, resolver, openaiClient)
+	if cfg.ExamplesEnabled && uploader == nil {
+		log.Warn("examples enabled but S3 upload is not configured; no examples will be saved and get_examples is not " +
+			"registered")
+	}
+
+	mcpSrv, err := mcpServer.New(mcpServer.Deps{
+		Log:       log,
+		Forge:     sdClient,
+		NovelAI:   novelaiClient,
+		Uploader:  uploader,
+		Shortener: shortenerClient,
+		Resolver:  resolver,
+		OpenAI:    openaiClient,
+		Store:     storeClient,
+		Examples: mcpServer.ExamplesConfig{
+			Enabled: cfg.ExamplesEnabled,
+			Max:     cfg.ExamplesMax,
+		},
+	})
 	if err != nil {
+		_ = storeClient.Close()
+
 		return nil, fmt.Errorf("build mcp server: %w", err)
 	}
 
@@ -141,6 +174,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	return &Server{
 		cfg:    cfg,
 		log:    log,
+		store:  storeClient,
 		router: router,
 		http: &http.Server{
 			Addr:              cfg.Addr(),
@@ -164,5 +198,5 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-	return s.http.Shutdown(ctx)
+	return errors.Join(s.http.Shutdown(ctx), s.store.Close())
 }

@@ -68,7 +68,14 @@ func (h *handlers) txt2img(
 
 	h.log.Info("txt2img generation finished", zap.Int("images", len(images)))
 
-	return publishImages(ctx, h.log, "txt2img", images, in.Public, h.uploader, h.shortener)
+	result, out, err := publishImages(ctx, h.log, "txt2img", images, in.Public, h.uploader, h.shortener)
+	if err != nil {
+		return nil, generationOutput{}, err
+	}
+
+	h.saveExamples(ctx, "txt2img", in.Model, in, out.URLs)
+
+	return result, out, nil
 }
 
 func txt2imgSchema() *jsonschema.Schema {

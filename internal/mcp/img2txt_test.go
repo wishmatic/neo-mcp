@@ -174,7 +174,11 @@ func TestImg2TxtSchema(t *testing.T) {
 func TestImg2TxtRegisteredOnlyWhenClientPresent(t *testing.T) {
 	resolver := newImg2TxtResolver(t)
 
-	withClient, err := New(zapNop(), nil, nil, nil, nil, resolver, newImg2TxtClient(t, "http://example.com", "m"))
+	withClient, err := New(Deps{
+		Log:      zapNop(),
+		Resolver: resolver,
+		OpenAI:   newImg2TxtClient(t, "http://example.com", "m"),
+	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -183,7 +187,7 @@ func TestImg2TxtRegisteredOnlyWhenClientPresent(t *testing.T) {
 		t.Errorf("tools = %v, want img2txt", names)
 	}
 
-	withoutClient, err := New(zapNop(), nil, nil, nil, nil, resolver, nil)
+	withoutClient, err := New(Deps{Log: zapNop(), Resolver: resolver})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -325,7 +329,11 @@ func TestImg2TxtCallToolEndToEnd(t *testing.T) {
 	imageServer := newImg2TxtImageServer(t)
 	visionServer, captured := newImg2TxtVisionServer(t, `{"choices":[{"message":{"content":"a red square"}}]}`)
 
-	srv, err := New(zapNop(), nil, nil, nil, nil, newImg2TxtResolver(t), newImg2TxtClient(t, visionServer.URL, "vision-model"))
+	srv, err := New(Deps{
+		Log:      zapNop(),
+		Resolver: newImg2TxtResolver(t),
+		OpenAI:   newImg2TxtClient(t, visionServer.URL, "vision-model"),
+	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}

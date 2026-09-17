@@ -16,6 +16,8 @@ type Config struct {
 
 	APIKey string `env:"API_KEY"`
 
+	DBPath string `env:"DB_PATH" envDefault:"neo-mcp.db"`
+
 	SDURL string `env:"SD_URL" envDefault:"http://127.0.0.1:7860"`
 
 	NovelAIAPIKey string `env:"NOVELAI_API_KEY"`
@@ -42,6 +44,9 @@ type Config struct {
 	Img2TxtAPIKey       string `env:"IMG2TXT_API_KEY"`
 	Img2TxtModel        string `env:"IMG2TXT_MODEL"`
 	Img2TxtSystemPrompt string `env:"IMG2TXT_SYSTEM_PROMPT"`
+
+	ExamplesEnabled bool `env:"EXAMPLES_ENABLED" envDefault:"false"`
+	ExamplesMax     int  `env:"EXAMPLES_MAX" envDefault:"16"`
 }
 
 func Load() (Config, error) {

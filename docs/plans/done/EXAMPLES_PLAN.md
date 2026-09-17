@@ -225,31 +225,31 @@ Behaviour:
 
 Acceptance criteria:
 
-- AC-1.1: `SaveExample` returns a positive id, and `RandomExamples(ctx, model, 1)` returns a row whose model, tool,
-  query, and URL are identical to what was passed.
-- AC-1.2: Saving 17 examples for one model with a retain value of 16 leaves the 16 newest ids; the first saved row is
-  gone and the other 16 remain.
-- AC-1.3: Pruning affects only the saved model; saving for model `B` never removes rows for model `A`.
-- AC-1.4: After each of 20 sequential saves for one model with a retain value of 5, the model's row count is at most 5.
-- AC-1.5: `SaveExample` rejects an empty or whitespace-only model, an empty tool, an empty query, an empty URL, and a
-  retain value of 0 or less, and writes nothing in each case.
-- AC-1.6: `SaveExample` rejects a query that is not valid JSON, such as `not json` and an empty JSON value, and writes
-  nothing.
-- AC-1.7: The URL is stored verbatim, including a query string, a fragment, and percent-encoded characters; a 2000
-  character URL round-trips unchanged.
-- AC-1.8: The stored query round-trips byte-for-byte, including embedded newlines, tabs, quotes, and Markdown
-  metacharacters, and is not reordered or reformatted.
-- AC-1.9: `RandomExamples(ctx, model, 2)` returns at most two rows, only for the requested model, with no duplicate ids;
-  across 50 calls on 16 saved rows it returns at least two distinct result sets.
-- AC-1.10: With one saved row, `RandomExamples(ctx, model, 2)` returns that one row; with none it returns an empty,
-  non-nil slice and no error.
-- AC-1.11: `RandomExamples` rejects an empty model and a count below 1.
-- AC-1.12: Eight goroutines saving alternately for two models all succeed, and neither model exceeds its retain value,
-  when the test runs with `-race`.
-- AC-1.13: `Load()` reads `EXAMPLES_ENABLED` and `EXAMPLES_MAX`; the defaults are `false` and `16`.
-- AC-1.14: Opening a database created by an earlier version of the store (without the `examples` table) adds the table
-  without touching existing `reviews` rows, proving the schema stays idempotent.
-- AC-1.15: Tests use `t.TempDir()` and close the client in `t.Cleanup`.
+- [x] AC-1.1: `SaveExample` returns a positive id, and `RandomExamples(ctx, model, 1)` returns a row whose model, tool,
+      query, and URL are identical to what was passed.
+- [x] AC-1.2: Saving 17 examples for one model with a retain value of 16 leaves the 16 newest ids; the first saved row is
+      gone and the other 16 remain.
+- [x] AC-1.3: Pruning affects only the saved model; saving for model `B` never removes rows for model `A`.
+- [x] AC-1.4: After each of 20 sequential saves for one model with a retain value of 5, the model's row count is at most 5.
+- [x] AC-1.5: `SaveExample` rejects an empty or whitespace-only model, an empty tool, an empty query, an empty URL, and a
+      retain value of 0 or less, and writes nothing in each case.
+- [x] AC-1.6: `SaveExample` rejects a query that is not valid JSON, such as `not json` and an empty JSON value, and writes
+      nothing.
+- [x] AC-1.7: The URL is stored verbatim, including a query string, a fragment, and percent-encoded characters; a 2000
+      character URL round-trips unchanged.
+- [x] AC-1.8: The stored query round-trips byte-for-byte, including embedded newlines, tabs, quotes, and Markdown
+      metacharacters, and is not reordered or reformatted.
+- [x] AC-1.9: `RandomExamples(ctx, model, 2)` returns at most two rows, only for the requested model, with no duplicate ids;
+      across 50 calls on 16 saved rows it returns at least two distinct result sets.
+- [x] AC-1.10: With one saved row, `RandomExamples(ctx, model, 2)` returns that one row; with none it returns an empty,
+      non-nil slice and no error.
+- [x] AC-1.11: `RandomExamples` rejects an empty model and a count below 1.
+- [x] AC-1.12: Eight goroutines saving alternately for two models all succeed, and neither model exceeds its retain value,
+      when the test runs with `-race`.
+- [x] AC-1.13: `Load()` reads `EXAMPLES_ENABLED` and `EXAMPLES_MAX`; the defaults are `false` and `16`.
+- [x] AC-1.14: Opening a database created by an earlier version of the store (without the `examples` table) adds the table
+      without touching existing `reviews` rows, proving the schema stays idempotent.
+- [x] AC-1.15: Tests use `t.TempDir()` and close the client in `t.Cleanup`.
 
 ### Unit 2: Capture examples from generations
 
@@ -287,33 +287,33 @@ Behaviour:
 
 Acceptance criteria:
 
-- AC-2.1: With examples enabled and an uploader configured (a test uploader built with `s3upload.New` against an
-  httptest endpoint and a `PublicBaseURL`, so returned URLs are `https://cdn.example.com/i/mcp/<id>.png`), a `txt2img`
-  call through `CallTool` against the existing Forge test backend stores exactly one row.
-- AC-2.2: The stored row's `model` and `tool` match the call, its `url` equals the URL in the tool's structured output,
-  and its `query` unmarshals to a map containing the prompt, negative prompt, sampler, scheduler, steps, width, height,
-  cfg scale, and seed from the request.
-- AC-2.3: The same for `img2img`, whose stored query additionally contains `init_image_url`, `denoising_strength`, and
-  `noise`, and whose `tool` is `img2img`.
-- AC-2.4: With examples enabled but no uploader, the call still succeeds, returns inline image content, and writes no
-  row, because no URL is produced.
-- AC-2.5: With examples disabled and an uploader configured, no row is written.
-- AC-2.6: The model column holds the model exactly as passed, for both a Forge checkpoint filename and a NovelAI model
-  id.
-- AC-2.7: An empty `sampler_name` and `scheduler` are absent from the stored query rather than being filled with a
-  provider default.
-- AC-2.8: A generation failure writes no row; a failed S3 upload writes no row, because the tool returns an error before
-  capture.
-- AC-2.9: A capture failure (a closed store) does not fail the call: the tool still returns the image URL, and a warning
-  naming the tool is logged.
-- AC-2.10: No log entry contains the marshalled query, the prompt, or the URL; the warning carries the model, tool, and
-  error at most.
-- AC-2.11: `server.New` errors when `EXAMPLES_ENABLED` is true and `EXAMPLES_MAX` is 0 or negative, naming
-  `EXAMPLES_MAX`, and succeeds when `EXAMPLES_MAX` is 1.
-- AC-2.12: `server.New` logs a warning naming examples when `EXAMPLES_ENABLED` is true and no `S3_*` configuration is
-  provided, and logs none when an uploader is built; in both cases startup succeeds.
-- AC-2.13: `saveExamples` called with an already-cancelled context logs a warning and returns without panicking or
-  writing a row.
+- [x] AC-2.1: With examples enabled and an uploader configured (a test uploader built with `s3upload.New` against an
+      httptest endpoint and a `PublicBaseURL`, so returned URLs are `https://cdn.example.com/i/mcp/<id>.png`), a `txt2img`
+      call through `CallTool` against the existing Forge test backend stores exactly one row.
+- [x] AC-2.2: The stored row's `model` and `tool` match the call, its `url` equals the URL in the tool's structured output,
+      and its `query` unmarshals to a map containing the prompt, negative prompt, sampler, scheduler, steps, width, height,
+      cfg scale, and seed from the request.
+- [x] AC-2.3: The same for `img2img`, whose stored query additionally contains `init_image_url`, `denoising_strength`, and
+      `noise`, and whose `tool` is `img2img`.
+- [x] AC-2.4: With examples enabled but no uploader, the call still succeeds, returns inline image content, and writes no
+      row, because no URL is produced.
+- [x] AC-2.5: With examples disabled and an uploader configured, no row is written.
+- [x] AC-2.6: The model column holds the model exactly as passed, for both a Forge checkpoint filename and a NovelAI model
+      id.
+- [x] AC-2.7: An empty `sampler_name` and `scheduler` are absent from the stored query rather than being filled with a
+      provider default.
+- [x] AC-2.8: A generation failure writes no row; a failed S3 upload writes no row, because the tool returns an error before
+      capture.
+- [x] AC-2.9: A capture failure (a closed store) does not fail the call: the tool still returns the image URL, and a warning
+      naming the tool is logged.
+- [x] AC-2.10: No log entry contains the marshalled query, the prompt, or the URL; the warning carries the model, tool, and
+      error at most.
+- [x] AC-2.11: `server.New` errors when `EXAMPLES_ENABLED` is true and `EXAMPLES_MAX` is 0 or negative, naming
+      `EXAMPLES_MAX`, and succeeds when `EXAMPLES_MAX` is 1.
+- [x] AC-2.12: `server.New` logs a warning naming examples when `EXAMPLES_ENABLED` is true and no `S3_*` configuration is
+      provided, and logs none when an uploader is built; in both cases startup succeeds.
+- [x] AC-2.13: `saveExamples` called with an already-cancelled context logs a warning and returns without panicking or
+      writing a row.
 
 ### Unit 3: `get_examples` tool
 
@@ -389,24 +389,24 @@ Behaviour:
 
 Acceptance criteria:
 
-- AC-3.1: `get_examples` is registered only when `ExamplesConfig.Enabled` is true, the store is non-nil, and the
-  uploader is non-nil; it is absent when any of the three is missing, asserted by listing tools over an in-memory
-  session.
-- AC-3.2: The tool requires `model` with no default and has no other input properties.
-- AC-3.3: The result is a single `TextContent`; no `ImageContent` is returned even when examples exist.
-- AC-3.4: Structured output reports the requested model and the exact number of examples returned.
-- AC-3.5: With no saved examples, the call succeeds with the text `No examples saved for <model> yet.` and `count` 0.
-- AC-3.6: With one saved example, one section is rendered; with at least two, exactly two are rendered and each carries
-  its own URL.
-- AC-3.7: The URLs in the Markdown are byte-identical to the URLs stored by capture, verified end to end through
-  `CallTool`.
-- AC-3.8: A store error (a closed client) becomes a tool error prefixed `get_examples:` rather than a panic.
-- AC-3.9: The Markdown matches the format above for a `txt2img` row and an `img2img` row, including the fenced JSON
-  block, the `Saved` and `Image` bullets, and the blank lines between blocks.
-- AC-3.10: `examplesMarkdown` is a pure function tested directly with hand-built rows covering an empty slice, a query
-  with multi-byte text, a query whose values contain Markdown metacharacters and newlines, and a query that is not valid
-  JSON.
-- AC-3.11: Only the requested model's rows are used, and no more than two are returned even when more exist.
+- [x] AC-3.1: `get_examples` is registered only when `ExamplesConfig.Enabled` is true, the store is non-nil, and the
+      uploader is non-nil; it is absent when any of the three is missing, asserted by listing tools over an in-memory
+      session.
+- [x] AC-3.2: The tool requires `model` with no default and has no other input properties.
+- [x] AC-3.3: The result is a single `TextContent`; no `ImageContent` is returned even when examples exist.
+- [x] AC-3.4: Structured output reports the requested model and the exact number of examples returned.
+- [x] AC-3.5: With no saved examples, the call succeeds with the text `No examples saved for <model> yet.` and `count` 0.
+- [x] AC-3.6: With one saved example, one section is rendered; with at least two, exactly two are rendered and each carries
+      its own URL.
+- [x] AC-3.7: The URLs in the Markdown are byte-identical to the URLs stored by capture, verified end to end through
+      `CallTool`.
+- [x] AC-3.8: A store error (a closed client) becomes a tool error prefixed `get_examples:` rather than a panic.
+- [x] AC-3.9: The Markdown matches the format above for a `txt2img` row and an `img2img` row, including the fenced JSON
+      block, the `Saved` and `Image` bullets, and the blank lines between blocks.
+- [x] AC-3.10: `examplesMarkdown` is a pure function tested directly with hand-built rows covering an empty slice, a query
+      with multi-byte text, a query whose values contain Markdown metacharacters and newlines, and a query that is not valid
+      JSON.
+- [x] AC-3.11: Only the requested model's rows are used, and no more than two are returned even when more exist.
 
 ### Unit 4: Documentation
 
@@ -418,17 +418,17 @@ Files:
 
 Acceptance criteria:
 
-- AC-4.1: The README features list gains one bullet stating that, when `EXAMPLES_ENABLED` is set, every generation is
-  saved per model (the query and the resulting URL) and `get_examples` returns two random ones, and that only the newest
-  `EXAMPLES_MAX` are kept.
-- AC-4.2: The README bullet, or a line directly under it, states plainly that the feature only works when images are
-  uploaded, so `S3_*` must be configured, and that without it nothing is saved and the tool is not registered. It is
-  described as an expected limitation of the feature rather than a bug.
-- AC-4.3: `.env.example` lists `EXAMPLES_ENABLED` and `EXAMPLES_MAX` under an `examples (optional)` heading, stating the
-  defaults, that the cap is per model, that the oldest are dropped first, and that the feature requires `S3_*`.
-- AC-4.4: `docs/PROMPT.md` gains a short bullet telling the agent to call `get_examples` for a model it has not used
-  before.
-- AC-4.5: The README stays high level and defers the detail to `.env.example`, matching the existing style.
+- [x] AC-4.1: The README features list gains one bullet stating that, when `EXAMPLES_ENABLED` is set, every generation is
+      saved per model (the query and the resulting URL) and `get_examples` returns two random ones, and that only the newest
+      `EXAMPLES_MAX` are kept.
+- [x] AC-4.2: The README bullet, or a line directly under it, states plainly that the feature only works when images are
+      uploaded, so `S3_*` must be configured, and that without it nothing is saved and the tool is not registered. It is
+      described as an expected limitation of the feature rather than a bug.
+- [x] AC-4.3: `.env.example` lists `EXAMPLES_ENABLED` and `EXAMPLES_MAX` under an `examples (optional)` heading, stating the
+      defaults, that the cap is per model, that the oldest are dropped first, and that the feature requires `S3_*`.
+- [x] AC-4.4: `docs/PROMPT.md` gains a short bullet telling the agent to call `get_examples` for a model it has not used
+      before.
+- [x] AC-4.5: The README stays high level and defers the detail to `.env.example`, matching the existing style.
 
 ## Out of Scope
 
@@ -467,12 +467,14 @@ tool registration is exercised over an in-memory MCP transport, and no test writ
   generations still work, and that the tool list has no `get_examples`.
 - HV-5: Read the Markdown `get_examples` returns in a real client and confirm the fenced JSON and the URL are legible,
   and that a URL can be passed straight to `img2img`.
-- HV-6: `.env.example` may be unreadable and unwritable for agents under editor privacy settings. If so, the human must
-  apply AC-4.3 by hand.
+- HV-6: `.env.example` is unreadable for agents under editor privacy settings. The `EXAMPLES_ENABLED` and
+  `EXAMPLES_MAX` entries were appended without reading the file; confirm their placement and formatting.
 
 ## Follow-ups
 
 - Store the unshortened upload URL alongside the returned one so a shortener expiry cannot rot an example; this needs
   `publishImages` to surface the pre-shortening URL.
+- Store the object key and re-presign on read, so an example whose presigned URL has expired (7 days) can be refreshed
+  instead of pointing at nothing.
 - Weight or rank examples using `reviews` once a model has enough reviews to be meaningful.
 - Add an examples count or list tool if an operator needs to inspect the table.

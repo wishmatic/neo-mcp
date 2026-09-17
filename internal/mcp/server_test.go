@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewRegistersTools(t *testing.T) {
-	srv, err := New(zapNop(), nil, nil, nil, nil, nil, nil)
+	srv, err := New(Deps{Log: zapNop()})
 	if err != nil {
 		t.Fatalf("New() unexpected error: %v", err)
 	}
@@ -63,7 +63,13 @@ func TestToolRegistration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			srv, err := New(zapNop(), tt.forge, tt.novelai, tt.uploader, nil, nil, tt.openai)
+			srv, err := New(Deps{
+				Log:      zapNop(),
+				Forge:    tt.forge,
+				NovelAI:  tt.novelai,
+				Uploader: tt.uploader,
+				OpenAI:   tt.openai,
+			})
 			if err != nil {
 				t.Fatalf("New() error: %v", err)
 			}

@@ -49,7 +49,14 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 - When a call returns a URL, pass it straight to the image tools that take one instead of exporting and re-uploading
   anything.
-- When the user pastes an image URL and asks about its contents, use `img2txt`.
+- When I paste an image URL and ask about its contents, use `img2txt`.
+
+## Model memory
+
+- `get_reviews` lists what I think of the models you can use, and `add_review` records a rating from 1 to 10 with one
+  line of commentary; check the reviews before choosing a model, and rate one once you form an opinion.
+- `get_examples` returns earlier queries and their image URLs for a model; look at them before generating with a model
+  you have not used.
 
 ## Credits
 

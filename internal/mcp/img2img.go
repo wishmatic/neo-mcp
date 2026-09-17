@@ -85,7 +85,14 @@ func (h *handlers) img2img(
 
 	h.log.Info("img2img generation finished", zap.Int("images", len(images)))
 
-	return publishImages(ctx, h.log, "img2img", images, in.Public, h.uploader, h.shortener)
+	result, out, err := publishImages(ctx, h.log, "img2img", images, in.Public, h.uploader, h.shortener)
+	if err != nil {
+		return nil, generationOutput{}, err
+	}
+
+	h.saveExamples(ctx, "img2img", in.Model, in, out.URLs)
+
+	return result, out, nil
 }
 
 func img2imgSchema() *jsonschema.Schema {
