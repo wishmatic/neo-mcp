@@ -129,20 +129,20 @@ Behaviour:
 
 Acceptance criteria:
 
-- AC-1.1: For an http(s) input, `Resolve` returns exactly the same bytes as `Fetch`, including a multi-hop redirect
+- [x] AC-1.1: For an http(s) input, `Resolve` returns exactly the same bytes as `Fetch`, including a multi-hop redirect
   chain and a redirect that lands on a Garagefront URL read from the object store.
-- AC-1.2: Data URIs `data:image/png;base64,...`, `data:image/jpeg;base64,...`, and `data:image/webp;base64,...` decode
+- [x] AC-1.2: Data URIs `data:image/png;base64,...`, `data:image/jpeg;base64,...`, and `data:image/webp;base64,...` decode
   to the raw image bytes.
-- AC-1.3: Raw base64 input (no `data:` prefix) decodes for all three formats, including unpadded base64, URL-safe
+- [x] AC-1.3: Raw base64 input (no `data:` prefix) decodes for all three formats, including unpadded base64, URL-safe
   base64, and base64 containing newlines.
-- AC-1.4: `Image.MediaType` is one of the three constants; when sniffing is inconclusive the data URI's declared
+- [x] AC-1.4: `Image.MediaType` is one of the three constants; when sniffing is inconclusive the data URI's declared
   supported media type is used.
-- AC-1.5: Input whose sniffed or declared type is unsupported (for example GIF or BMP) returns an error that includes
+- [x] AC-1.5: Input whose sniffed or declared type is unsupported (for example GIF or BMP) returns an error that includes
   the offending type.
-- AC-1.6: Empty input, malformed base64, and a `data:` URI without `;base64` each return a distinct error, all wrapped
+- [x] AC-1.6: Empty input, malformed base64, and a `data:` URI without `;base64` each return a distinct error, all wrapped
   with an `resolve:` prefix.
-- AC-1.7: Base64 and data URI inputs perform no network I/O; URL inputs do.
-- AC-1.8: Existing `internal/resolve/resolver_test.go` passes unmodified, proving `Fetch` behaviour is unchanged.
+- [x] AC-1.7: Base64 and data URI inputs perform no network I/O; URL inputs do.
+- [x] AC-1.8: Existing `internal/resolve/resolver_test.go` passes unmodified, proving `Fetch` behaviour is unchanged.
 
 ### Unit 2: OpenAI-compatible vision client
 
@@ -197,22 +197,22 @@ Behaviour:
 
 Acceptance criteria:
 
-- AC-2.1: `New` normalises a trailing slash so the request path is exactly `{baseURL}/chat/completions`; an empty or
+- [x] AC-2.1: `New` normalises a trailing slash so the request path is exactly `{baseURL}/chat/completions`; an empty or
   non-http(s) base URL returns an error.
-- AC-2.2: The request is a `POST` to `/chat/completions` with `Content-Type: application/json`; `Authorization:
+- [x] AC-2.2: The request is a `POST` to `/chat/completions` with `Content-Type: application/json`; `Authorization:
   Bearer <key>` is present when the key is set and absent when it is empty.
-- AC-2.3: The `image_url.url` value is `data:{MediaType};base64,{base64data}` and the part also carries
+- [x] AC-2.3: The `image_url.url` value is `data:{MediaType};base64,{base64data}` and the part also carries
   `image_url.detail`; the `text` part carries `Prompt` and precedes the image part.
-- AC-2.4: A `system` message is included only when `SystemPrompt` is non-empty.
-- AC-2.5: `temperature`, `max_tokens`, and `top_p` are carried with the provided values in the JSON body.
-- AC-2.6: Model resolution prefers the request model, falls back to the client default, and errors when neither is set;
+- [x] AC-2.4: A `system` message is included only when `SystemPrompt` is non-empty.
+- [x] AC-2.5: `temperature`, `max_tokens`, and `top_p` are carried with the provided values in the JSON body.
+- [x] AC-2.6: Model resolution prefers the request model, falls back to the client default, and errors when neither is set;
   `Result.Model` reports the resolved model.
-- AC-2.7: String content and array-of-text-parts content both parse to the expected text; empty content and malformed
+- [x] AC-2.7: String content and array-of-text-parts content both parse to the expected text; empty content and malformed
   JSON return errors.
-- AC-2.8: A non-2xx response surfaces the upstream `error.message` when present, and the call fails with a wrapped error
+- [x] AC-2.8: A non-2xx response surfaces the upstream `error.message` when present, and the call fails with a wrapped error
   rather than returning empty text.
-- AC-2.9: `Describe` uses `http.NewRequestWithContext`, so a cancelled context aborts the call.
-- AC-2.10: Tests use `httptest` to assert method, path, headers, and body, and cover both success shapes plus all error
+- [x] AC-2.9: `Describe` uses `http.NewRequestWithContext`, so a cancelled context aborts the call.
+- [x] AC-2.10: Tests use `httptest` to assert method, path, headers, and body, and cover both success shapes plus all error
   paths; no live network is used.
 
 ### Unit 3: Configuration
@@ -227,10 +227,10 @@ Files:
 
 Acceptance criteria:
 
-- AC-3.1: `Config` gains `Img2TxtBaseURL`, `Img2TxtAPIKey`, and `Img2TxtModel` with the env tags from the
+- [x] AC-3.1: `Config` gains `Img2TxtBaseURL`, `Img2TxtAPIKey`, and `Img2TxtModel` with the env tags from the
   configuration table.
-- AC-3.2: A test asserts the three values load from their env vars.
-- AC-3.3: `.env.example` lists the three vars under an `img2txt (optional)` heading, noting that `/chat/completions` is
+- [x] AC-3.2: A test asserts the three values load from their env vars.
+- [x] AC-3.3: `.env.example` lists the three vars under an `img2txt (optional)` heading, noting that `/chat/completions` is
   appended to the base URL.
 
 ### Unit 4: `img2txt` MCP tool
@@ -275,21 +275,21 @@ three SD tools.
 
 Acceptance criteria:
 
-- AC-4.1: `New` and `registerTools` accept a `*openai.Client`; `img2txt` is registered when it is non-nil and is absent
+- [x] AC-4.1: `New` and `registerTools` accept a `*openai.Client`; `img2txt` is registered when it is non-nil and is absent
   when it is nil. Absence is asserted by connecting an in-memory MCP client session and listing tools.
-- AC-4.2: The registered tool is named `img2txt`; `image` is required with no default; `prompt`, `temperature`,
+- [x] AC-4.2: The registered tool is named `img2txt`; `image` is required with no default; `prompt`, `temperature`,
   `max_tokens`, `top_p`, and `detail` have the defaults in the table; `detail` has the enum `auto|low|high`; `model` and
   `system_prompt` have no default.
-- AC-4.3: `runImg2Txt` resolves the image with `resolve.Resolve`, so URL inputs (including shortened and Garagefront
+- [x] AC-4.3: `runImg2Txt` resolves the image with `resolve.Resolve`, so URL inputs (including shortened and Garagefront
   URLs) and base64 inputs both reach the client as raw bytes with the correct media type.
-- AC-4.4: `runImg2Txt` forwards `prompt`, `system_prompt`, `model`, and the tuning values to `Describe` and returns the
+- [x] AC-4.4: `runImg2Txt` forwards `prompt`, `system_prompt`, `model`, and the tuning values to `Describe` and returns the
   resolved model in `img2txtOutput.Model`.
-- AC-4.5: Image resolution failure returns `img2txt: resolve image: %w`; a client failure returns `img2txt: %w`; the
+- [x] AC-4.5: Image resolution failure returns `img2txt: resolve image: %w`; a client failure returns `img2txt: %w`; the
   registered closure surfaces these as tool errors.
-- AC-4.6: An end-to-end test wires an `httptest` image server and an `httptest` OpenAI-compatible server into a real
+- [x] AC-4.6: An end-to-end test wires an `httptest` image server and an `httptest` OpenAI-compatible server into a real
   `openai.Client` and `Resolver`, calls the tool through an in-memory MCP session, and asserts the returned text, plus
   that the image bytes and prompt arrived correctly at the vision endpoint.
-- AC-4.7: `internal/mcp/server_test.go` is updated to the new `New` signature, and `go test ./internal/mcp/...` passes.
+- [x] AC-4.7: `internal/mcp/server_test.go` is updated to the new `New` signature, and `go test ./internal/mcp/...` passes.
 
 ### Unit 5: Server wiring
 
@@ -301,12 +301,12 @@ Files:
 
 Acceptance criteria:
 
-- AC-5.1: When `IMG2TXT_BASE_URL` is empty, no client is built, `img2txt` is not registered, and startup succeeds.
-- AC-5.2: When `IMG2TXT_BASE_URL` is set, a client is built with the configured key and model, and `img2txt` is
+- [x] AC-5.1: When `IMG2TXT_BASE_URL` is empty, no client is built, `img2txt` is not registered, and startup succeeds.
+- [x] AC-5.2: When `IMG2TXT_BASE_URL` is set, a client is built with the configured key and model, and `img2txt` is
   registered.
-- AC-5.3: An invalid base URL fails startup with a `build img2txt client: %w` error.
-- AC-5.4: `IMG2TXT_API_KEY` remaining empty is valid (for keyless local endpoints) and does not block startup.
-- AC-5.5: Enabling `img2txt` logs an info line with the base URL and default model; disabling it does not.
+- [x] AC-5.3: An invalid base URL fails startup with a `build img2txt client: %w` error.
+- [x] AC-5.4: `IMG2TXT_API_KEY` remaining empty is valid (for keyless local endpoints) and does not block startup.
+- [x] AC-5.5: Enabling `img2txt` logs an info line with the base URL and default model; disabling it does not.
 
 ### Unit 6: Documentation
 
@@ -316,9 +316,9 @@ Files:
 
 Acceptance criteria:
 
-- AC-6.1: The README features list gains one bullet describing `img2txt` and that it needs `IMG2TXT_BASE_URL`,
+- [x] AC-6.1: The README features list gains one bullet describing `img2txt` and that it needs `IMG2TXT_BASE_URL`,
   `IMG2TXT_API_KEY`, and `IMG2TXT_MODEL`.
-- AC-6.2: The README stays high level and points at `.env.example` for the remaining settings, matching the existing
+- [x] AC-6.2: The README stays high level and points at `.env.example` for the remaining settings, matching the existing
   style.
 
 ## Validation
