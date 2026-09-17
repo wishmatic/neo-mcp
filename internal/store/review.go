@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode"
-	"unicode/utf8"
 )
 
 var ErrReviewNotFound = errors.New("review not found")
@@ -18,27 +16,61 @@ const (
 	maxRating = 10
 )
 
+const reviewColumns = `id, model, rating, comment, prompt, image_url, agent_comment, created_at`
+
 type Review struct {
-	ID        int64
-	Model     string
-	Rating    int
-	Comment   string
-	CreatedAt time.Time
+	ID           int64
+	Model        string
+	Rating       int
+	Comment      string
+	Prompt       string
+	ImageURL     string
+	AgentComment string
+	CreatedAt    time.Time
+}
+
+// ReviewInput carries every field of a review. Only Model, Rating, and Comment are required.
+type ReviewInput struct {
+	Model        string
+	Rating       int
+	Comment      string
+	Prompt       string
+	ImageURL     string
+	AgentComment string
 }
 
 func (c *Client) AddReview(ctx context.Context, model string, rating int, comment string) (Review, error) {
-	model = strings.TrimSpace(model)
-	comment = strings.TrimSpace(comment)
+	return c.AddReviewDetails(ctx, ReviewInput{Model: model, Rating: rating, Comment: comment})
+}
 
-	if err := validateModel(model); err != nil {
+func (c *Client) AddReviewDetails(ctx context.Context, in ReviewInput) (Review, error) {
+	in.Model = strings.TrimSpace(in.Model)
+	in.Comment = strings.TrimSpace(in.Comment)
+	in.Prompt = strings.TrimSpace(in.Prompt)
+	in.ImageURL = strings.TrimSpace(in.ImageURL)
+	in.AgentComment = strings.TrimSpace(in.AgentComment)
+
+	if err := validateModel(in.Model); err != nil {
 		return Review{}, err
 	}
 
-	if rating < minRating || rating > maxRating {
-		return Review{}, fmt.Errorf("store: rating %d is outside the %d-%d range", rating, minRating, maxRating)
+	if in.Rating < minRating || in.Rating > maxRating {
+		return Review{}, fmt.Errorf("store: rating %d is outside the %d-%d range", in.Rating, minRating, maxRating)
 	}
 
-	if err := validateComment(comment); err != nil {
+	if err := validateComment(in.Comment); err != nil {
+		return Review{}, err
+	}
+
+	if err := validateOptionalText("prompt", in.Prompt, MaxPromptLength); err != nil {
+		return Review{}, err
+	}
+
+	if err := validateImageURL(in.ImageURL); err != nil {
+		return Review{}, err
+	}
+
+	if err := validateOptionalText("agent comment", in.AgentComment, MaxAgentCommentLength); err != nil {
 		return Review{}, err
 	}
 
@@ -46,8 +78,9 @@ func (c *Client) AddReview(ctx context.Context, model string, rating int, commen
 
 	result, err := c.db.ExecContext(
 		ctx,
-		`INSERT INTO reviews (model, rating, comment, created_at) VALUES (?, ?, ?, ?)`,
-		model, rating, comment, formatTime(createdAt),
+		`INSERT INTO reviews (model, rating, comment, prompt, image_url, agent_comment, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		in.Model, in.Rating, in.Comment, in.Prompt, in.ImageURL, in.AgentComment, formatTime(createdAt),
 	)
 	if err != nil {
 		return Review{}, fmt.Errorf("store: insert review: %w", err)
@@ -58,14 +91,75 @@ func (c *Client) AddReview(ctx context.Context, model string, rating int, commen
 		return Review{}, fmt.Errorf("store: new review id: %w", err)
 	}
 
-	return Review{ID: id, Model: model, Rating: rating, Comment: comment, CreatedAt: createdAt}, nil
+	return Review{
+		ID:           id,
+		Model:        in.Model,
+		Rating:       in.Rating,
+		Comment:      in.Comment,
+		Prompt:       in.Prompt,
+		ImageURL:     in.ImageURL,
+		AgentComment: in.AgentComment,
+		CreatedAt:    createdAt,
+	}, nil
 }
 
 func (c *Client) Reviews(ctx context.Context) ([]Review, error) {
-	rows, err := c.db.QueryContext(
-		ctx,
-		`SELECT id, model, rating, comment, created_at FROM reviews ORDER BY model COLLATE NOCASE, id`,
-	)
+	return c.queryReviews(ctx, `SELECT `+reviewColumns+` FROM reviews ORDER BY model COLLATE NOCASE, id`)
+}
+
+func (c *Client) ReviewsByModel(ctx context.Context, model string) ([]Review, error) {
+	model = strings.TrimSpace(model)
+
+	if err := validateModel(model); err != nil {
+		return nil, err
+	}
+
+	return c.queryReviews(ctx, `SELECT `+reviewColumns+` FROM reviews WHERE model = ? COLLATE NOCASE ORDER BY id`, model)
+}
+
+func (c *Client) Review(ctx context.Context, id int64) (Review, error) {
+	review, err := scanReview(c.db.QueryRowContext(ctx, `SELECT `+reviewColumns+` FROM reviews WHERE id = ?`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return Review{}, fmt.Errorf("store: review %d: %w", id, ErrReviewNotFound)
+	}
+
+	if err != nil {
+		return Review{}, err
+	}
+
+	return review, nil
+}
+
+func (c *Client) DeleteReview(ctx context.Context, id int64) (Review, error) {
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Review{}, fmt.Errorf("store: begin delete transaction: %w", err)
+	}
+
+	defer func() { _ = tx.Rollback() }()
+
+	review, err := scanReview(tx.QueryRowContext(ctx, `SELECT `+reviewColumns+` FROM reviews WHERE id = ?`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return Review{}, fmt.Errorf("store: review %d: %w", id, ErrReviewNotFound)
+	}
+
+	if err != nil {
+		return Review{}, err
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM reviews WHERE id = ?`, id); err != nil {
+		return Review{}, fmt.Errorf("store: delete review %d: %w", id, err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return Review{}, fmt.Errorf("store: commit review delete: %w", err)
+	}
+
+	return review, nil
+}
+
+func (c *Client) queryReviews(ctx context.Context, query string, args ...any) ([]Review, error) {
+	rows, err := c.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("store: query reviews: %w", err)
 	}
@@ -90,38 +184,6 @@ func (c *Client) Reviews(ctx context.Context) ([]Review, error) {
 	return reviews, nil
 }
 
-func (c *Client) DeleteReview(ctx context.Context, id int64) (Review, error) {
-	tx, err := c.db.BeginTx(ctx, nil)
-	if err != nil {
-		return Review{}, fmt.Errorf("store: begin delete transaction: %w", err)
-	}
-
-	defer func() { _ = tx.Rollback() }()
-
-	review, err := scanReview(tx.QueryRowContext(
-		ctx,
-		`SELECT id, model, rating, comment, created_at FROM reviews WHERE id = ?`,
-		id,
-	))
-	if errors.Is(err, sql.ErrNoRows) {
-		return Review{}, fmt.Errorf("store: review %d: %w", id, ErrReviewNotFound)
-	}
-
-	if err != nil {
-		return Review{}, err
-	}
-
-	if _, err := tx.ExecContext(ctx, `DELETE FROM reviews WHERE id = ?`, id); err != nil {
-		return Review{}, fmt.Errorf("store: delete review %d: %w", id, err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return Review{}, fmt.Errorf("store: commit review delete: %w", err)
-	}
-
-	return review, nil
-}
-
 type rowScanner interface {
 	Scan(dest ...any) error
 }
@@ -132,7 +194,16 @@ func scanReview(row rowScanner) (Review, error) {
 		createdAt string
 	)
 
-	if err := row.Scan(&review.ID, &review.Model, &review.Rating, &review.Comment, &createdAt); err != nil {
+	if err := row.Scan(
+		&review.ID,
+		&review.Model,
+		&review.Rating,
+		&review.Comment,
+		&review.Prompt,
+		&review.ImageURL,
+		&review.AgentComment,
+		&createdAt,
+	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Review{}, err
 		}
@@ -148,34 +219,4 @@ func scanReview(row rowScanner) (Review, error) {
 	review.CreatedAt = parsed
 
 	return review, nil
-}
-
-func validateModel(model string) error {
-	if model == "" {
-		return errors.New("store: model is required")
-	}
-
-	if utf8.RuneCountInString(model) > MaxModelLength {
-		return fmt.Errorf("store: model is longer than %d characters", MaxModelLength)
-	}
-
-	return nil
-}
-
-func validateComment(comment string) error {
-	if comment == "" {
-		return errors.New("store: comment is required")
-	}
-
-	if utf8.RuneCountInString(comment) > MaxCommentLength {
-		return fmt.Errorf("store: comment is longer than %d characters", MaxCommentLength)
-	}
-
-	for _, r := range comment {
-		if unicode.IsControl(r) {
-			return errors.New("store: comment must be a single line without control characters")
-		}
-	}
-
-	return nil
 }

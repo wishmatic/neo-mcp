@@ -129,6 +129,74 @@ func TestNewReopensExistingDatabase(t *testing.T) {
 	}
 }
 
+func TestNewAddsReviewDetailColumnsToExistingDatabase(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "neo.db")
+
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open() error: %v", err)
+	}
+
+	if _, err := raw.Exec(`CREATE TABLE reviews (
+		id         INTEGER PRIMARY KEY AUTOINCREMENT,
+		model      TEXT    NOT NULL,
+		rating     INTEGER NOT NULL,
+		comment    TEXT    NOT NULL,
+		created_at TEXT    NOT NULL
+	)`); err != nil {
+		t.Fatalf("create legacy reviews table: %v", err)
+	}
+
+	if _, err := raw.Exec(
+		`INSERT INTO reviews (model, rating, comment, created_at) VALUES ('legacy', 5, 'kept', '2026-01-01T00:00:00Z')`,
+	); err != nil {
+		t.Fatalf("insert legacy review: %v", err)
+	}
+
+	if err := raw.Close(); err != nil {
+		t.Fatalf("close raw database: %v", err)
+	}
+
+	client, err := New(path)
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	t.Cleanup(func() { _ = client.Close() })
+
+	ctx := context.Background()
+
+	created, err := client.AddReviewDetails(ctx, ReviewInput{
+		Model:        "m",
+		Rating:       9,
+		Comment:      "new",
+		Prompt:       "a cat",
+		ImageURL:     "https://cdn.example.com/a.png",
+		AgentComment: "note",
+	})
+	if err != nil {
+		t.Fatalf("AddReviewDetails() error: %v", err)
+	}
+
+	got, err := client.Review(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("Review() error: %v", err)
+	}
+
+	if got.Prompt != "a cat" || got.ImageURL != "https://cdn.example.com/a.png" || got.AgentComment != "note" {
+		t.Fatalf("review = %+v, want the recorded details", got)
+	}
+
+	legacy, err := client.Review(ctx, 1)
+	if err != nil {
+		t.Fatalf("Review(legacy) error: %v", err)
+	}
+
+	if legacy.Model != "legacy" || legacy.Prompt != "" || legacy.ImageURL != "" || legacy.AgentComment != "" {
+		t.Fatalf("legacy = %+v, want the migrated row with empty details", legacy)
+	}
+}
+
 func TestClosePreventsFurtherUse(t *testing.T) {
 	client := newTestClient(t)
 

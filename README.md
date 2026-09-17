@@ -31,8 +31,10 @@ Note that the only version of Forge we support is
 - If you _also_ provide `SHORTENER_*` environment variables, any generated URLs are shortened first.
     - This assumes your URL shortener is [`chhoto-url`](https://github.com/SinTan1729/chhoto-url).
     - This also registers the `shorten` tool, which shortens any URL you give it.
-- `add_review`, `get_reviews`, and `delete_review` record a rating from 1 to 10 with one line of commentary per model,
-  stored in a local SQLite database.
+- `add_review`, `get_reviews`, `get_review`, and `delete_review` record a rating from 1 to 10 with one line of
+  commentary per model, stored in a local SQLite database.
+    - A review may also carry the prompt used, the URL of an image it is about, and the agent's own notes. `get_reviews`
+      lists reviews (optionally for one model) without prompts; `get_review` returns one review in full by its id.
     - Created automatically at `DB_PATH` (`neo-mcp.db`; `/data/neo-mcp.db` in Docker).
 - If you set `EXAMPLES_ENABLED=true`, every `txt2img`/`img2img` query and the URL of the image it produced are saved per
   model, and `get_examples` returns two random ones. Only the newest `EXAMPLES_MAX` examples per model are kept.

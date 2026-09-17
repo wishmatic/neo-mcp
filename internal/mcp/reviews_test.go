@@ -36,7 +36,7 @@ func TestReviewToolsRegistration(t *testing.T) {
 
 	registered := toolNames(t, withStore)
 
-	for _, tool := range []string{"add_review", "get_reviews", "delete_review"} {
+	for _, tool := range []string{"add_review", "get_reviews", "get_review", "delete_review"} {
 		if !slices.Contains(registered, tool) {
 			t.Errorf("tools = %v, want %s", registered, tool)
 		}
@@ -49,7 +49,7 @@ func TestReviewToolsRegistration(t *testing.T) {
 
 	absent := toolNames(t, withoutStore)
 
-	for _, tool := range []string{"add_review", "get_reviews", "delete_review"} {
+	for _, tool := range []string{"add_review", "get_reviews", "get_review", "delete_review"} {
 		if slices.Contains(absent, tool) {
 			t.Errorf("tools = %v, want no %s without a store", absent, tool)
 		}
@@ -88,6 +88,63 @@ func TestAddReviewSchema(t *testing.T) {
 
 	if limit := s.Properties["comment"].MaxLength; limit == nil || *limit != store.MaxCommentLength {
 		t.Errorf("comment maxLength = %v, want %d", limit, store.MaxCommentLength)
+	}
+
+	for _, field := range []string{"prompt", "image_url", "agent_comment"} {
+		prop, ok := s.Properties[field]
+		if !ok {
+			t.Fatalf("%s property is missing", field)
+		}
+
+		if slices.Contains(s.Required, field) {
+			t.Errorf("%s must not be required", field)
+		}
+
+		if prop.Default != nil {
+			t.Errorf("%s must not have a default", field)
+		}
+	}
+
+	if limit := s.Properties["prompt"].MaxLength; limit == nil || *limit != store.MaxPromptLength {
+		t.Errorf("prompt maxLength = %v, want %d", limit, store.MaxPromptLength)
+	}
+
+	if limit := s.Properties["agent_comment"].MaxLength; limit == nil || *limit != store.MaxAgentCommentLength {
+		t.Errorf("agent_comment maxLength = %v, want %d", limit, store.MaxAgentCommentLength)
+	}
+
+	imageURL := s.Properties["image_url"]
+
+	if limit := imageURL.MaxLength; limit == nil || *limit != store.MaxImageURLLength {
+		t.Errorf("image_url maxLength = %v, want %d", limit, store.MaxImageURLLength)
+	}
+
+	if imageURL.Format != "uri" {
+		t.Errorf("image_url format = %q, want uri", imageURL.Format)
+	}
+}
+
+func TestGetReviewsSchema(t *testing.T) {
+	s := getReviewsSchema()
+
+	if slices.Contains(s.Required, "model") {
+		t.Error("model must not be required")
+	}
+
+	if limit := s.Properties["model"].MaxLength; limit == nil || *limit != store.MaxModelLength {
+		t.Errorf("model maxLength = %v, want %d", limit, store.MaxModelLength)
+	}
+}
+
+func TestGetReviewSchema(t *testing.T) {
+	s := getReviewSchema()
+
+	if !slices.Contains(s.Required, "id") {
+		t.Error("id is not required")
+	}
+
+	if s.Properties["id"].Default != nil {
+		t.Error("id must not have a default")
 	}
 }
 
@@ -144,6 +201,23 @@ func TestDeleteReviewUnknownID(t *testing.T) {
 	}
 }
 
+func TestGetReviewUnknownID(t *testing.T) {
+	h := &handlers{log: zapNop(), store: newReviewStore(t)}
+
+	_, _, err := h.getReview(context.Background(), nil, getReviewInput{ID: 42})
+	if err == nil {
+		t.Fatal("getReview() error = nil, want an error")
+	}
+
+	if !strings.HasPrefix(err.Error(), "get_review:") {
+		t.Errorf("error = %q, want a get_review prefix", err.Error())
+	}
+
+	if !strings.Contains(err.Error(), "42") || !strings.Contains(err.Error(), "not found") {
+		t.Errorf("error = %q, want it to name the id and the failure", err.Error())
+	}
+}
+
 func TestReviewToolsLogToolAndAffectedID(t *testing.T) {
 	core, logs := observer.New(zapcore.DebugLevel)
 
@@ -157,6 +231,10 @@ func TestReviewToolsLogToolAndAffectedID(t *testing.T) {
 
 	if _, _, err := h.getReviews(ctx, nil, getReviewsInput{}); err != nil {
 		t.Fatalf("getReviews() error: %v", err)
+	}
+
+	if _, _, err := h.getReview(ctx, nil, getReviewInput{ID: added.ID}); err != nil {
+		t.Fatalf("getReview() error: %v", err)
 	}
 
 	if _, _, err := h.deleteReview(ctx, nil, deleteReviewInput{ID: added.ID}); err != nil {
@@ -178,7 +256,7 @@ func TestReviewToolsLogToolAndAffectedID(t *testing.T) {
 		}
 	}
 
-	for _, tool := range []string{"add_review", "get_reviews", "delete_review"} {
+	for _, tool := range []string{"add_review", "get_reviews", "get_review", "delete_review"} {
 		if !called[tool] {
 			t.Errorf("no \"tool called\" entry for %s", tool)
 		}
@@ -202,6 +280,12 @@ func TestReviewToolsStoreError(t *testing.T) {
 		t.Error("getReviews() error = nil, want a store error")
 	} else if !strings.HasPrefix(err.Error(), "get_reviews:") {
 		t.Errorf("error = %q, want a get_reviews prefix", err.Error())
+	}
+
+	if _, _, err := h.getReview(context.Background(), nil, getReviewInput{ID: 1}); err == nil {
+		t.Error("getReview() error = nil, want a store error")
+	} else if !strings.HasPrefix(err.Error(), "get_review:") {
+		t.Errorf("error = %q, want a get_review prefix", err.Error())
 	}
 
 	in := addReviewInput{Model: "m", Rating: 5, Comment: "ok"}
@@ -342,6 +426,147 @@ func TestReviewToolsEndToEnd(t *testing.T) {
 
 	if strings.Contains(textContent(t, result), "temporary") {
 		t.Error("the deleted review is still listed")
+	}
+}
+
+func TestReviewDetailsEndToEnd(t *testing.T) {
+	srv, err := New(Deps{Log: zapNop(), Store: newReviewStore(t)})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	session := connectSession(t, srv)
+	ctx := context.Background()
+
+	added, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name: "add_review",
+		Arguments: map[string]any{
+			"model":         "nai-diffusion-5-full",
+			"rating":        9,
+			"comment":       "Superb hands",
+			"prompt":        "a cat, cinematic lighting",
+			"image_url":     "https://cdn.example.com/a.png",
+			"agent_comment": "Liked the composition",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(add_review) error: %v", err)
+	}
+
+	if added.IsError {
+		t.Fatalf("CallTool(add_review) tool error: %+v", added.Content)
+	}
+
+	content, ok := added.StructuredContent.(map[string]any)
+	if !ok {
+		t.Fatalf("structured content = %T, want map[string]any", added.StructuredContent)
+	}
+
+	if content["prompt"] != "a cat, cinematic lighting" ||
+		content["image_url"] != "https://cdn.example.com/a.png" ||
+		content["agent_comment"] != "Liked the composition" {
+		t.Errorf("structured content = %+v, want the recorded details", content)
+	}
+
+	id := int64(content["id"].(float64))
+
+	listing, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "get_reviews"})
+	if err != nil {
+		t.Fatalf("CallTool(get_reviews) error: %v", err)
+	}
+
+	listingText := textContent(t, listing)
+
+	if strings.Contains(listingText, "a cat, cinematic lighting") {
+		t.Error("get_reviews leaked the prompt")
+	}
+
+	for _, want := range []string{"https://cdn.example.com/a.png", "Liked the composition"} {
+		if !strings.Contains(listingText, want) {
+			t.Errorf("listing =\n%s\nwant it to contain %q", listingText, want)
+		}
+	}
+
+	full, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name:      "get_review",
+		Arguments: map[string]any{"id": id},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(get_review) error: %v", err)
+	}
+
+	if full.IsError {
+		t.Fatalf("CallTool(get_review) tool error: %+v", full.Content)
+	}
+
+	fullContent, ok := full.StructuredContent.(map[string]any)
+	if !ok {
+		t.Fatalf("structured content = %T, want map[string]any", full.StructuredContent)
+	}
+
+	if fullContent["prompt"] != "a cat, cinematic lighting" ||
+		fullContent["image_url"] != "https://cdn.example.com/a.png" ||
+		fullContent["agent_comment"] != "Liked the composition" {
+		t.Errorf("structured content = %+v, want every recorded detail", fullContent)
+	}
+
+	if createdAt, ok := fullContent["created_at"].(string); !ok || createdAt == "" {
+		t.Errorf("created_at = %v, want a timestamp", fullContent["created_at"])
+	}
+
+	if !strings.Contains(textContent(t, full), "a cat, cinematic lighting") {
+		t.Error("get_review text omitted the prompt")
+	}
+}
+
+func TestGetReviewsFiltersByModel(t *testing.T) {
+	srv, err := New(Deps{Log: zapNop(), Store: newReviewStore(t)})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	session := connectSession(t, srv)
+	ctx := context.Background()
+
+	for _, review := range []struct{ model, comment string }{
+		{model: "a", comment: "a-note"},
+		{model: "b", comment: "b-note"},
+	} {
+		if _, err := session.CallTool(ctx, &mcp.CallToolParams{
+			Name:      "add_review",
+			Arguments: map[string]any{"model": review.model, "rating": 5, "comment": review.comment},
+		}); err != nil {
+			t.Fatalf("CallTool(add_review) error: %v", err)
+		}
+	}
+
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name:      "get_reviews",
+		Arguments: map[string]any{"model": "a"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(get_reviews) error: %v", err)
+	}
+
+	structured, ok := result.StructuredContent.(map[string]any)
+	if !ok {
+		t.Fatalf("structured content = %T, want map[string]any", result.StructuredContent)
+	}
+
+	if structured["model"] != "a" || structured["count"] != float64(1) || structured["average"] != 5.0 {
+		t.Errorf("structured content = %+v, want only model a", structured)
+	}
+
+	listing := textContent(t, result)
+
+	for _, want := range []string{"# Reviews for a", "a-note"} {
+		if !strings.Contains(listing, want) {
+			t.Errorf("listing =\n%s\nwant it to contain %q", listing, want)
+		}
+	}
+
+	if strings.Contains(listing, "b-note") {
+		t.Error("the listing includes another model's review")
 	}
 }
 

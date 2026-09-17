@@ -2,6 +2,7 @@ package present
 
 import (
 	"testing"
+	"time"
 
 	"github.com/wishmatic/neo-mcp/internal/store"
 )
@@ -90,6 +91,107 @@ Average: 10.0/10 (1 review)
 				t.Errorf("Reviews() =\n%s\nwant:\n%s", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestReviewsWithDetails(t *testing.T) {
+	reviews := []store.Review{
+		{
+			ID:           5,
+			Model:        "m",
+			Rating:       8,
+			Comment:      "nice",
+			Prompt:       "a cat",
+			ImageURL:     "https://cdn.example.com/a.png",
+			AgentComment: "solid\nlighting",
+		},
+	}
+
+	want := `# Reviews
+
+Average: 8.0/10 (1 review)
+
+## m
+
+Average: 8.0/10 (1 review)
+
+- 8/10 (id 5): nice
+    - Image: https://cdn.example.com/a.png
+    - Agent: solid lighting
+`
+
+	if got := Reviews(reviews); got != want {
+		t.Errorf("Reviews() =\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestModelReviews(t *testing.T) {
+	if got := ModelReviews("m", nil); got != "No reviews yet for m." {
+		t.Errorf("ModelReviews(nil) = %q, want an empty notice", got)
+	}
+
+	reviews := []store.Review{
+		{ID: 1, Model: "m", Rating: 4, Comment: "first"},
+		{ID: 2, Model: "m", Rating: 6, Comment: "second", ImageURL: "https://cdn.example.com/b.png"},
+	}
+
+	want := `# Reviews for m
+
+Average: 5.0/10 (2 reviews)
+
+- 4/10 (id 1): first
+- 6/10 (id 2): second
+    - Image: https://cdn.example.com/b.png
+`
+
+	if got := ModelReviews("m", reviews); got != want {
+		t.Errorf("ModelReviews() =\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestReview(t *testing.T) {
+	review := store.Review{
+		ID:           5,
+		Model:        "m",
+		Rating:       8,
+		Comment:      "nice",
+		Prompt:       "a cat\non a mat",
+		ImageURL:     "https://cdn.example.com/a.png",
+		AgentComment: "solid\nlighting",
+		CreatedAt:    time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC),
+	}
+
+	want := `# Review 5
+
+- Model: m
+- Rating: 8/10
+- Comment: nice
+- Image: https://cdn.example.com/a.png
+- Agent comment: solid lighting
+- Created: 2026-09-17T12:00:00Z
+
+## Prompt
+
+` + "```\na cat\non a mat\n```\n"
+
+	if got := Review(review); got != want {
+		t.Errorf("Review() =\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestReviewWithoutDetails(t *testing.T) {
+	review := store.Review{ID: 1, Model: "m", Rating: 3, Comment: "meh", CreatedAt: time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC)}
+
+	want := `# Review 1
+
+- Model: m
+- Rating: 3/10
+- Comment: meh
+- Created: 2026-09-17T12:00:00Z
+`
+
+	if got := Review(review); got != want {
+		t.Errorf("Review() =\n%s\nwant:\n%s", got, want)
 	}
 }
 

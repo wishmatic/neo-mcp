@@ -14,17 +14,23 @@ import (
 
 // Exported so the MCP tool schemas advertise the same limits the store enforces.
 const (
-	MaxModelLength   = 200
-	MaxCommentLength = 500
+	MaxModelLength        = 200
+	MaxCommentLength      = 500
+	MaxPromptLength       = 4000
+	MaxAgentCommentLength = 2000
+	MaxImageURLLength     = 2048
 )
 
 var schema = []string{
 	`CREATE TABLE IF NOT EXISTS reviews (
-		id         INTEGER PRIMARY KEY AUTOINCREMENT,
-		model      TEXT    NOT NULL,
-		rating     INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 10),
-		comment    TEXT    NOT NULL,
-		created_at TEXT    NOT NULL
+		id            INTEGER PRIMARY KEY AUTOINCREMENT,
+		model         TEXT    NOT NULL,
+		rating        INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 10),
+		comment       TEXT    NOT NULL,
+		prompt        TEXT    NOT NULL DEFAULT '',
+		image_url     TEXT    NOT NULL DEFAULT '',
+		agent_comment TEXT    NOT NULL DEFAULT '',
+		created_at    TEXT    NOT NULL
 	)`,
 	`CREATE INDEX IF NOT EXISTS reviews_model_id_idx ON reviews (model, id)`,
 	`CREATE TABLE IF NOT EXISTS examples (
@@ -36,6 +42,13 @@ var schema = []string{
 		created_at TEXT NOT NULL
 	)`,
 	`CREATE INDEX IF NOT EXISTS examples_model_id_idx ON examples (model, id)`,
+}
+
+// Columns added to reviews after the initial release, applied to databases created before they existed.
+var reviewDetailColumns = []struct{ name, definition string }{
+	{"prompt", "TEXT NOT NULL DEFAULT ''"},
+	{"image_url", "TEXT NOT NULL DEFAULT ''"},
+	{"agent_comment", "TEXT NOT NULL DEFAULT ''"},
 }
 
 type Client struct {
@@ -97,11 +110,70 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	if err := addReviewDetailColumns(ctx, tx); err != nil {
+		return err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("store: commit schema: %w", err)
 	}
 
 	return nil
+}
+
+func addReviewDetailColumns(ctx context.Context, tx *sql.Tx) error {
+	for _, column := range reviewDetailColumns {
+		present, err := hasColumn(ctx, tx, "reviews", column.name)
+		if err != nil {
+			return err
+		}
+
+		if present {
+			continue
+		}
+
+		statement := fmt.Sprintf(`ALTER TABLE reviews ADD COLUMN %s %s`, column.name, column.definition)
+
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("store: add reviews.%s: %w", column.name, err)
+		}
+	}
+
+	return nil
+}
+
+func hasColumn(ctx context.Context, tx *sql.Tx, table, column string) (bool, error) {
+	rows, err := tx.QueryContext(ctx, fmt.Sprintf(`PRAGMA table_info(%s)`, table))
+	if err != nil {
+		return false, fmt.Errorf("store: read %s columns: %w", table, err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			position   int
+			name       string
+			kind       string
+			notNull    int
+			fallback   sql.NullString
+			primaryKey int
+		)
+
+		if err := rows.Scan(&position, &name, &kind, &notNull, &fallback, &primaryKey); err != nil {
+			return false, fmt.Errorf("store: scan %s column: %w", table, err)
+		}
+
+		if name == column {
+			return true, nil
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return false, fmt.Errorf("store: read %s columns: %w", table, err)
+	}
+
+	return false, nil
 }
 
 func formatTime(t time.Time) string {
