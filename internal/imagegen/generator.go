@@ -33,6 +33,14 @@ func ProviderOf(model string) string {
 	return "forge"
 }
 
+func (g *Generator) ForgeEnabled() bool {
+	return g.forge != nil
+}
+
+func (g *Generator) NovelAIEnabled() bool {
+	return g.novelai != nil
+}
+
 func (g *Generator) Txt2Img(ctx context.Context, req Txt2ImgRequest) ([][]byte, error) {
 	if novelai.IsModel(req.Model) {
 		if g.novelai == nil {

@@ -171,8 +171,13 @@ func numberField(t *testing.T, params map[string]any, key string) float64 {
 
 func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 	novelaiLog := &requestLog{}
+	backend := newNovelAIBackend(t, novelaiLog)
 
-	srv, err := New(Deps{Log: zapNop(), NovelAI: newNovelAIBackend(t, novelaiLog)})
+	srv, err := New(Deps{
+		Log:       zapNop(),
+		Generator: imagegen.New(nil, backend),
+		NovelAI:   backend,
+	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}

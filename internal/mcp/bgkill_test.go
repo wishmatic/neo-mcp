@@ -4,8 +4,35 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
+	"github.com/wishmatic/neo-mcp/internal/bgkill"
 )
+
+func TestBgkillRequestMapsInput(t *testing.T) {
+	five := 5
+
+	in := bgkillInput{
+		ModelName:  "Portrait",
+		ImageURL:   "https://example.com/a.png",
+		IsFullMode: true,
+		IsCrop:     true,
+		IsSquare:   true,
+		Padding:    &five,
+	}
+
+	got := bgkillRequest(in, []byte("image"))
+
+	if got.ModelName != "Portrait" || got.IsFullMode != true || got.IsCrop != true || got.IsSquare != true {
+		t.Errorf("request = %+v, want the input flags copied", got)
+	}
+
+	if string(got.ImageData) != "image" {
+		t.Errorf("image = %q, want it copied", got.ImageData)
+	}
+
+	if got.Padding == nil || *got.Padding != 5 {
+		t.Errorf("padding = %v, want 5", got.Padding)
+	}
+}
 
 func TestBgkillSchema(t *testing.T) {
 	s := bgkillSchema()
@@ -25,8 +52,8 @@ func TestBgkillSchema(t *testing.T) {
 		t.Error("bgkill: model_name must not have a default")
 	}
 
-	if len(model.Enum) != len(sdwebui.BgkillModels) {
-		t.Errorf("bgkill: model_name has %d enum values, want %d", len(model.Enum), len(sdwebui.BgkillModels))
+	if len(model.Enum) != len(bgkill.Models) {
+		t.Errorf("bgkill: model_name has %d enum values, want %d", len(model.Enum), len(bgkill.Models))
 	}
 }
 

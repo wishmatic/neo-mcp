@@ -230,9 +230,9 @@ func TestPublicizeRegistration(t *testing.T) {
 	captured := &[]uploadCapture{}
 
 	withUploader, err := New(Deps{
-		Log:      zapNop(),
-		Uploader: newPublicizeUploader(t, captured),
-		Resolver: newPublicizeResolver(t),
+		Log:       zapNop(),
+		Publisher: publish.New(newPublicizeUploader(t, captured), nil, zapNop()),
+		Resolver:  newPublicizeResolver(t),
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)

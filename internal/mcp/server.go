@@ -2,24 +2,22 @@ package mcp
 
 import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
-	"github.com/wishmatic/neo-mcp/internal/s3upload"
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
-	"github.com/wishmatic/neo-mcp/internal/shortener"
 	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
 
 type Deps struct {
 	Log       *zap.Logger
-	Forge     *sdwebui.Client
+	Generator *imagegen.Generator
+	Bgkill    *bgkill.Service
+	Publisher *publish.Publisher
 	NovelAI   *novelai.Client
-	Uploader  *s3upload.Client
-	Shortener *shortener.Client
 	Resolver  *resolve.Resolver
 	OpenAI    *openai.Client
 	Store     *store.Client
@@ -32,23 +30,41 @@ func New(deps Deps) (*mcp.Server, error) {
 		Version: "0.1.0",
 	}, nil)
 
-	registerTools(srv, &handlers{
-		log:       deps.Log,
-		forge:     deps.Forge,
-		novelai:   deps.NovelAI,
-		gen:       imagegen.New(deps.Forge, deps.NovelAI),
-		publisher: publish.New(deps.Uploader, deps.Shortener, deps.Log),
-		resolver:  deps.Resolver,
-		openai:    deps.OpenAI,
-		store:     deps.Store,
-		examples:  deps.Examples,
-	})
+	registerTools(srv, buildHandlers(deps))
 
 	return srv, nil
 }
 
+func buildHandlers(deps Deps) *handlers {
+	h := &handlers{
+		log:       deps.Log,
+		gen:       deps.Generator,
+		bgkillSvc: deps.Bgkill,
+		publisher: deps.Publisher,
+		novelai:   deps.NovelAI,
+		resolver:  deps.Resolver,
+		openai:    deps.OpenAI,
+		store:     deps.Store,
+		examples:  deps.Examples,
+	}
+
+	if h.gen == nil {
+		h.gen = imagegen.New(nil, nil)
+	}
+
+	if h.bgkillSvc == nil {
+		h.bgkillSvc = bgkill.New(nil)
+	}
+
+	if h.publisher == nil {
+		h.publisher = publish.New(nil, nil, deps.Log)
+	}
+
+	return h
+}
+
 func registerTools(srv *mcp.Server, h *handlers) {
-	if h.forge != nil || h.novelai != nil {
+	if h.gen.ForgeEnabled() || h.gen.NovelAIEnabled() {
 		registerTxt2Img(srv, h)
 		registerImg2Img(srv, h)
 	}
@@ -57,7 +73,7 @@ func registerTools(srv *mcp.Server, h *handlers) {
 		registerAnlas(srv, h)
 	}
 
-	if h.forge != nil {
+	if h.bgkillSvc.Enabled() {
 		registerBgkill(srv, h)
 	}
 

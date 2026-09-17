@@ -6,8 +6,7 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/crop"
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
+	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"go.uber.org/zap"
 )
 
@@ -65,34 +64,23 @@ func (h *handlers) bgkill(
 		zap.Bool("full_mode", in.IsFullMode),
 	)
 
-	out, err := h.forge.Bgkill(ctx, sdwebui.BgkillRequest{
-		ModelName:  in.ModelName,
-		ImageData:  image,
-		IsFullMode: in.IsFullMode,
-	})
+	out, err := h.bgkillSvc.Remove(ctx, bgkillRequest(in, image))
 	if err != nil {
-		if ctxErr := ctx.Err(); ctxErr != nil {
-			h.log.Warn("bgkill aborted: request context cancelled before completion",
-				zap.Error(err),
-				zap.String("ctx_err", ctxErr.Error()),
-			)
-		} else {
-			h.log.Error("bgkill failed", zap.Error(err))
-		}
-
-		return nil, generationOutput{}, fmt.Errorf("bgkill: %w", err)
-	}
-
-	if opts, ok := crop.OptionsFor(in.IsCrop, in.IsSquare, in.Padding); ok {
-		out, err = crop.ToContent(out, opts)
-		if err != nil {
-			h.log.Error("bgkill failed to crop foreground", zap.Error(err))
-
-			return nil, generationOutput{}, fmt.Errorf("bgkill: %w", err)
-		}
+		return nil, generationOutput{}, h.generationFailure(ctx, "bgkill", err)
 	}
 
 	return h.publishImages(ctx, "bgkill", [][]byte{out}, in.Public)
+}
+
+func bgkillRequest(in bgkillInput, image []byte) bgkill.Request {
+	return bgkill.Request{
+		ModelName:  in.ModelName,
+		ImageData:  image,
+		IsFullMode: in.IsFullMode,
+		IsCrop:     in.IsCrop,
+		IsSquare:   in.IsSquare,
+		Padding:    in.Padding,
+	}
 }
 
 func bgkillSchema() *jsonschema.Schema {
@@ -101,8 +89,8 @@ func bgkillSchema() *jsonschema.Schema {
 		panic(fmt.Sprintf("bgkill: infer input schema: %v", err))
 	}
 
-	models := make([]any, 0, len(sdwebui.BgkillModels))
-	for _, model := range sdwebui.BgkillModels {
+	models := make([]any, 0, len(bgkill.Models))
+	for _, model := range bgkill.Models {
 		models = append(models, model)
 	}
 

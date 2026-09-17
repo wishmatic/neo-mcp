@@ -12,10 +12,13 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/auth"
+	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/config"
+	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
+	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
@@ -141,10 +144,10 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 
 	mcpSrv, err := mcpServer.New(mcpServer.Deps{
 		Log:       log,
-		Forge:     sdClient,
+		Generator: imagegen.New(sdClient, novelaiClient),
+		Bgkill:    bgkill.New(sdClient),
+		Publisher: publish.New(uploader, shortenerClient, log),
 		NovelAI:   novelaiClient,
-		Uploader:  uploader,
-		Shortener: shortenerClient,
 		Resolver:  resolver,
 		OpenAI:    openaiClient,
 		Store:     storeClient,

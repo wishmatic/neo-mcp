@@ -64,12 +64,12 @@ func newExamplesSession(
 	t.Helper()
 
 	srv, err := New(Deps{
-		Log:      zapNop(),
-		Forge:    newForgeBackend(t, &requestLog{}),
-		Resolver: newResolver(t),
-		Uploader: uploader,
-		Store:    client,
-		Examples: ExamplesConfig{Enabled: enabled, Max: max},
+		Log:       zapNop(),
+		Generator: imagegen.New(newForgeBackend(t, &requestLog{}), nil),
+		Publisher: publish.New(uploader, nil, zapNop()),
+		Resolver:  newResolver(t),
+		Store:     client,
+		Examples:  ExamplesConfig{Enabled: enabled, Max: max},
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
@@ -463,7 +463,7 @@ func TestGetExamplesRegistration(t *testing.T) {
 			}
 
 			if tt.uploader {
-				deps.Uploader = newExamplesUploader(t)
+				deps.Publisher = publish.New(newExamplesUploader(t), nil, zapNop())
 			}
 
 			srv, err := New(deps)

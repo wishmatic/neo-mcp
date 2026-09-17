@@ -44,6 +44,90 @@ A file is considered "very long" at 300 lines of code or more. It is considered 
 Do not over-optimise, but if a file can be broken up and split into smaller, more focused units, do so at roughly 200+
 lines of code, and even if it might influence readability, do so at unacceptably long files.
 
+## Architecture
+
+Arrows point from a package to the packages it imports. Only `internal/server` may import `internal/mcp`; the
+libraries below it must not import `internal/mcp` or the MCP SDK. `internal/utils` is the shared leaf and must stay
+dependency-free.
+
+If you make changes to the architecture, update this diagram.
+
+```mermaid
+flowchart TD
+    subgraph entry[Entrypoint]
+        cmd["cmd/server"]
+        server["internal/server"]
+    end
+
+    subgraph mcpLayer[MCP adapter]
+        mcp["internal/mcp"]
+    end
+
+    subgraph domainLibraries[Domain libraries]
+        imagegen["internal/imagegen"]
+        bgkill["internal/bgkill"]
+        present["internal/present"]
+        publish["internal/publish"]
+        crop["internal/crop"]
+    end
+
+    subgraph clientLibraries[Backend and infrastructure clients]
+        sdwebui["internal/sdwebui"]
+        novelai["internal/novelai"]
+        openai["internal/openai"]
+        resolve["internal/resolve"]
+        s3upload["internal/s3upload"]
+        shortener["internal/shortener"]
+        store["internal/store"]
+    end
+
+    subgraph platform[Platform]
+        config["internal/config"]
+        auth["internal/auth"]
+        utils["internal/utils"]
+    end
+
+    cmd --> server
+    cmd --> config
+
+    server --> mcp
+    server --> imagegen
+    server --> bgkill
+    server --> publish
+    server --> auth
+    server --> config
+    server --> sdwebui
+    server --> novelai
+    server --> openai
+    server --> resolve
+    server --> s3upload
+    server --> shortener
+    server --> store
+
+    mcp --> imagegen
+    mcp --> bgkill
+    mcp --> present
+    mcp --> publish
+    mcp --> novelai
+    mcp --> openai
+    mcp --> resolve
+    mcp --> store
+
+    imagegen --> sdwebui
+    imagegen --> novelai
+    bgkill --> sdwebui
+    bgkill --> crop
+    publish --> s3upload
+    publish --> shortener
+    present --> store
+
+    sdwebui --> utils
+    novelai --> utils
+    openai --> utils
+    resolve --> utils
+    shortener --> utils
+```
+
 ## Comments and Docstrings
 
 Do not add comments nor docstrings unless they document something that the code itself does not document. You should

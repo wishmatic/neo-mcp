@@ -4,8 +4,11 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/wishmatic/neo-mcp/internal/bgkill"
+	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
+	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"go.uber.org/zap"
@@ -64,11 +67,12 @@ func TestToolRegistration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			srv, err := New(Deps{
-				Log:      zapNop(),
-				Forge:    tt.forge,
-				NovelAI:  tt.novelai,
-				Uploader: tt.uploader,
-				OpenAI:   tt.openai,
+				Log:       zapNop(),
+				Generator: imagegen.New(tt.forge, tt.novelai),
+				Bgkill:    bgkill.New(tt.forge),
+				Publisher: publish.New(tt.uploader, nil, zapNop()),
+				NovelAI:   tt.novelai,
+				OpenAI:    tt.openai,
 			})
 			if err != nil {
 				t.Fatalf("New() error: %v", err)

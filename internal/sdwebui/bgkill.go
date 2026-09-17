@@ -6,23 +6,6 @@ import (
 	"fmt"
 )
 
-var BgkillModels = []string{
-	"General",
-	"General-HR",
-	"General-Lite",
-	"General-Lite-2K",
-	"Portrait",
-	"Matting",
-	"Matting-HR",
-	"Matting-Lite",
-	"Anime-Lite",
-	"Dynamic",
-	"DIS",
-	"HRSOD",
-	"COD",
-	"DIS-TR_TEs",
-}
-
 type BgkillRequest struct {
 	ModelName  string
 	ImageData  []byte
