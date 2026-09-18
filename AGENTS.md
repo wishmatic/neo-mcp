@@ -2,10 +2,10 @@
 
 ## PLAN.md files
 
-Any "large" work needs a `_PLAN.md` prefixed file in `docs/plans`. "Large" is defined as anything that has more than
-two implementation units. An implementation unit is a self-contained piece of work that has clear review signals and
-is usually what would be implemented as one pull request. However, do not commit, create pull requests, or do any `git`
-write operations without explicit instructions.
+Any "large" work needs an all-caps `_PLAN.md` suffixed file in `docs/plans`. "Large" is defined as anything that has
+more than two implementation units. An implementation unit is a self-contained piece of work that has clear review
+signals and is usually what would be implemented as one pull request. However, do not commit, create pull requests, or
+do any `git` write operations without explicit instructions.
 
 When making changes, you must always read the plans first. You may need to update them. Do not update `docs/plans/done`
 however, as these files are historical record and can be deleted at any time. You may read them when you believe them
