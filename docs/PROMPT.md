@@ -6,7 +6,7 @@
 Use the MCP image tools for anything visual. Generate and edit real images instead of describing what an image could
 look like, and use the tools' own descriptions for how each field behaves.
 
-## What the user has (Forge)
+## Available Forge assets
 
 Pass these filenames exactly as written; if you are unsure which to use, ask the user.
 
@@ -19,10 +19,10 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 - Presets: `{{FORGE_PRESET_NAMES}}`
 - Samplers: `{{FORGE_SAMPLER_NAMES}}`
 - Schedulers: `{{FORGE_SCHEDULER_NAMES}}`
-- LoRAs are asked for in the prompt itself as `<lora:{{lora name}}:{{weight}}>`, for example
+- Request LoRAs in the prompt itself as `<lora:{{lora name}}:{{weight}}>`, for example
   `<lora:{{lora name}}:0.7>`.
 
-## What the user has (NovelAI)
+## Available NovelAI models
 
 - Default model: `nai-diffusion-5-full`
 - V5 models: `nai-diffusion-5-full`, `nai-diffusion-5-curated`
@@ -31,7 +31,7 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 - Samplers: `k_euler`, `k_euler_ancestral`, `k_dpmpp_2m`, `k_dpmpp_2s_ancestral`, `k_dpmpp_sde`, `k_dpmpp_2m_sde`,
   `ddim_v3`
 
-## How the user wants images
+## Image preferences
 
 - Default to {{PREFERRED_SIZE}} unless the request implies otherwise.
 - Use {{PREFERRED_STEPS}} steps and {{PREFERRED_CFG}} guidance unless the user asks for something else.
@@ -51,11 +51,11 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 - When a call returns a URL, pass it straight to the image tools that take one instead of exporting and re-uploading
   anything.
-- When I paste an image URL and ask about its contents, use `img2txt`.
+- When the user pastes an image URL and asks about its contents, use `img2txt`.
 
 ## Model memory
 
-- `get_reviews` lists what I think of the models you can use, optionally for one model; `get_review` reads a single
+- `get_reviews` lists saved reviews of the models you can use, optionally for one model; `get_review` reads a single
   review in full by its id. `add_review` records a rating from 1 to 10 with one line of commentary, and can optionally
   attach the prompt used, an image URL, and your own notes; check the reviews before choosing a model, and rate one once
   you form an opinion.
