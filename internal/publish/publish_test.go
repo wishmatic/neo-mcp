@@ -73,6 +73,22 @@ func TestEnabled(t *testing.T) {
 	}
 }
 
+func TestIsPublicURL(t *testing.T) {
+	if New(nil, nil, zap.NewNop()).IsPublicURL("https://cdn.example.com/i/public/x.png") {
+		t.Error("IsPublicURL() = true without an uploader, want false")
+	}
+
+	p := New(newUploader(t, &[]uploadCapture{}), nil, zap.NewNop())
+
+	if !p.IsPublicURL("https://cdn.example.com/i/public/2026-09/x.png") {
+		t.Error("IsPublicURL() = false for a public URL, want true")
+	}
+
+	if p.IsPublicURL("https://cdn.example.com/i/images/user/2026-09/x.png") {
+		t.Error("IsPublicURL() = true for a private URL, want false")
+	}
+}
+
 func TestImagesPublicNamespace(t *testing.T) {
 	captured := &[]uploadCapture{}
 	p := New(newUploader(t, captured), nil, zap.NewNop())

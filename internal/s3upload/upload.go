@@ -77,6 +77,31 @@ func (u *Client) objectKey(public bool, ext string) string {
 	return u.cfg.KeyPrefix + "/" + key
 }
 
+// IsPublicURL reports whether rawURL is an unsigned URL for an object under PublicKeyPrefix on PublicBaseURL.
+func (u *Client) IsPublicURL(rawURL string) bool {
+	if u.cfg.PublicBaseURL == "" {
+		return false
+	}
+
+	base, err := url.Parse(u.cfg.PublicBaseURL)
+	if err != nil || base.Host == "" {
+		return false
+	}
+
+	target, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+
+	if !strings.EqualFold(target.Host, base.Host) {
+		return false
+	}
+
+	prefix := strings.TrimSuffix(base.Path, "/") + "/" + PublicKeyPrefix + "/"
+
+	return strings.HasPrefix(target.Path, prefix)
+}
+
 func publicObjectURL(base, key string) string {
 	u, err := url.Parse(base)
 	if err != nil {

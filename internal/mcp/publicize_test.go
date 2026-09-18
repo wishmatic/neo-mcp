@@ -215,6 +215,40 @@ func TestPublicizeShortenerFailureFallsBack(t *testing.T) {
 	}
 }
 
+func TestPublicizeAlreadyPublicSkipsWork(t *testing.T) {
+	captured := &[]uploadCapture{}
+
+	h := &handlers{
+		log:       zapNop(),
+		resolver:  newPublicizeResolver(t),
+		publisher: publish.New(newPublicizeUploader(t, captured), nil, zapNop()),
+	}
+
+	const publicURL = "https://cdn.example.com/i/public/2026-09/x.png"
+
+	result, out, err := h.publicize(context.Background(), nil, publicizeInput{ImageURL: publicURL})
+	if err != nil {
+		t.Fatalf("publicize() error: %v", err)
+	}
+
+	if len(*captured) != 0 {
+		t.Errorf("uploads = %d, want none for an already public image", len(*captured))
+	}
+
+	if out.URL != publicURL {
+		t.Errorf("URL = %q, want %q unchanged", out.URL, publicURL)
+	}
+
+	if len(result.Content) != 1 {
+		t.Fatalf("content = %d, want 1", len(result.Content))
+	}
+
+	text, ok := result.Content[0].(*mcp.TextContent)
+	if !ok || text.Text != publicURL {
+		t.Errorf("content = %#v, want the unchanged public URL", result.Content[0])
+	}
+}
+
 func TestPublicizeWithoutUploader(t *testing.T) {
 	h := &handlers{log: zapNop(), resolver: newPublicizeResolver(t), publisher: publish.New(nil, nil, zapNop())}
 

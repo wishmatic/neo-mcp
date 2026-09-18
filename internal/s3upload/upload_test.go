@@ -335,6 +335,74 @@ func TestFileExtension(t *testing.T) {
 	}
 }
 
+func TestIsPublicURL(t *testing.T) {
+	tests := []struct {
+		name string
+		base string
+		url  string
+		want bool
+	}{
+		{
+			name: "public namespace",
+			base: "https://cdn.example.com",
+			url:  "https://cdn.example.com/i/public/2026-09/x.png",
+			want: true,
+		},
+		{
+			name: "private namespace",
+			base: "https://cdn.example.com",
+			url:  "https://cdn.example.com/i/images/user/2026-09/x.png",
+			want: false,
+		},
+		{
+			name: "other host",
+			base: "https://cdn.example.com",
+			url:  "https://evil.example.com/i/public/2026-09/x.png",
+			want: false,
+		},
+		{
+			name: "prefix lookalike",
+			base: "https://cdn.example.com",
+			url:  "https://cdn.example.com/i/publicity/x.png",
+			want: false,
+		},
+		{
+			name: "base with path prefix",
+			base: "https://cdn.example.com/cdn",
+			url:  "https://cdn.example.com/cdn/i/public/x.png",
+			want: true,
+		},
+		{
+			name: "base path absent from url",
+			base: "https://cdn.example.com/cdn",
+			url:  "https://cdn.example.com/i/public/x.png",
+			want: false,
+		},
+		{
+			name: "no public base",
+			base: "",
+			url:  "https://cdn.example.com/i/public/x.png",
+			want: false,
+		},
+		{
+			name: "malformed url",
+			base: "https://cdn.example.com",
+			url:  "%%%not-a-url%%%",
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := &Client{cfg: Config{PublicBaseURL: tt.base}}
+
+			if got := u.IsPublicURL(tt.url); got != tt.want {
+				t.Errorf("IsPublicURL(%q) = %v, want %v", tt.url, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPublicObjectURL(t *testing.T) {
 	tests := []struct {
 		name string

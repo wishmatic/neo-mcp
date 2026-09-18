@@ -50,6 +50,12 @@ func (h *handlers) publicize(
 		return nil, publicizeOutput{}, fmt.Errorf("publicize: S3 upload is not configured")
 	}
 
+	if h.publisher.IsPublicURL(in.ImageURL) {
+		h.log.Info("publicize skipped; image is already public", zap.String("url", in.ImageURL))
+
+		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: in.ImageURL}}}, publicizeOutput{URL: in.ImageURL}, nil
+	}
+
 	image, err := h.resolver.Resolve(ctx, in.ImageURL)
 	if err != nil {
 		h.log.Error("publicize failed to fetch image",

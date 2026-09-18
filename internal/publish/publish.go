@@ -22,6 +22,15 @@ func (p *Publisher) Enabled() bool {
 	return p.uploader != nil
 }
 
+// IsPublicURL reports whether rawURL already points at the world-readable namespace, so publishing it is a no-op.
+func (p *Publisher) IsPublicURL(rawURL string) bool {
+	if p.uploader == nil {
+		return false
+	}
+
+	return p.uploader.IsPublicURL(rawURL)
+}
+
 func (p *Publisher) Images(ctx context.Context, label string, images [][]byte, contentType string, public bool) ([]string, error) {
 	urls := make([]string, 0, len(images))
 
