@@ -364,6 +364,14 @@ func TestRandomExamplesValidation(t *testing.T) {
 	if _, err := client.RandomExamples(ctx, "m", 0); err == nil {
 		t.Error("RandomExamples() with count 0 error = nil, want an error")
 	}
+
+	if _, err := client.RandomExamplesByNSFW(ctx, "", 1, true); err == nil {
+		t.Error("RandomExamplesByNSFW() with an empty model error = nil, want an error")
+	}
+
+	if _, err := client.RandomExamplesByNSFW(ctx, "m", 0, true); err == nil {
+		t.Error("RandomExamplesByNSFW() with count 0 error = nil, want an error")
+	}
 }
 
 func TestSaveExamplesWritesEachURL(t *testing.T) {
@@ -536,6 +544,53 @@ func TestSaveExampleConcurrent(t *testing.T) {
 
 		if len(examples) > 4 {
 			t.Fatalf("model %s has %d examples, want at most 4", model, len(examples))
+		}
+	}
+}
+
+func TestExampleNSFWRoundTripAndFilter(t *testing.T) {
+	client := newTestClient(t)
+	ctx := context.Background()
+
+	for i, nsfw := range []bool{false, false, true} {
+		meta := exampleMeta("m", fmt.Sprintf("https://cdn.example.com/%d.png", i))
+		meta.NSFW = nsfw
+
+		if _, err := client.SaveExample(ctx, meta, 16); err != nil {
+			t.Fatalf("SaveExample() error: %v", err)
+		}
+	}
+
+	all, err := client.RandomExamples(ctx, "m", 10)
+	if err != nil {
+		t.Fatalf("RandomExamples() error: %v", err)
+	}
+
+	if len(all) != 3 {
+		t.Fatalf("examples = %d, want 3", len(all))
+	}
+
+	nsfw, err := client.RandomExamplesByNSFW(ctx, "m", 10, true)
+	if err != nil {
+		t.Fatalf("RandomExamplesByNSFW(true) error: %v", err)
+	}
+
+	if len(nsfw) != 1 || !nsfw[0].NSFW {
+		t.Fatalf("nsfw examples = %+v, want exactly the NSFW one", nsfw)
+	}
+
+	clean, err := client.RandomExamplesByNSFW(ctx, "m", 10, false)
+	if err != nil {
+		t.Fatalf("RandomExamplesByNSFW(false) error: %v", err)
+	}
+
+	if len(clean) != 2 {
+		t.Fatalf("clean examples = %d, want 2", len(clean))
+	}
+
+	for _, example := range clean {
+		if example.NSFW {
+			t.Errorf("example = %+v, want non-NSFW", example)
 		}
 	}
 }

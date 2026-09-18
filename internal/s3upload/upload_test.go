@@ -85,7 +85,7 @@ func TestUploadImage(t *testing.T) {
 	u := newTestUploader(t, rt)
 
 	want := []byte("pretend-png-bytes")
-	url, err := u.UploadFile(context.Background(), want, "image/png", false)
+	url, err := u.UploadFile(context.Background(), want, "image/png", false, false)
 	if err != nil {
 		t.Fatalf("UploadImage() error: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestUploadImagePublicBaseURL(t *testing.T) {
 	u.cfg.PublicBaseURL = "https://cdn.example.com"
 	u.cfg.KeyPrefix = "i/mcp"
 
-	url, err := u.UploadFile(context.Background(), []byte("pretend-png-bytes"), "image/png", false)
+	url, err := u.UploadFile(context.Background(), []byte("pretend-png-bytes"), "image/png", false, false)
 	if err != nil {
 		t.Fatalf("UploadImage() error: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestUploadImagePublicPrefix(t *testing.T) {
 	u.cfg.PublicBaseURL = "https://cdn.example.com"
 	u.cfg.KeyPrefix = "i/images/user"
 
-	url, err := u.UploadFile(context.Background(), []byte("pretend-png-bytes"), "image/png", true)
+	url, err := u.UploadFile(context.Background(), []byte("pretend-png-bytes"), "image/png", true, false)
 	if err != nil {
 		t.Fatalf("UploadImage() error: %v", err)
 	}
@@ -209,7 +209,7 @@ func TestUploadImagePublicPresigned(t *testing.T) {
 
 	u := newTestUploader(t, rt)
 
-	url, err := u.UploadFile(context.Background(), []byte("pretend-png-bytes"), "image/png", true)
+	url, err := u.UploadFile(context.Background(), []byte("pretend-png-bytes"), "image/png", true, false)
 	if err != nil {
 		t.Fatalf("UploadImage() error: %v", err)
 	}
@@ -228,14 +228,67 @@ func TestObjectKeyPublic(t *testing.T) {
 		t.Fatalf("PublicKeyPrefix = %q, want %q", PublicKeyPrefix, "i/public")
 	}
 
-	u := &Client{cfg: Config{PublicBaseURL: "https://cdn.example.com", KeyPrefix: "i/images/user"}}
-
-	if got := u.objectKey(true, "png"); !strings.HasPrefix(got, PublicKeyPrefix+"/") {
-		t.Errorf("objectKey(true) = %q, want %q prefix", got, PublicKeyPrefix)
+	if NSFWKeySegment != "nsfw" {
+		t.Fatalf("NSFWKeySegment = %q, want %q", NSFWKeySegment, "nsfw")
 	}
 
-	if got := u.objectKey(false, "png"); !strings.HasPrefix(got, "i/images/user/") {
-		t.Errorf("objectKey(false) = %q, want i/images/user/ prefix", got)
+	u := &Client{cfg: Config{PublicBaseURL: "https://cdn.example.com", KeyPrefix: "i/images/user"}}
+
+	if got := u.objectKey(true, false, "png"); !strings.HasPrefix(got, PublicKeyPrefix+"/") {
+		t.Errorf("objectKey(true, false) = %q, want %q prefix", got, PublicKeyPrefix)
+	}
+
+	if got := u.objectKey(false, false, "png"); !strings.HasPrefix(got, "i/images/user/") {
+		t.Errorf("objectKey(false, false) = %q, want i/images/user/ prefix", got)
+	}
+
+	if got := u.objectKey(false, true, "png"); !strings.HasPrefix(got, "i/images/user/"+NSFWKeySegment+"/") {
+		t.Errorf("objectKey(false, true) = %q, want an %s/ subdirectory", got, NSFWKeySegment)
+	}
+}
+
+func TestUploadImageNSFWPrefix(t *testing.T) {
+	tests := []struct {
+		name       string
+		public     bool
+		keyPrefix  string
+		wantPrefix string
+	}{
+		{name: "garagefront", keyPrefix: "i/images/user", wantPrefix: "/test-bucket/i/images/user/nsfw/"},
+		{name: "public", public: true, keyPrefix: "i/images/user", wantPrefix: "/test-bucket/i/public/nsfw/"},
+		{name: "presigned", wantPrefix: "/test-bucket/nsfw/"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var gotPath string
+
+			rt := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				gotPath = r.URL.Path
+
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Status:     "200 OK",
+					Header:     http.Header{},
+					Body:       io.NopCloser(bytes.NewReader(nil)),
+				}, nil
+			})
+
+			u := newTestUploader(t, rt)
+
+			if tt.keyPrefix != "" {
+				u.cfg.PublicBaseURL = "https://cdn.example.com"
+				u.cfg.KeyPrefix = tt.keyPrefix
+			}
+
+			if _, err := u.UploadFile(context.Background(), []byte("bytes"), "image/png", tt.public, true); err != nil {
+				t.Fatalf("UploadFile() error: %v", err)
+			}
+
+			if !strings.HasPrefix(gotPath, tt.wantPrefix) {
+				t.Fatalf("request path = %q, want %q prefix", gotPath, tt.wantPrefix)
+			}
+		})
 	}
 }
 
@@ -272,7 +325,7 @@ func TestUploadFileContentTypes(t *testing.T) {
 
 			u := newTestUploader(t, rt)
 
-			if _, err := u.UploadFile(context.Background(), []byte("pretend-image-bytes"), tt.contentType, false); err != nil {
+			if _, err := u.UploadFile(context.Background(), []byte("pretend-image-bytes"), tt.contentType, false, false); err != nil {
 				t.Fatalf("UploadFile() error: %v", err)
 			}
 
@@ -305,7 +358,7 @@ func TestUploadFilePublicPrefix(t *testing.T) {
 	u.cfg.PublicBaseURL = "https://cdn.example.com"
 	u.cfg.KeyPrefix = "i/images/user"
 
-	url, err := u.UploadFile(context.Background(), []byte("pretend-image-bytes"), "image/jpeg", true)
+	url, err := u.UploadFile(context.Background(), []byte("pretend-image-bytes"), "image/jpeg", true, false)
 	if err != nil {
 		t.Fatalf("UploadFile() error: %v", err)
 	}

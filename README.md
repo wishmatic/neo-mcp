@@ -11,6 +11,8 @@ Note that the only version of Forge we support is
     - They also route to NovelAI when `model` starts with `nai-diffusion-`. Set `NOVELAI_API_KEY` to enable it. Forge-only
       options such as hi-res fix, presets, and VAE/text encoders are ignored for NovelAI requests.
     - With NovelAI enabled, `anlas` reports the account's credit balance and the V5 usage meter.
+    - Both take an optional `nsfw` boolean to mark a generation as NSFW. It tags the saved example and places the image
+      under an `nsfw/` subdirectory; it does not change generation.
 - Output images are WebP by default. `OUTPUT_FORMAT` sets the format for every tool (`png`, `jpeg`, `jxl`, or `webp`),
   and the `format` input overrides it for a single call. `txt2img`, `img2img`, `bgkill`, and `publicize` all take it.
   Transparency is kept for every format except JPEG, which composites onto white.
@@ -34,8 +36,9 @@ Note that the only version of Forge we support is
 - If you _also_ provide `SHORTENER_*` environment variables, any generated URLs are shortened first.
     - This assumes your URL shortener is [`chhoto-url`](https://github.com/SinTan1729/chhoto-url).
 - If you set `EXAMPLES_ENABLED=true`, every `txt2img`/`img2img` query and the URL of the image it produced are saved per
-  model, and the `examples` tool returns random ones: two by default, or as many as you ask for with `n`. Only the newest
-  `EXAMPLES_MAX` examples per model are kept.
+  model, and the `examples` tool returns random ones: two by default, or as many as you ask for with `n`. A generation's
+  `nsfw` flag tags its example, and the call's `nsfw` filters them: `-1` non-NSFW only, `1` NSFW only, `0` or omitted for
+  either. Only the newest `EXAMPLES_MAX` examples per model are kept.
     - The database is created automatically at `DB_PATH` (`neo-mcp.db`; `/data/neo-mcp.db` in Docker).
     - This only works when generated images are uploaded, so `S3_*` must be configured; without it nothing is saved and
       the `examples` tool is not registered. That is expected rather than a bug: a saved example is the query plus a URL,

@@ -31,11 +31,11 @@ func (p *Publisher) IsPublicURL(rawURL string) bool {
 	return p.uploader.IsPublicURL(rawURL)
 }
 
-func (p *Publisher) Images(ctx context.Context, label string, images [][]byte, contentType string, public bool) ([]string, error) {
+func (p *Publisher) Images(ctx context.Context, label string, images [][]byte, contentType string, public, nsfw bool) ([]string, error) {
 	urls := make([]string, 0, len(images))
 
 	for _, data := range images {
-		url, err := p.uploader.UploadFile(ctx, data, contentType, public)
+		url, err := p.uploader.UploadFile(ctx, data, contentType, public, nsfw)
 		if err != nil {
 			p.log.Error(label+" upload to s3 failed", zap.Error(err))
 
@@ -49,7 +49,7 @@ func (p *Publisher) Images(ctx context.Context, label string, images [][]byte, c
 }
 
 func (p *Publisher) File(ctx context.Context, label string, data []byte, contentType string, public bool) (string, error) {
-	url, err := p.uploader.UploadFile(ctx, data, contentType, public)
+	url, err := p.uploader.UploadFile(ctx, data, contentType, public, false)
 	if err != nil {
 		p.log.Error(label+" upload to s3 failed", zap.Error(err))
 

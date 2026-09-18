@@ -56,7 +56,8 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 ## Model memory
 
 - `examples` returns earlier queries and their image URLs for a model, two by default or as many as you ask for with
-  `n`; look at them before generating with a model you have not used.
+  `n`; pass `nsfw` (`-1` non-NSFW only, `1` NSFW only, `0` or omitted for either) to filter. Look at them before
+  generating with a model you have not used. Mark a generation NSFW with the `nsfw` boolean the image tools take.
 
 ## Credits
 

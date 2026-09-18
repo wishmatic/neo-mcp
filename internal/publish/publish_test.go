@@ -93,7 +93,7 @@ func TestImagesPublicNamespace(t *testing.T) {
 	captured := &[]uploadCapture{}
 	p := New(newUploader(t, captured), nil, zap.NewNop())
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("pretend-png-bytes")}, "image/png", true)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("pretend-png-bytes")}, "image/png", true, false)
 	if err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestImagesPrivateNamespace(t *testing.T) {
 	captured := &[]uploadCapture{}
 	p := New(newUploader(t, captured), nil, zap.NewNop())
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("pretend-png-bytes")}, "image/png", false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("pretend-png-bytes")}, "image/png", false, false)
 	if err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
@@ -125,11 +125,29 @@ func TestImagesPrivateNamespace(t *testing.T) {
 	}
 }
 
+func TestImagesNSFWNamespace(t *testing.T) {
+	captured := &[]uploadCapture{}
+	p := New(newUploader(t, captured), nil, zap.NewNop())
+
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("pretend-png-bytes")}, "image/png", false, true)
+	if err != nil {
+		t.Fatalf("Images() error: %v", err)
+	}
+
+	if len(*captured) != 1 || !strings.HasPrefix((*captured)[0].path, "/test-bucket/i/images/user/nsfw/") {
+		t.Fatalf("uploads = %+v, want one /test-bucket/i/images/user/nsfw/ path", *captured)
+	}
+
+	if len(urls) != 1 || !strings.HasPrefix(urls[0], "https://cdn.example.com/i/images/user/nsfw/") {
+		t.Fatalf("urls = %v, want https://cdn.example.com/i/images/user/nsfw/ prefix", urls)
+	}
+}
+
 func TestImagesKeepsOrderAndCount(t *testing.T) {
 	captured := &[]uploadCapture{}
 	p := New(newUploader(t, captured), nil, zap.NewNop())
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a"), []byte("b"), []byte("c")}, "image/png", false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a"), []byte("b"), []byte("c")}, "image/png", false, false)
 	if err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
@@ -161,7 +179,7 @@ func TestImagesUploadsWithContentType(t *testing.T) {
 
 			images := [][]byte{[]byte("bytes")}
 
-			urls, err := p.Images(context.Background(), "txt2img", images, tt.contentType, false)
+			urls, err := p.Images(context.Background(), "txt2img", images, tt.contentType, false, false)
 			if err != nil {
 				t.Fatalf("Images() error: %v", err)
 			}
@@ -184,7 +202,7 @@ func TestImagesShortens(t *testing.T) {
 		zap.NewNop(),
 	)
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a"), []byte("b")}, "image/png", false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a"), []byte("b")}, "image/png", false, false)
 	if err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
@@ -204,7 +222,7 @@ func TestImagesShortenerFailureFallsBack(t *testing.T) {
 		zap.New(core),
 	)
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, "image/png", false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, "image/png", false, false)
 	if err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
@@ -247,7 +265,7 @@ func newFailingUploader(t *testing.T) *s3upload.Client {
 func TestImagesUploadFailure(t *testing.T) {
 	p := New(newFailingUploader(t), nil, zap.NewNop())
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, "image/png", false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, "image/png", false, false)
 	if err == nil {
 		t.Fatal("Images() error = nil, want the upload failure")
 	}

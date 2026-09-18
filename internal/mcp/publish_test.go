@@ -20,7 +20,7 @@ func TestPublishImagesWithUploader(t *testing.T) {
 				h := &handlers{log: zapNop(), publisher: publish.New(newPublicizeUploader(t, captured), nil, zapNop())}
 
 				images := [][]byte{testImagePNG(t)}
-				result, out, err := h.publishImages(context.Background(), "txt2img", images, public, format)
+				result, out, err := h.publishImages(context.Background(), "txt2img", images, public, false, format)
 				if err != nil {
 					t.Fatalf("publishImages(public=%v, format=%s) error: %v", public, format, err)
 				}
@@ -52,7 +52,7 @@ func TestPublishImagesWithoutUploader(t *testing.T) {
 			h := &handlers{log: zapNop(), publisher: publish.New(nil, nil, zapNop())}
 
 			images := [][]byte{testImagePNG(t)}
-			result, out, err := h.publishImages(context.Background(), "txt2img", images, false, format)
+			result, out, err := h.publishImages(context.Background(), "txt2img", images, false, false, format)
 			if err != nil {
 				t.Fatalf("publishImages(format=%s) error: %v", format, err)
 			}
@@ -89,7 +89,7 @@ func TestPublishImagesWithoutUploader(t *testing.T) {
 func TestPublishImagesConvertFailure(t *testing.T) {
 	h := &handlers{log: zapNop(), publisher: publish.New(nil, nil, zapNop())}
 
-	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{[]byte("not an image")}, false, imgfmt.WebP)
+	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{[]byte("not an image")}, false, false, imgfmt.WebP)
 	if err == nil || !strings.HasPrefix(err.Error(), "txt2img:") {
 		t.Fatalf("error = %v, want a txt2img: prefix", err)
 	}

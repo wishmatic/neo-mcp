@@ -66,6 +66,7 @@ func (h *handlers) img2img(
 		zap.Int("hr_second_pass_steps", in.HRSecondPassSteps),
 		zap.Float64("hr_cfg", in.HRCFGScale),
 		zap.Bool("public", in.Public),
+		zap.Bool("nsfw", in.NSFW),
 	)
 
 	initImage, err := h.resolver.Fetch(ctx, in.InitImageURL)
@@ -93,12 +94,12 @@ func (h *handlers) img2img(
 
 	h.log.Info("img2img generation finished", zap.Int("images", len(images)))
 
-	result, out, err := h.publishImages(ctx, "img2img", images, in.Public, format)
+	result, out, err := h.publishImages(ctx, "img2img", images, in.Public, in.NSFW, format)
 	if err != nil {
 		return nil, generationOutput{}, err
 	}
 
-	h.saveExamples(ctx, "img2img", in.Model, in, out.URLs)
+	h.saveExamples(ctx, "img2img", in.Model, in.NSFW, in, out.URLs)
 
 	return result, out, nil
 }
@@ -120,6 +121,7 @@ func img2imgSchema(def imgfmt.Format) *jsonschema.Schema {
 	setDefault(s.Properties, "sampler_name", "")
 	setDefault(s.Properties, "scheduler", "")
 	setDefault(s.Properties, "public", false)
+	setDefault(s.Properties, "nsfw", false)
 	setFormatSchema(s, def)
 
 	return s

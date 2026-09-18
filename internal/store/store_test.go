@@ -197,6 +197,57 @@ func TestNewEnablesWAL(t *testing.T) {
 	}
 }
 
+func TestNewAddsExamplesNSFWColumnToExistingDatabase(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "neo.db")
+
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open() error: %v", err)
+	}
+
+	if _, err := raw.Exec(`CREATE TABLE examples (
+		id         INTEGER PRIMARY KEY AUTOINCREMENT,
+		model      TEXT NOT NULL,
+		tool       TEXT NOT NULL,
+		query      TEXT NOT NULL,
+		url        TEXT NOT NULL,
+		created_at TEXT NOT NULL
+	)`); err != nil {
+		t.Fatalf("create legacy examples table: %v", err)
+	}
+
+	if _, err := raw.Exec(
+		`INSERT INTO examples (model, tool, query, url, created_at)
+		 VALUES ('m', 'txt2img', '{}', 'https://cdn.example.com/a.png', '2026-01-01T00:00:00Z')`,
+	); err != nil {
+		t.Fatalf("insert legacy example: %v", err)
+	}
+
+	if err := raw.Close(); err != nil {
+		t.Fatalf("close raw database: %v", err)
+	}
+
+	client, err := New(path)
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	t.Cleanup(func() { _ = client.Close() })
+
+	examples, err := client.RandomExamples(context.Background(), "m", 1)
+	if err != nil {
+		t.Fatalf("RandomExamples() error: %v", err)
+	}
+
+	if len(examples) != 1 {
+		t.Fatalf("examples = %d, want the pre-existing row", len(examples))
+	}
+
+	if examples[0].NSFW {
+		t.Error("legacy example read back as NSFW, want non-NSFW")
+	}
+}
+
 func TestNewAddsMissingTablesToExistingDatabase(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "neo.db")
 

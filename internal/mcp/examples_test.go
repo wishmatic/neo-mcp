@@ -397,7 +397,7 @@ func TestSaveExamplesCancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	h.saveExamples(ctx, "txt2img", examplesModel, txt2imgInput{
+	h.saveExamples(ctx, "txt2img", examplesModel, false, txt2imgInput{
 		generationInput: generationInput{Model: examplesModel, Prompt: "a cat"},
 	}, []string{"https://cdn.example.com/a.png"})
 
@@ -535,8 +535,29 @@ func TestExamplesSchema(t *testing.T) {
 		t.Errorf("n default = %s, want 2", n.Default)
 	}
 
-	if len(s.Properties) != 2 {
-		t.Errorf("properties = %v, want model and n", s.Properties)
+	nsfw := s.Properties["nsfw"]
+	if nsfw == nil {
+		t.Fatal("nsfw property is missing")
+	}
+
+	if slices.Contains(s.Required, "nsfw") {
+		t.Error("nsfw must not be required")
+	}
+
+	if nsfw.Minimum == nil || *nsfw.Minimum != -1 {
+		t.Errorf("nsfw minimum = %v, want -1", nsfw.Minimum)
+	}
+
+	if nsfw.Maximum == nil || *nsfw.Maximum != 1 {
+		t.Errorf("nsfw maximum = %v, want 1", nsfw.Maximum)
+	}
+
+	if string(nsfw.Default) != "0" {
+		t.Errorf("nsfw default = %s, want 0", nsfw.Default)
+	}
+
+	if len(s.Properties) != 3 {
+		t.Errorf("properties = %v, want model, n, and nsfw", s.Properties)
 	}
 }
 
@@ -677,5 +698,111 @@ func TestExamplesHonoursCount(t *testing.T) {
 				t.Errorf("count = %v, want %d", structured["count"], tt.want)
 			}
 		})
+	}
+}
+
+func TestSaveExamplesNSFWFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		nsfw bool
+		want bool
+	}{
+		{name: "flagged", nsfw: true, want: true},
+		{name: "not flagged", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newTestStore(t)
+			h := &handlers{
+				log:            zapNop(),
+				gen:            imagegen.New(newForgeBackend(t, &requestLog{}), nil),
+				publisher:      publish.New(newExamplesUploader(t), nil, zapNop()),
+				store:          client,
+				examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
+			}
+
+			_, out, err := h.txt2img(context.Background(), nil, txt2imgInput{
+				generationInput: generationInput{Model: examplesModel, Prompt: "a cat on a fence", NSFW: tt.nsfw},
+			})
+			if err != nil {
+				t.Fatalf("txt2img() error: %v", err)
+			}
+
+			if len(out.URLs) != 1 {
+				t.Fatalf("urls = %v, want 1", out.URLs)
+			}
+
+			examples, err := client.RandomExamples(context.Background(), examplesModel, 1)
+			if err != nil {
+				t.Fatalf("RandomExamples() error: %v", err)
+			}
+
+			if len(examples) != 1 {
+				t.Fatalf("examples = %d, want 1", len(examples))
+			}
+
+			if examples[0].NSFW != tt.want {
+				t.Errorf("NSFW = %v, want %v", examples[0].NSFW, tt.want)
+			}
+		})
+	}
+}
+
+func TestExamplesNSFWFilter(t *testing.T) {
+	client := newTestStore(t)
+	ctx := context.Background()
+
+	for i, nsfw := range []bool{false, false, true} {
+		meta := store.ExampleMeta{
+			Model: examplesModel,
+			Tool:  "txt2img",
+			Query: `{"prompt":"a cat"}`,
+			URL:   fmt.Sprintf("https://cdn.example.com/%d.png", i),
+			NSFW:  nsfw,
+		}
+
+		if _, err := client.SaveExample(ctx, meta, 16); err != nil {
+			t.Fatalf("SaveExample() error: %v", err)
+		}
+	}
+
+	session := newExamplesSession(t, client, newExamplesUploader(t), true, 16)
+
+	for _, tt := range []struct {
+		name string
+		args map[string]any
+		want int
+	}{
+		{name: "any", args: map[string]any{"model": examplesModel, "n": 3}, want: 3},
+		{name: "non-nsfw", args: map[string]any{"model": examplesModel, "nsfw": -1}, want: 2},
+		{name: "nsfw", args: map[string]any{"model": examplesModel, "nsfw": 1}, want: 1},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "examples", Arguments: tt.args})
+			if err != nil {
+				t.Fatalf("CallTool(examples) error: %v", err)
+			}
+
+			if result.IsError {
+				t.Fatalf("CallTool(examples) tool error: %+v", result.Content)
+			}
+
+			structured, ok := result.StructuredContent.(map[string]any)
+			if !ok {
+				t.Fatalf("structured content = %T, want map[string]any", result.StructuredContent)
+			}
+
+			if structured["count"] != float64(tt.want) {
+				t.Errorf("count = %v, want %d", structured["count"], tt.want)
+			}
+		})
+	}
+
+	_, _, err := (&handlers{log: zapNop(), store: client, examplesConfig: ExamplesConfig{Enabled: true, Max: 4}}).examples(
+		ctx, nil, examplesInput{Model: examplesModel, NSFW: 2},
+	)
+	if err == nil {
+		t.Error("examples(nsfw=2) error = nil, want an error")
 	}
 }

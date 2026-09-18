@@ -59,6 +59,7 @@ func (h *handlers) txt2img(
 		zap.Float64("denoising_strength", in.DenoisingStrength),
 		zap.Float64("hr_cfg", in.HRCFGScale),
 		zap.Bool("public", in.Public),
+		zap.Bool("nsfw", in.NSFW),
 	)
 
 	h.log.Info("txt2img generating synchronously",
@@ -76,12 +77,12 @@ func (h *handlers) txt2img(
 
 	h.log.Info("txt2img generation finished", zap.Int("images", len(images)))
 
-	result, out, err := h.publishImages(ctx, "txt2img", images, in.Public, format)
+	result, out, err := h.publishImages(ctx, "txt2img", images, in.Public, in.NSFW, format)
 	if err != nil {
 		return nil, generationOutput{}, err
 	}
 
-	h.saveExamples(ctx, "txt2img", in.Model, in, out.URLs)
+	h.saveExamples(ctx, "txt2img", in.Model, in.NSFW, in, out.URLs)
 
 	return result, out, nil
 }
@@ -101,6 +102,7 @@ func txt2imgSchema(def imgfmt.Format) *jsonschema.Schema {
 	setDefault(s.Properties, "sampler_name", "")
 	setDefault(s.Properties, "scheduler", "")
 	setDefault(s.Properties, "public", false)
+	setDefault(s.Properties, "nsfw", false)
 	setFormatSchema(s, def)
 
 	return s

@@ -14,6 +14,7 @@ type ExampleMeta struct {
 	Tool  string
 	Query string
 	URL   string
+	NSFW  bool
 }
 
 type Example struct {
@@ -60,8 +61,8 @@ func (c *Client) SaveExample(ctx context.Context, meta ExampleMeta, retainPerMod
 
 	result, err := tx.ExecContext(
 		ctx,
-		`INSERT INTO examples (model, tool, query, url, created_at) VALUES (?, ?, ?, ?, ?)`,
-		meta.Model, meta.Tool, meta.Query, meta.URL, formatTime(time.Now().UTC()),
+		`INSERT INTO examples (model, tool, query, url, nsfw, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		meta.Model, meta.Tool, meta.Query, meta.URL, boolToInt(meta.NSFW), formatTime(time.Now().UTC()),
 	)
 	if err != nil {
 		return 0, fmt.Errorf("store: insert example: %w", err)
@@ -109,6 +110,15 @@ func (c *Client) SaveExamples(ctx context.Context, meta ExampleMeta, urls []stri
 }
 
 func (c *Client) RandomExamples(ctx context.Context, model string, count int) ([]Example, error) {
+	return c.randomExamples(ctx, model, count, nil)
+}
+
+// RandomExamplesByNSFW returns examples for model whose NSFW flag equals nsfw.
+func (c *Client) RandomExamplesByNSFW(ctx context.Context, model string, count int, nsfw bool) ([]Example, error) {
+	return c.randomExamples(ctx, model, count, &nsfw)
+}
+
+func (c *Client) randomExamples(ctx context.Context, model string, count int, nsfw *bool) ([]Example, error) {
 	model = strings.TrimSpace(model)
 
 	if model == "" {
@@ -119,11 +129,18 @@ func (c *Client) RandomExamples(ctx context.Context, model string, count int) ([
 		return nil, errors.New("store: example count must be at least 1")
 	}
 
-	rows, err := c.db.QueryContext(
-		ctx,
-		`SELECT id, model, tool, query, url, created_at FROM examples WHERE model = ? ORDER BY RANDOM() LIMIT ?`,
-		model, count,
-	)
+	query := `SELECT id, model, tool, query, url, nsfw, created_at FROM examples WHERE model = ?`
+	args := []any{model}
+
+	if nsfw != nil {
+		query += ` AND nsfw = ?`
+		args = append(args, boolToInt(*nsfw))
+	}
+
+	query += ` ORDER BY RANDOM() LIMIT ?`
+	args = append(args, count)
+
+	rows, err := c.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("store: query examples: %w", err)
 	}
@@ -135,14 +152,17 @@ func (c *Client) RandomExamples(ctx context.Context, model string, count int) ([
 	for rows.Next() {
 		var (
 			example   Example
+			nsfwValue int
 			createdAt string
 		)
 
 		if err := rows.Scan(
-			&example.ID, &example.Model, &example.Tool, &example.Query, &example.URL, &createdAt,
+			&example.ID, &example.Model, &example.Tool, &example.Query, &example.URL, &nsfwValue, &createdAt,
 		); err != nil {
 			return nil, fmt.Errorf("store: scan example: %w", err)
 		}
+
+		example.NSFW = nsfwValue != 0
 
 		parsed, err := parseTime(createdAt)
 		if err != nil {
@@ -159,4 +179,12 @@ func (c *Client) RandomExamples(ctx context.Context, model string, count int) ([
 	}
 
 	return examples, nil
+}
+
+func boolToInt(value bool) int {
+	if value {
+		return 1
+	}
+
+	return 0
 }

@@ -19,8 +19,11 @@ const presignExpiry = 7 * 24 * time.Hour
 // PublicKeyPrefix is the object key prefix Garagefront serves without access checks.
 const PublicKeyPrefix = "i/public"
 
-func (u *Client) UploadFile(ctx context.Context, data []byte, contentType string, public bool) (string, error) {
-	key := u.objectKey(public, fileExtension(contentType))
+// NSFWKeySegment namespaces NSFW objects within their namespace so they can be served or restricted separately.
+const NSFWKeySegment = "nsfw"
+
+func (u *Client) UploadFile(ctx context.Context, data []byte, contentType string, public, nsfw bool) (string, error) {
+	key := u.objectKey(public, nsfw, fileExtension(contentType))
 
 	u.log.Info("uploading image",
 		zap.String("key", key),
@@ -64,17 +67,23 @@ func fileExtension(contentType string) string {
 	}
 }
 
-func (u *Client) objectKey(public bool, ext string) string {
-	key := fmt.Sprintf("%s/%s.%s", time.Now().UTC().Format("2006-01"), uuid.NewString(), ext)
-	if public {
-		return PublicKeyPrefix + "/" + key
+func (u *Client) objectKey(public, nsfw bool, ext string) string {
+	var parts []string
+
+	switch {
+	case public:
+		parts = append(parts, PublicKeyPrefix)
+	case u.cfg.PublicBaseURL != "" && u.cfg.KeyPrefix != "":
+		parts = append(parts, u.cfg.KeyPrefix)
 	}
 
-	if u.cfg.PublicBaseURL == "" || u.cfg.KeyPrefix == "" {
-		return key
+	if nsfw {
+		parts = append(parts, NSFWKeySegment)
 	}
 
-	return u.cfg.KeyPrefix + "/" + key
+	name := fmt.Sprintf("%s/%s.%s", time.Now().UTC().Format("2006-01"), uuid.NewString(), ext)
+
+	return strings.Join(append(parts, name), "/")
 }
 
 // IsPublicURL reports whether rawURL is an unsigned URL for an object under PublicKeyPrefix on PublicBaseURL.
