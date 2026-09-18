@@ -8,26 +8,29 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/wishmatic/neo-mcp/internal/utils"
 )
 
+const (
+	finishReasonLength        = "length"
+	finishReasonContentFilter = "content_filter"
+
+	maxResponseBytes = 4 << 20
+)
+
 type DescribeRequest struct {
-	ImageData    []byte
-	MediaType    string
-	Prompt       string
-	SystemPrompt string
-	Model        string
-	Temperature  float64
-	MaxTokens    int
-	TopP         float64
-	Detail       string
+	ImageData []byte
+	MediaType string
+	Prompt    string
 }
 
 type Result struct {
-	Text  string
-	Model string
+	Text      string
+	Model     string
+	Truncated bool
 }
 
 type chatMessage struct {
@@ -50,37 +53,40 @@ type chatCompletionRequest struct {
 	Model       string        `json:"model"`
 	Messages    []chatMessage `json:"messages"`
 	Temperature float64       `json:"temperature"`
-	MaxTokens   int           `json:"max_tokens"`
-	TopP        float64       `json:"top_p"`
+	MaxTokens   int           `json:"max_tokens,omitempty"`
+}
+
+type chatCompletionMessage struct {
+	Content          json.RawMessage `json:"content"`
+	ReasoningContent string          `json:"reasoning_content"`
+	Reasoning        string          `json:"reasoning"`
+}
+
+type chatCompletionChoice struct {
+	FinishReason string                `json:"finish_reason"`
+	Message      chatCompletionMessage `json:"message"`
 }
 
 type chatCompletionResponse struct {
-	Choices []struct {
-		Message struct {
-			Content json.RawMessage `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
+	Choices []chatCompletionChoice `json:"choices"`
+}
+
+type completion struct {
+	text         string
+	finishReason string
 }
 
 func (c *Client) Describe(ctx context.Context, req DescribeRequest) (Result, error) {
-	model := strings.TrimSpace(req.Model)
-	if model == "" {
-		model = strings.TrimSpace(c.defaultModel)
-	}
-
+	model := strings.TrimSpace(c.defaultModel)
 	if model == "" {
 		return Result{}, fmt.Errorf("openai: no model configured")
-	}
-
-	if strings.TrimSpace(req.SystemPrompt) == "" {
-		req.SystemPrompt = c.systemPrompt()
 	}
 
 	if len(req.ImageData) == 0 {
 		return Result{}, fmt.Errorf("openai: empty image data")
 	}
 
-	body, err := json.Marshal(buildPayload(req, model))
+	body, err := json.Marshal(c.buildPayload(req, model))
 	if err != nil {
 		return Result{}, fmt.Errorf("openai: marshal request: %w", err)
 	}
@@ -106,35 +112,43 @@ func (c *Client) Describe(ctx context.Context, req DescribeRequest) (Result, err
 		return Result{}, c.httpError(resp)
 	}
 
-	text, err := decodeCompletion(resp.Body)
+	out, err := decodeCompletion(resp.Body, c.maxTokens)
 	if err != nil {
 		return Result{}, err
 	}
 
-	return Result{Text: text, Model: model}, nil
+	return Result{
+		Text:      out.text,
+		Model:     model,
+		Truncated: out.finishReason == finishReasonLength,
+	}, nil
 }
 
-func buildPayload(req DescribeRequest, model string) chatCompletionRequest {
+func (c *Client) buildPayload(req DescribeRequest, model string) chatCompletionRequest {
+	prompt := strings.TrimSpace(req.Prompt)
+	if prompt == "" {
+		prompt = c.prompt()
+	}
+
 	messages := make([]chatMessage, 0, 2)
 
-	if system := strings.TrimSpace(req.SystemPrompt); system != "" {
+	if system := strings.TrimSpace(c.systemPrompt()); system != "" {
 		messages = append(messages, chatMessage{Role: "system", Content: system})
 	}
 
 	messages = append(messages, chatMessage{
 		Role: "user",
 		Content: []contentPart{
-			{Type: "text", Text: req.Prompt},
-			{Type: "image_url", ImageURL: &imageURLPart{URL: dataURI(req.MediaType, req.ImageData), Detail: req.Detail}},
+			{Type: "text", Text: prompt},
+			{Type: "image_url", ImageURL: &imageURLPart{URL: dataURI(req.MediaType, req.ImageData), Detail: "high"}},
 		},
 	})
 
 	return chatCompletionRequest{
 		Model:       model,
 		Messages:    messages,
-		Temperature: req.Temperature,
-		MaxTokens:   req.MaxTokens,
-		TopP:        req.TopP,
+		Temperature: 0,
+		MaxTokens:   c.maxTokens,
 	}
 }
 
@@ -142,26 +156,69 @@ func dataURI(mediaType string, data []byte) string {
 	return "data:" + mediaType + ";base64," + base64.StdEncoding.EncodeToString(data)
 }
 
-func decodeCompletion(r io.Reader) (string, error) {
+func decodeCompletion(r io.Reader, maxTokens int) (completion, error) {
+	body, err := io.ReadAll(io.LimitReader(r, maxResponseBytes))
+	if err != nil {
+		return completion{}, fmt.Errorf("openai: read response: %w", err)
+	}
+
 	var out chatCompletionResponse
-	if err := json.NewDecoder(r).Decode(&out); err != nil {
-		return "", fmt.Errorf("openai: decode response: %w", err)
+	if err := json.Unmarshal(body, &out); err != nil {
+		return completion{}, fmt.Errorf("openai: decode response: %w", err)
 	}
 
 	if len(out.Choices) == 0 {
-		return "", fmt.Errorf("openai: response contained no choices")
+		return completion{}, fmt.Errorf("openai: response contained no choices")
 	}
 
-	text, err := decodeContent(out.Choices[0].Message.Content)
+	choice := out.Choices[0]
+
+	text, err := decodeContent(choice.Message.Content)
 	if err != nil {
-		return "", err
+		return completion{}, err
 	}
 
 	if strings.TrimSpace(text) == "" {
-		return "", fmt.Errorf("openai: response contained no text")
+		return completion{}, emptyTextError(choice, body, maxTokens)
 	}
 
-	return text, nil
+	return completion{text: text, finishReason: choice.FinishReason}, nil
+}
+
+func emptyTextError(choice chatCompletionChoice, body []byte, maxTokens int) error {
+	if choice.FinishReason == finishReasonLength {
+		return fmt.Errorf("openai: response truncated at max_tokens %s before any text was produced", maxTokensLabel(maxTokens))
+	}
+
+	if reasoningText(choice.Message) != "" {
+		return fmt.Errorf("openai: model produced reasoning but no answer text (finish_reason %q)", choice.FinishReason)
+	}
+
+	if choice.FinishReason == finishReasonContentFilter {
+		return fmt.Errorf("openai: response was blocked by the provider's content filter")
+	}
+
+	return fmt.Errorf("openai: response contained no text (finish_reason %q): %s", choice.FinishReason, responseSnippet(body))
+}
+
+func maxTokensLabel(maxTokens int) string {
+	if maxTokens <= 0 {
+		return "unset"
+	}
+
+	return strconv.Itoa(maxTokens)
+}
+
+func reasoningText(message chatCompletionMessage) string {
+	if content := strings.TrimSpace(message.ReasoningContent); content != "" {
+		return content
+	}
+
+	return strings.TrimSpace(message.Reasoning)
+}
+
+func responseSnippet(body []byte) string {
+	return utils.ReadLimited(bytes.NewReader(body))
 }
 
 func decodeContent(raw json.RawMessage) (string, error) {

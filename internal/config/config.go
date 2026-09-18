@@ -44,7 +44,9 @@ type Config struct {
 	Img2TxtBaseURL      string `env:"IMG2TXT_BASE_URL"`
 	Img2TxtAPIKey       string `env:"IMG2TXT_API_KEY"`
 	Img2TxtModel        string `env:"IMG2TXT_MODEL"`
+	Img2TxtPrompt       string `env:"IMG2TXT_PROMPT"`
 	Img2TxtSystemPrompt string `env:"IMG2TXT_SYSTEM_PROMPT"`
+	Img2TxtMaxTokens    int    `env:"IMG2TXT_MAX_TOKENS" envDefault:"8192"`
 
 	ExamplesEnabled bool `env:"EXAMPLES_ENABLED" envDefault:"false"`
 	ExamplesMax     int  `env:"EXAMPLES_MAX" envDefault:"16"`

@@ -120,12 +120,14 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 
 	var openaiClient *openai.Client
 	if cfg.Img2TxtBaseURL != "" {
-		openaiClient, err = openai.New(
-			cfg.Img2TxtBaseURL,
-			cfg.Img2TxtAPIKey,
-			cfg.Img2TxtModel,
-			cfg.Img2TxtSystemPrompt,
-		)
+		openaiClient, err = openai.New(openai.Config{
+			BaseURL:      cfg.Img2TxtBaseURL,
+			APIKey:       cfg.Img2TxtAPIKey,
+			Model:        cfg.Img2TxtModel,
+			SystemPrompt: cfg.Img2TxtSystemPrompt,
+			Prompt:       cfg.Img2TxtPrompt,
+			MaxTokens:    cfg.Img2TxtMaxTokens,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("build img2txt client: %w", err)
 		}
@@ -133,6 +135,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		log.Info("img2txt enabled",
 			zap.String("base_url", cfg.Img2TxtBaseURL),
 			zap.String("model", cfg.Img2TxtModel),
+			zap.Int("max_tokens", openaiClient.MaxTokens()),
 		)
 	}
 

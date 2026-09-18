@@ -22,6 +22,17 @@ type img2txtCapture struct {
 	body []byte
 }
 
+type img2txtPayload struct {
+	Model    string `json:"model"`
+	Messages []struct {
+		Role    string          `json:"role"`
+		Content json.RawMessage `json:"content"`
+	} `json:"messages"`
+	Temperature *float64 `json:"temperature"`
+	MaxTokens   int      `json:"max_tokens"`
+	TopP        *float64 `json:"top_p"`
+}
+
 func newImg2TxtImageServer(t *testing.T) *httptest.Server {
 	t.Helper()
 
@@ -50,10 +61,10 @@ func newImg2TxtVisionServer(t *testing.T, response string) (*httptest.Server, *i
 	return server, captured
 }
 
-func newImg2TxtClient(t *testing.T, baseURL, model string) *openai.Client {
+func newImg2TxtClient(t *testing.T, cfg openai.Config) *openai.Client {
 	t.Helper()
 
-	client, err := openai.New(baseURL, "", model, "")
+	client, err := openai.New(cfg)
 	if err != nil {
 		t.Fatalf("openai.New() error: %v", err)
 	}
@@ -117,56 +128,73 @@ func toolNames(t *testing.T, srv *mcp.Server) []string {
 	return names
 }
 
+func decodeImg2TxtPayload(t *testing.T, body []byte) img2txtPayload {
+	t.Helper()
+
+	var payload img2txtPayload
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("decode vision payload: %v", err)
+	}
+
+	return payload
+}
+
+func img2txtUserParts(t *testing.T, body []byte) []struct {
+	Type     string `json:"type"`
+	Text     string `json:"text"`
+	ImageURL struct {
+		URL    string `json:"url"`
+		Detail string `json:"detail"`
+	} `json:"image_url"`
+} {
+	t.Helper()
+
+	payload := decodeImg2TxtPayload(t, body)
+	last := payload.Messages[len(payload.Messages)-1]
+	if last.Role != "user" {
+		t.Fatalf("last message role = %q, want user", last.Role)
+	}
+
+	var parts []struct {
+		Type     string `json:"type"`
+		Text     string `json:"text"`
+		ImageURL struct {
+			URL    string `json:"url"`
+			Detail string `json:"detail"`
+		} `json:"image_url"`
+	}
+	if err := json.Unmarshal(last.Content, &parts); err != nil {
+		t.Fatalf("decode user content: %v", err)
+	}
+
+	return parts
+}
+
 func TestImg2TxtSchema(t *testing.T) {
 	s := img2txtSchema()
+
+	properties := make([]string, 0, len(s.Properties))
+	for name := range s.Properties {
+		properties = append(properties, name)
+	}
+
+	slices.Sort(properties)
+
+	if !slices.Equal(properties, []string{"image", "prompt"}) {
+		t.Errorf("properties = %v, want image and prompt", properties)
+	}
 
 	if !slices.Contains(s.Required, "image") {
 		t.Error("image is not required")
 	}
 
-	if s.Properties["image"].Default != nil {
-		t.Error("image must not have a default")
+	if slices.Contains(s.Required, "prompt") {
+		t.Error("prompt must be optional")
 	}
 
-	defaults := map[string]string{
-		"prompt":      `"Describe this image in detail."`,
-		"temperature": "0.2",
-		"max_tokens":  "1024",
-		"top_p":       "1",
-		"detail":      `"auto"`,
-	}
-
-	for field, want := range defaults {
-		prop := s.Properties[field]
-		if prop == nil {
-			t.Errorf("%s property is missing", field)
-			continue
-		}
-
-		if prop.Default == nil {
-			t.Errorf("%s has no default", field)
-			continue
-		}
-
-		if string(prop.Default) != want {
-			t.Errorf("%s default = %s, want %s", field, prop.Default, want)
-		}
-	}
-
-	for _, field := range []string{"model", "system_prompt"} {
+	for _, field := range []string{"image", "prompt"} {
 		if s.Properties[field].Default != nil {
 			t.Errorf("%s must not have a default", field)
-		}
-	}
-
-	detailEnum := s.Properties["detail"].Enum
-	if len(detailEnum) != 3 {
-		t.Fatalf("detail enum = %v, want three values", detailEnum)
-	}
-
-	for i, want := range []string{"auto", "low", "high"} {
-		if detailEnum[i] != want {
-			t.Errorf("detail enum[%d] = %v, want %q", i, detailEnum[i], want)
 		}
 	}
 }
@@ -177,7 +205,7 @@ func TestImg2TxtRegisteredOnlyWhenClientPresent(t *testing.T) {
 	withClient, err := New(Deps{
 		Log:      zapNop(),
 		Resolver: resolver,
-		OpenAI:   newImg2TxtClient(t, "http://example.com", "m"),
+		OpenAI:   newImg2TxtClient(t, openai.Config{BaseURL: "http://example.com", Model: "m"}),
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
@@ -201,17 +229,9 @@ func TestRunImg2TxtResolvesAndForwards(t *testing.T) {
 	imageServer := newImg2TxtImageServer(t)
 	visionServer, captured := newImg2TxtVisionServer(t, `{"choices":[{"message":{"content":"a red square"}}]}`)
 
-	out, err := img2txtHandlers(t, newImg2TxtClient(t, visionServer.URL, "default-model")).runImg2Txt(
+	out, err := img2txtHandlers(t, newImg2TxtClient(t, openai.Config{BaseURL: visionServer.URL, Model: "default-model"})).runImg2Txt(
 		context.Background(),
-		img2txtInput{
-			Image:        imageServer.URL + "/x.png",
-			Prompt:       "what is it?",
-			SystemPrompt: "be terse",
-			Temperature:  0.3,
-			MaxTokens:    55,
-			TopP:         0.9,
-			Detail:       "high",
-		})
+		img2txtInput{Image: imageServer.URL + "/x.png"})
 	if err != nil {
 		t.Fatalf("runImg2Txt() error: %v", err)
 	}
@@ -224,42 +244,35 @@ func TestRunImg2TxtResolvesAndForwards(t *testing.T) {
 		t.Errorf("Model = %q, want default-model", out.Model)
 	}
 
-	var payload struct {
-		Model    string `json:"model"`
-		Messages []struct {
-			Role    string          `json:"role"`
-			Content json.RawMessage `json:"content"`
-		} `json:"messages"`
-		Temperature float64 `json:"temperature"`
-		MaxTokens   int     `json:"max_tokens"`
-		TopP        float64 `json:"top_p"`
-	}
-	if err := json.Unmarshal(captured.body, &payload); err != nil {
-		t.Fatalf("decode vision payload: %v", err)
+	if out.Truncated {
+		t.Error("Truncated = true, want false")
 	}
 
-	if payload.Temperature != 0.3 || payload.MaxTokens != 55 || payload.TopP != 0.9 {
-		t.Errorf("tuning = (%v, %v, %v), want (0.3, 55, 0.9)", payload.Temperature, payload.MaxTokens, payload.TopP)
+	payload := decodeImg2TxtPayload(t, captured.body)
+
+	if payload.Model != "default-model" {
+		t.Errorf("payload model = %q, want default-model", payload.Model)
+	}
+
+	if payload.Temperature == nil || *payload.Temperature != 0 {
+		t.Errorf("temperature = %v, want a pinned 0", payload.Temperature)
+	}
+
+	if payload.TopP != nil {
+		t.Errorf("top_p = %v, want the field omitted", *payload.TopP)
+	}
+
+	if payload.MaxTokens != openai.DefaultMaxTokens {
+		t.Errorf("max_tokens = %d, want %d", payload.MaxTokens, openai.DefaultMaxTokens)
 	}
 
 	if len(payload.Messages) != 2 {
 		t.Fatalf("messages = %d, want 2", len(payload.Messages))
 	}
 
-	var parts []struct {
-		Type     string `json:"type"`
-		Text     string `json:"text"`
-		ImageURL struct {
-			URL    string `json:"url"`
-			Detail string `json:"detail"`
-		} `json:"image_url"`
-	}
-	if err := json.Unmarshal(payload.Messages[1].Content, &parts); err != nil {
-		t.Fatalf("decode user content: %v", err)
-	}
-
-	if parts[0].Text != "what is it?" {
-		t.Errorf("prompt = %q, want what is it?", parts[0].Text)
+	parts := img2txtUserParts(t, captured.body)
+	if parts[0].Text != openai.DefaultPrompt {
+		t.Errorf("prompt = %q, want %q", parts[0].Text, openai.DefaultPrompt)
 	}
 
 	wantURL := "data:image/png;base64," + base64.StdEncoding.EncodeToString(img2txtPNGBytes)
@@ -272,32 +285,35 @@ func TestRunImg2TxtResolvesAndForwards(t *testing.T) {
 	}
 }
 
-func TestRunImg2TxtUsesDefaultSystemPrompt(t *testing.T) {
+func TestRunImg2TxtForwardsPrompt(t *testing.T) {
 	imageServer := newImg2TxtImageServer(t)
 	visionServer, captured := newImg2TxtVisionServer(t, `{"choices":[{"message":{"content":"ok"}}]}`)
 
-	client, err := openai.New(visionServer.URL, "", "m", "be terse")
+	_, err := img2txtHandlers(t, newImg2TxtClient(t, openai.Config{BaseURL: visionServer.URL, Model: "m"})).runImg2Txt(
+		context.Background(),
+		img2txtInput{Image: imageServer.URL + "/x.png", Prompt: "read the serial number"})
 	if err != nil {
-		t.Fatalf("openai.New() error: %v", err)
+		t.Fatalf("runImg2Txt() error: %v", err)
 	}
 
+	if parts := img2txtUserParts(t, captured.body); parts[0].Text != "read the serial number" {
+		t.Errorf("prompt = %q, want the per-call prompt", parts[0].Text)
+	}
+}
+
+func TestRunImg2TxtUsesConfiguredSystemPrompt(t *testing.T) {
+	imageServer := newImg2TxtImageServer(t)
+	visionServer, captured := newImg2TxtVisionServer(t, `{"choices":[{"message":{"content":"ok"}}]}`)
+
+	client := newImg2TxtClient(t, openai.Config{BaseURL: visionServer.URL, Model: "m", SystemPrompt: "be terse"})
+
 	if _, err := img2txtHandlers(t, client).runImg2Txt(context.Background(), img2txtInput{
-		Image:  imageServer.URL + "/x.png",
-		Prompt: "hi",
+		Image: imageServer.URL + "/x.png",
 	}); err != nil {
 		t.Fatalf("runImg2Txt() error: %v", err)
 	}
 
-	var payload struct {
-		Messages []struct {
-			Role    string          `json:"role"`
-			Content json.RawMessage `json:"content"`
-		} `json:"messages"`
-	}
-	if err := json.Unmarshal(captured.body, &payload); err != nil {
-		t.Fatalf("decode vision payload: %v", err)
-	}
-
+	payload := decodeImg2TxtPayload(t, captured.body)
 	if len(payload.Messages) != 2 || payload.Messages[0].Role != "system" {
 		t.Fatalf("messages = %+v, want a leading system message", payload.Messages)
 	}
@@ -312,10 +328,30 @@ func TestRunImg2TxtUsesDefaultSystemPrompt(t *testing.T) {
 	}
 }
 
-func TestRunImg2TxtResolveError(t *testing.T) {
-	_, err := img2txtHandlers(t, newImg2TxtClient(t, "http://example.com", "m")).runImg2Txt(
+func TestRunImg2TxtTruncated(t *testing.T) {
+	imageServer := newImg2TxtImageServer(t)
+	visionServer, _ := newImg2TxtVisionServer(t, `{"choices":[{"finish_reason":"length","message":{"content":"partial text"}}]}`)
+
+	out, err := img2txtHandlers(t, newImg2TxtClient(t, openai.Config{BaseURL: visionServer.URL, Model: "m"})).runImg2Txt(
 		context.Background(),
-		img2txtInput{Image: "%%%not-an-image%%%", Prompt: "hi"})
+		img2txtInput{Image: imageServer.URL + "/x.png"})
+	if err != nil {
+		t.Fatalf("runImg2Txt() error: %v", err)
+	}
+
+	if !out.Truncated {
+		t.Error("Truncated = false, want true")
+	}
+
+	if out.Text != "partial text" {
+		t.Errorf("Text = %q, want the partial text", out.Text)
+	}
+}
+
+func TestRunImg2TxtResolveError(t *testing.T) {
+	_, err := img2txtHandlers(t, newImg2TxtClient(t, openai.Config{BaseURL: "http://example.com", Model: "m"})).runImg2Txt(
+		context.Background(),
+		img2txtInput{Image: "%%%not-an-image%%%"})
 	if err == nil {
 		t.Fatal("runImg2Txt() expected error, got nil")
 	}
@@ -332,18 +368,15 @@ func TestImg2TxtCallToolEndToEnd(t *testing.T) {
 	srv, err := New(Deps{
 		Log:      zapNop(),
 		Resolver: newImg2TxtResolver(t),
-		OpenAI:   newImg2TxtClient(t, visionServer.URL, "vision-model"),
+		OpenAI:   newImg2TxtClient(t, openai.Config{BaseURL: visionServer.URL, Model: "vision-model"}),
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
 
 	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
-		Name: "img2txt",
-		Arguments: map[string]any{
-			"image":  imageServer.URL + "/x.png",
-			"prompt": "what is it?",
-		},
+		Name:      "img2txt",
+		Arguments: map[string]any{"image": imageServer.URL + "/x.png"},
 	})
 	if err != nil {
 		t.Fatalf("CallTool() error: %v", err)
@@ -375,41 +408,102 @@ func TestImg2TxtCallToolEndToEnd(t *testing.T) {
 		t.Errorf("structured content = %+v", structured)
 	}
 
-	var payload struct {
-		Messages []struct {
-			Role    string          `json:"role"`
-			Content json.RawMessage `json:"content"`
-		} `json:"messages"`
-	}
-	if err := json.Unmarshal(captured.body, &payload); err != nil {
-		t.Fatalf("decode vision payload: %v", err)
+	if structured["truncated"] != false {
+		t.Errorf("structured truncated = %v, want false", structured["truncated"])
 	}
 
-	if len(payload.Messages) == 0 || payload.Messages[len(payload.Messages)-1].Role != "user" {
-		t.Fatalf("messages = %+v, want a trailing user message", payload.Messages)
-	}
-
-	var parts []struct {
-		Type     string `json:"type"`
-		Text     string `json:"text"`
-		ImageURL struct {
-			URL string `json:"url"`
-		} `json:"image_url"`
-	}
-	if err := json.Unmarshal(payload.Messages[len(payload.Messages)-1].Content, &parts); err != nil {
-		t.Fatalf("decode user content: %v", err)
-	}
-
-	if len(parts) != 2 {
-		t.Fatalf("content parts = %d, want 2", len(parts))
-	}
-
-	if parts[0].Text != "what is it?" {
-		t.Errorf("prompt = %q, want what is it?", parts[0].Text)
+	parts := img2txtUserParts(t, captured.body)
+	if parts[0].Text != openai.DefaultPrompt {
+		t.Errorf("prompt = %q, want %q", parts[0].Text, openai.DefaultPrompt)
 	}
 
 	wantURL := "data:image/png;base64," + base64.StdEncoding.EncodeToString(img2txtPNGBytes)
 	if parts[1].ImageURL.URL != wantURL {
 		t.Errorf("image url = %q, want %q", parts[1].ImageURL.URL, wantURL)
+	}
+}
+
+func TestImg2TxtCallToolIgnoresRemovedFields(t *testing.T) {
+	imageServer := newImg2TxtImageServer(t)
+	visionServer, captured := newImg2TxtVisionServer(t, `{"choices":[{"message":{"content":"ok"}}]}`)
+
+	srv, err := New(Deps{
+		Log:      zapNop(),
+		Resolver: newImg2TxtResolver(t),
+		OpenAI:   newImg2TxtClient(t, openai.Config{BaseURL: visionServer.URL, Model: "m"}),
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "img2txt",
+		Arguments: map[string]any{
+			"image":       imageServer.URL + "/x.png",
+			"temperature": 0.9,
+			"top_p":       0.5,
+			"detail":      "low",
+			"model":       "other",
+		},
+	})
+	if err != nil || result.IsError {
+		return
+	}
+
+	payload := decodeImg2TxtPayload(t, captured.body)
+
+	if payload.Temperature == nil || *payload.Temperature != 0 {
+		t.Errorf("temperature = %v, want a pinned 0", payload.Temperature)
+	}
+
+	if payload.TopP != nil {
+		t.Errorf("top_p = %v, want the field omitted", *payload.TopP)
+	}
+
+	if payload.Model != "m" {
+		t.Errorf("model = %q, want the configured m", payload.Model)
+	}
+
+	if parts := img2txtUserParts(t, captured.body); parts[0].Text != openai.DefaultPrompt {
+		t.Errorf("prompt = %q, want %q", parts[0].Text, openai.DefaultPrompt)
+	}
+
+	if parts := img2txtUserParts(t, captured.body); parts[1].ImageURL.Detail != "high" {
+		t.Errorf("detail = %q, want high", parts[1].ImageURL.Detail)
+	}
+}
+
+func TestImg2TxtCallToolReportsTruncation(t *testing.T) {
+	imageServer := newImg2TxtImageServer(t)
+	visionServer, _ := newImg2TxtVisionServer(t, `{"choices":[{"finish_reason":"length","message":{"content":"partial"}}]}`)
+
+	srv, err := New(Deps{
+		Log:      zapNop(),
+		Resolver: newImg2TxtResolver(t),
+		OpenAI:   newImg2TxtClient(t, openai.Config{BaseURL: visionServer.URL, Model: "vision-model"}),
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "img2txt",
+		Arguments: map[string]any{"image": imageServer.URL + "/x.png"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool() error: %v", err)
+	}
+
+	structured, ok := result.StructuredContent.(map[string]any)
+	if !ok {
+		t.Fatalf("structured content type = %T, want map[string]any", result.StructuredContent)
+	}
+
+	if structured["truncated"] != true {
+		t.Errorf("structured truncated = %v, want true", structured["truncated"])
+	}
+
+	if structured["text"] != "partial" {
+		t.Errorf("structured text = %v, want partial", structured["text"])
 	}
 }

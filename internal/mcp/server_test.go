@@ -26,7 +26,7 @@ func TestNewRegistersTools(t *testing.T) {
 }
 
 func TestToolRegistration(t *testing.T) {
-	openaiClient, err := openai.New("http://example.com", "", "m", "")
+	openaiClient, err := openai.New(openai.Config{BaseURL: "http://example.com", Model: "m"})
 	if err != nil {
 		t.Fatalf("openai.New() error: %v", err)
 	}

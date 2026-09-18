@@ -22,16 +22,9 @@ func TestDefaultSystemPromptMatchesFile(t *testing.T) {
 func TestDescribeUsesBuiltInSystemPromptWhenUnset(t *testing.T) {
 	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
 
-	c, err := New(server.URL, "", "m", "")
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
+	c := newClient(t, Config{BaseURL: server.URL, Model: "m"})
 
-	if _, err := c.Describe(context.Background(), DescribeRequest{
-		ImageData: []byte("x"),
-		MediaType: "image/png",
-		Prompt:    "hi",
-	}); err != nil {
+	if _, err := c.Describe(context.Background(), DescribeRequest{ImageData: []byte("x"), MediaType: "image/png"}); err != nil {
 		t.Fatalf("Describe() error: %v", err)
 	}
 

@@ -8,29 +8,55 @@ import (
 	"time"
 )
 
-const requestTimeout = 3 * time.Minute
+const (
+	requestTimeout = 3 * time.Minute
 
-type Client struct {
-	baseURL             string
-	apiKey              string
-	defaultModel        string
-	defaultSystemPrompt string
-	http                *http.Client
+	DefaultMaxTokens = 8192
+)
+
+type Config struct {
+	BaseURL      string
+	APIKey       string
+	Model        string
+	SystemPrompt string
+	Prompt       string
+	MaxTokens    int
 }
 
-func New(baseURL, apiKey, defaultModel, defaultSystemPrompt string) (*Client, error) {
-	trimmed := strings.TrimRight(strings.TrimSpace(baseURL), "/")
+type Client struct {
+	baseURL                string
+	apiKey                 string
+	defaultModel           string
+	configuredSystemPrompt string
+	configuredPrompt       string
+	maxTokens              int
+	http                   *http.Client
+}
+
+func New(cfg Config) (*Client, error) {
+	trimmed := strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
 
 	u, err := url.Parse(trimmed)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return nil, fmt.Errorf("openai: invalid base URL %q", baseURL)
+		return nil, fmt.Errorf("openai: invalid base URL %q", cfg.BaseURL)
+	}
+
+	maxTokens := cfg.MaxTokens
+	if maxTokens <= 0 {
+		maxTokens = DefaultMaxTokens
 	}
 
 	return &Client{
-		baseURL:             trimmed,
-		apiKey:              apiKey,
-		defaultModel:        defaultModel,
-		defaultSystemPrompt: defaultSystemPrompt,
-		http:                &http.Client{Timeout: requestTimeout},
+		baseURL:                trimmed,
+		apiKey:                 cfg.APIKey,
+		defaultModel:           cfg.Model,
+		configuredSystemPrompt: cfg.SystemPrompt,
+		configuredPrompt:       cfg.Prompt,
+		maxTokens:              maxTokens,
+		http:                   &http.Client{Timeout: requestTimeout},
 	}, nil
+}
+
+func (c *Client) MaxTokens() int {
+	return c.maxTokens
 }

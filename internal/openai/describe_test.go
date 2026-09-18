@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -37,15 +38,26 @@ func newCaptureServer(t *testing.T, status int, response string) (*httptest.Serv
 	return server, captured
 }
 
+func newClient(t *testing.T, cfg Config) *Client {
+	t.Helper()
+
+	c, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	return c
+}
+
 type decodedPayload struct {
 	Model    string `json:"model"`
 	Messages []struct {
 		Role    string          `json:"role"`
 		Content json.RawMessage `json:"content"`
 	} `json:"messages"`
-	Temperature float64 `json:"temperature"`
-	MaxTokens   int     `json:"max_tokens"`
-	TopP        float64 `json:"top_p"`
+	Temperature *float64 `json:"temperature"`
+	MaxTokens   int      `json:"max_tokens"`
+	TopP        *float64 `json:"top_p"`
 }
 
 func decodePayload(t *testing.T, body []byte) decodedPayload {
@@ -59,25 +71,67 @@ func decodePayload(t *testing.T, body []byte) decodedPayload {
 	return payload
 }
 
+func systemMessage(t *testing.T, body []byte) string {
+	t.Helper()
+
+	payload := decodePayload(t, body)
+	if len(payload.Messages) != 2 || payload.Messages[0].Role != "system" {
+		t.Fatalf("messages = %+v, want a leading system message", payload.Messages)
+	}
+
+	var text string
+	if err := json.Unmarshal(payload.Messages[0].Content, &text); err != nil {
+		t.Fatalf("decode system content: %v", err)
+	}
+
+	return text
+}
+
+func userParts(t *testing.T, body []byte) []struct {
+	Type     string `json:"type"`
+	Text     string `json:"text"`
+	ImageURL struct {
+		URL    string `json:"url"`
+		Detail string `json:"detail"`
+	} `json:"image_url"`
+} {
+	t.Helper()
+
+	payload := decodePayload(t, body)
+	last := payload.Messages[len(payload.Messages)-1]
+	if last.Role != "user" {
+		t.Fatalf("last message role = %q, want user", last.Role)
+	}
+
+	var parts []struct {
+		Type     string `json:"type"`
+		Text     string `json:"text"`
+		ImageURL struct {
+			URL    string `json:"url"`
+			Detail string `json:"detail"`
+		} `json:"image_url"`
+	}
+	if err := json.Unmarshal(last.Content, &parts); err != nil {
+		t.Fatalf("decode user content: %v", err)
+	}
+
+	return parts
+}
+
 func TestDescribeSendsExpectedRequest(t *testing.T) {
 	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"a cat"}}]}`)
 
-	c, err := New(server.URL+"/", "secret", "default-model", "")
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
+	c := newClient(t, Config{
+		BaseURL:      server.URL + "/",
+		APIKey:       "secret",
+		Model:        "default-model",
+		SystemPrompt: "be terse",
+		Prompt:       "what is this?",
+		MaxTokens:    55,
+	})
 
 	image := []byte("png-bytes")
-	result, err := c.Describe(context.Background(), DescribeRequest{
-		ImageData:    image,
-		MediaType:    "image/png",
-		Prompt:       "what is this?",
-		SystemPrompt: "be terse",
-		Temperature:  0.3,
-		MaxTokens:    55,
-		TopP:         0.9,
-		Detail:       "high",
-	})
+	result, err := c.Describe(context.Background(), DescribeRequest{ImageData: image, MediaType: "image/png"})
 	if err != nil {
 		t.Fatalf("Describe() error: %v", err)
 	}
@@ -88,6 +142,10 @@ func TestDescribeSendsExpectedRequest(t *testing.T) {
 
 	if result.Model != "default-model" {
 		t.Errorf("Model = %q, want default-model", result.Model)
+	}
+
+	if result.Truncated {
+		t.Error("Truncated = true, want false")
 	}
 
 	if captured.method != http.MethodPost {
@@ -112,43 +170,23 @@ func TestDescribeSendsExpectedRequest(t *testing.T) {
 		t.Errorf("payload model = %q, want default-model", payload.Model)
 	}
 
-	if payload.Temperature != 0.3 || payload.MaxTokens != 55 || payload.TopP != 0.9 {
-		t.Errorf("tuning = (%v, %v, %v), want (0.3, 55, 0.9)", payload.Temperature, payload.MaxTokens, payload.TopP)
+	if payload.Temperature == nil || *payload.Temperature != 0 {
+		t.Errorf("temperature = %v, want a pinned 0", payload.Temperature)
 	}
 
-	if len(payload.Messages) != 2 {
-		t.Fatalf("messages = %d, want 2", len(payload.Messages))
+	if payload.TopP != nil {
+		t.Errorf("top_p = %v, want the field omitted", *payload.TopP)
 	}
 
-	if payload.Messages[0].Role != "system" {
-		t.Errorf("messages[0].role = %q, want system", payload.Messages[0].Role)
+	if payload.MaxTokens != 55 {
+		t.Errorf("max_tokens = %d, want 55", payload.MaxTokens)
 	}
 
-	var systemText string
-	if err := json.Unmarshal(payload.Messages[0].Content, &systemText); err != nil {
-		t.Fatalf("decode system content: %v", err)
+	if got := systemMessage(t, captured.body); got != "be terse" {
+		t.Errorf("system content = %q, want be terse", got)
 	}
 
-	if systemText != "be terse" {
-		t.Errorf("system content = %q, want be terse", systemText)
-	}
-
-	if payload.Messages[1].Role != "user" {
-		t.Errorf("messages[1].role = %q, want user", payload.Messages[1].Role)
-	}
-
-	var parts []struct {
-		Type     string `json:"type"`
-		Text     string `json:"text"`
-		ImageURL struct {
-			URL    string `json:"url"`
-			Detail string `json:"detail"`
-		} `json:"image_url"`
-	}
-	if err := json.Unmarshal(payload.Messages[1].Content, &parts); err != nil {
-		t.Fatalf("decode user content: %v", err)
-	}
-
+	parts := userParts(t, captured.body)
 	if len(parts) != 2 {
 		t.Fatalf("user parts = %d, want 2", len(parts))
 	}
@@ -163,132 +201,115 @@ func TestDescribeSendsExpectedRequest(t *testing.T) {
 	}
 }
 
-func TestDescribeOmitsAuthWhenUnset(t *testing.T) {
+func TestDescribeAppliesDefaults(t *testing.T) {
 	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
 
-	c, err := New(server.URL, "", "", "")
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
+	c := newClient(t, Config{BaseURL: server.URL, Model: "m"})
+
+	if _, err := c.Describe(context.Background(), DescribeRequest{ImageData: []byte("x"), MediaType: "image/png"}); err != nil {
+		t.Fatalf("Describe() error: %v", err)
 	}
+
+	payload := decodePayload(t, captured.body)
+
+	if payload.MaxTokens != DefaultMaxTokens {
+		t.Errorf("max_tokens = %d, want %d", payload.MaxTokens, DefaultMaxTokens)
+	}
+
+	if got := systemMessage(t, captured.body); got != strings.TrimSpace(DefaultSystemPrompt) {
+		t.Errorf("system content = %q, want the built-in default", got)
+	}
+
+	if parts := userParts(t, captured.body); parts[0].Text != DefaultPrompt {
+		t.Errorf("prompt = %q, want %q", parts[0].Text, DefaultPrompt)
+	}
+}
+
+func TestDescribePromptAndSystemPromptPrecedence(t *testing.T) {
+	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
+
+	c := newClient(t, Config{BaseURL: server.URL, Model: "m", Prompt: "be specific", SystemPrompt: "be terse"})
+
+	if _, err := c.Describe(context.Background(), DescribeRequest{ImageData: []byte("x"), MediaType: "image/png"}); err != nil {
+		t.Fatalf("Describe() error: %v", err)
+	}
+
+	if got := systemMessage(t, captured.body); got != "be terse" {
+		t.Errorf("system content = %q, want be terse", got)
+	}
+
+	if parts := userParts(t, captured.body); parts[0].Text != "be specific" {
+		t.Errorf("prompt = %q, want be specific", parts[0].Text)
+	}
+}
+
+func TestDescribePerCallPromptOverride(t *testing.T) {
+	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
+
+	c := newClient(t, Config{BaseURL: server.URL, Model: "m", Prompt: "default focus"})
 
 	if _, err := c.Describe(context.Background(), DescribeRequest{
 		ImageData: []byte("x"),
-		MediaType: "image/jpeg",
-		Prompt:    "hi",
-		Model:     "m",
+		MediaType: "image/png",
+		Prompt:    "read the serial number",
 	}); err != nil {
+		t.Fatalf("Describe() error: %v", err)
+	}
+
+	if parts := userParts(t, captured.body); parts[0].Text != "read the serial number" {
+		t.Errorf("prompt = %q, want the per-call prompt", parts[0].Text)
+	}
+}
+
+func TestDescribeMaxTokensOverride(t *testing.T) {
+	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
+
+	c := newClient(t, Config{BaseURL: server.URL, Model: "m", MaxTokens: 2048})
+
+	if _, err := c.Describe(context.Background(), DescribeRequest{ImageData: []byte("x"), MediaType: "image/png"}); err != nil {
+		t.Fatalf("Describe() error: %v", err)
+	}
+
+	if got := decodePayload(t, captured.body).MaxTokens; got != 2048 {
+		t.Errorf("max_tokens = %d, want 2048", got)
+	}
+
+	if c.MaxTokens() != 2048 {
+		t.Errorf("Client.MaxTokens() = %d, want 2048", c.MaxTokens())
+	}
+}
+
+func TestDescribeOmitsAuthWhenUnset(t *testing.T) {
+	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
+
+	c := newClient(t, Config{BaseURL: server.URL, Model: "m"})
+
+	if _, err := c.Describe(context.Background(), DescribeRequest{ImageData: []byte("x"), MediaType: "image/jpeg"}); err != nil {
 		t.Fatalf("Describe() error: %v", err)
 	}
 
 	if got := captured.header.Get("Authorization"); got != "" {
 		t.Errorf("Authorization = %q, want empty", got)
 	}
-
-	payload := decodePayload(t, captured.body)
-	if len(payload.Messages) == 0 || payload.Messages[len(payload.Messages)-1].Role != "user" {
-		t.Errorf("messages = %+v, want a trailing user message", payload.Messages)
-	}
-}
-
-func TestDescribeModelOverride(t *testing.T) {
-	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
-
-	c, err := New(server.URL, "", "default", "")
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
-
-	result, err := c.Describe(context.Background(), DescribeRequest{
-		ImageData: []byte("x"),
-		MediaType: "image/png",
-		Prompt:    "hi",
-		Model:     "override",
-	})
-	if err != nil {
-		t.Fatalf("Describe() error: %v", err)
-	}
-
-	if result.Model != "override" {
-		t.Errorf("Model = %q, want override", result.Model)
-	}
-
-	if got := decodePayload(t, captured.body).Model; got != "override" {
-		t.Errorf("payload model = %q, want override", got)
-	}
-}
-
-func TestDescribeDefaultSystemPrompt(t *testing.T) {
-	server, captured := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
-
-	c, err := New(server.URL, "", "m", "be a botanist")
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
-
-	if _, err := c.Describe(context.Background(), DescribeRequest{
-		ImageData: []byte("x"),
-		MediaType: "image/png",
-		Prompt:    "hi",
-	}); err != nil {
-		t.Fatalf("Describe() error: %v", err)
-	}
-
-	if got := systemMessage(t, captured.body); got != "be a botanist" {
-		t.Errorf("system content = %q, want the configured default", got)
-	}
-
-	if _, err := c.Describe(context.Background(), DescribeRequest{
-		ImageData:    []byte("x"),
-		MediaType:    "image/png",
-		Prompt:       "hi",
-		SystemPrompt: "be terse",
-	}); err != nil {
-		t.Fatalf("Describe() error: %v", err)
-	}
-
-	if got := systemMessage(t, captured.body); got != "be terse" {
-		t.Errorf("system content = %q, want the per-call override", got)
-	}
-}
-
-func systemMessage(t *testing.T, body []byte) string {
-	t.Helper()
-
-	payload := decodePayload(t, body)
-	if len(payload.Messages) != 2 || payload.Messages[0].Role != "system" {
-		t.Fatalf("messages = %+v, want a leading system message", payload.Messages)
-	}
-
-	var text string
-	if err := json.Unmarshal(payload.Messages[0].Content, &text); err != nil {
-		t.Fatalf("decode system content: %v", err)
-	}
-
-	return text
 }
 
 func TestDescribeNoModel(t *testing.T) {
-	c, err := New("http://example.com", "", "", "")
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
+	c := newClient(t, Config{BaseURL: "http://example.com"})
+
+	_, err := c.Describe(context.Background(), DescribeRequest{ImageData: []byte("x"), MediaType: "image/png"})
+	if err == nil {
+		t.Fatal("Describe() expected error, got nil")
 	}
 
-	if _, err := c.Describe(context.Background(), DescribeRequest{
-		ImageData: []byte("x"),
-		MediaType: "image/png",
-		Prompt:    "hi",
-	}); err == nil {
-		t.Fatal("Describe() expected error, got nil")
+	if !strings.Contains(err.Error(), "no model configured") {
+		t.Errorf("error = %q, want a no-model message", err.Error())
 	}
 }
 
 func TestDescribeEmptyImage(t *testing.T) {
-	c, err := New("http://example.com", "", "m", "")
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
+	c := newClient(t, Config{BaseURL: "http://example.com", Model: "m"})
 
-	if _, err := c.Describe(context.Background(), DescribeRequest{MediaType: "image/png", Prompt: "hi"}); err == nil {
+	if _, err := c.Describe(context.Background(), DescribeRequest{MediaType: "image/png"}); err == nil {
 		t.Fatal("Describe() expected error, got nil")
 	}
 }
@@ -297,22 +318,97 @@ func TestDescribeArrayContent(t *testing.T) {
 	response := `{"choices":[{"message":{"content":[{"type":"text","text":"hello "},{"type":"text","text":"world"}]}}]}`
 	server, _ := newCaptureServer(t, http.StatusOK, response)
 
-	c, err := New(server.URL, "", "m", "")
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
+	c := newClient(t, Config{BaseURL: server.URL, Model: "m"})
 
-	result, err := c.Describe(context.Background(), DescribeRequest{
-		ImageData: []byte("x"),
-		MediaType: "image/png",
-		Prompt:    "hi",
-	})
+	result, err := c.Describe(context.Background(), DescribeRequest{ImageData: []byte("x"), MediaType: "image/png"})
 	if err != nil {
 		t.Fatalf("Describe() error: %v", err)
 	}
 
 	if result.Text != "hello world" {
 		t.Errorf("Text = %q, want hello world", result.Text)
+	}
+}
+
+func TestDescribeTruncatedWithText(t *testing.T) {
+	response := `{"choices":[{"finish_reason":"length","message":{"content":"a partial cat"}}]}`
+	server, _ := newCaptureServer(t, http.StatusOK, response)
+
+	c := newClient(t, Config{BaseURL: server.URL, Model: "m"})
+
+	result, err := c.Describe(context.Background(), DescribeRequest{ImageData: []byte("x"), MediaType: "image/png"})
+	if err != nil {
+		t.Fatalf("Describe() error: %v", err)
+	}
+
+	if result.Text != "a partial cat" {
+		t.Errorf("Text = %q, want a partial cat", result.Text)
+	}
+
+	if !result.Truncated {
+		t.Error("Truncated = false, want true")
+	}
+}
+
+func TestDescribeEmptyContentErrors(t *testing.T) {
+	tests := []struct {
+		name         string
+		response     string
+		wantContains []string
+	}{
+		{
+			name:         "length finish names truncation and the cap",
+			response:     `{"choices":[{"finish_reason":"length","message":{"content":""}}]}`,
+			wantContains: []string{"truncated", "2048"},
+		},
+		{
+			name:         "reasoning content without an answer",
+			response:     `{"choices":[{"finish_reason":"stop","message":{"content":"","reasoning_content":"hidden chain"}}]}`,
+			wantContains: []string{"reasoning"},
+		},
+		{
+			name:         "openrouter reasoning without an answer",
+			response:     `{"choices":[{"finish_reason":"stop","message":{"content":null,"reasoning":"hidden chain"}}]}`,
+			wantContains: []string{"reasoning"},
+		},
+		{
+			name:         "content filter",
+			response:     `{"choices":[{"finish_reason":"content_filter","message":{"content":null}}]}`,
+			wantContains: []string{"content filter"},
+		},
+		{
+			name:         "null content includes finish reason and snippet",
+			response:     `{"choices":[{"finish_reason":"stop","message":{"content":null}}]}`,
+			wantContains: []string{`finish_reason "stop"`, `"content":null`},
+		},
+		{
+			name:         "non-text parts include finish reason and snippet",
+			response:     `{"choices":[{"finish_reason":"stop","message":{"content":[{"type":"image_url","image_url":{"url":"x"}}]}}]}`,
+			wantContains: []string{`finish_reason "stop"`, `"image_url"`},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server, _ := newCaptureServer(t, http.StatusOK, tt.response)
+
+			c := newClient(t, Config{BaseURL: server.URL, Model: "m", MaxTokens: 2048})
+
+			_, err := c.Describe(context.Background(), DescribeRequest{ImageData: []byte("x"), MediaType: "image/png"})
+			if err == nil {
+				t.Fatal("Describe() expected error, got nil")
+			}
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("error = %q, want substring %q", err.Error(), want)
+				}
+			}
+
+			if strings.Contains(err.Error(), "hidden chain") {
+				t.Errorf("error = %q, must not leak reasoning content", err.Error())
+			}
+		})
 	}
 }
 
@@ -335,16 +431,9 @@ func TestDescribeErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server, _ := newCaptureServer(t, tt.status, tt.response)
 
-			c, err := New(server.URL, "", "m", "")
-			if err != nil {
-				t.Fatalf("New() error: %v", err)
-			}
+			c := newClient(t, Config{BaseURL: server.URL, Model: "m"})
 
-			_, err = c.Describe(context.Background(), DescribeRequest{
-				ImageData: []byte("x"),
-				MediaType: "image/png",
-				Prompt:    "hi",
-			})
+			_, err := c.Describe(context.Background(), DescribeRequest{ImageData: []byte("x"), MediaType: "image/png"})
 			if err == nil {
 				t.Fatal("Describe() expected error, got nil")
 			}
@@ -359,16 +448,23 @@ func TestDescribeErrors(t *testing.T) {
 func TestDescribeContextCancelled(t *testing.T) {
 	server, _ := newCaptureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"x"}}]}`)
 
-	c, err := New(server.URL, "", "m", "")
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
+	c := newClient(t, Config{BaseURL: server.URL, Model: "m"})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if _, err := c.Describe(ctx, DescribeRequest{ImageData: []byte("x"), MediaType: "image/png", Prompt: "hi"}); err == nil {
+	if _, err := c.Describe(ctx, DescribeRequest{ImageData: []byte("x"), MediaType: "image/png"}); err == nil {
 		t.Fatal("Describe() expected error, got nil")
+	}
+}
+
+func TestMaxTokensLabel(t *testing.T) {
+	if got := maxTokensLabel(0); got != "unset" {
+		t.Errorf("maxTokensLabel(0) = %q, want unset", got)
+	}
+
+	if got := maxTokensLabel(DefaultMaxTokens); got != strconv.Itoa(DefaultMaxTokens) {
+		t.Errorf("maxTokensLabel(%d) = %q", DefaultMaxTokens, got)
 	}
 }
 
@@ -384,7 +480,7 @@ func TestNewValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := New(tt.baseURL, "", "m", ""); err == nil {
+			if _, err := New(Config{BaseURL: tt.baseURL, Model: "m"}); err == nil {
 				t.Fatal("New() expected error, got nil")
 			}
 		})

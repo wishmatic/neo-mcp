@@ -206,7 +206,9 @@ func TestLoadImg2TxtValues(t *testing.T) {
 	t.Setenv("IMG2TXT_BASE_URL", "https://api.example.com/v1")
 	t.Setenv("IMG2TXT_API_KEY", "secret")
 	t.Setenv("IMG2TXT_MODEL", "vision")
+	t.Setenv("IMG2TXT_PROMPT", "what is this?")
 	t.Setenv("IMG2TXT_SYSTEM_PROMPT", "be terse")
+	t.Setenv("IMG2TXT_MAX_TOKENS", "2048")
 
 	cfg, err := Load()
 	if err != nil {
@@ -225,7 +227,28 @@ func TestLoadImg2TxtValues(t *testing.T) {
 		t.Errorf("Img2TxtModel = %q", cfg.Img2TxtModel)
 	}
 
+	if cfg.Img2TxtPrompt != "what is this?" {
+		t.Errorf("Img2TxtPrompt = %q", cfg.Img2TxtPrompt)
+	}
+
 	if cfg.Img2TxtSystemPrompt != "be terse" {
 		t.Errorf("Img2TxtSystemPrompt = %q", cfg.Img2TxtSystemPrompt)
+	}
+
+	if cfg.Img2TxtMaxTokens != 2048 {
+		t.Errorf("Img2TxtMaxTokens = %d, want 2048", cfg.Img2TxtMaxTokens)
+	}
+}
+
+func TestLoadImg2TxtMaxTokensDefault(t *testing.T) {
+	unsetEnv(t, "IMG2TXT_MAX_TOKENS")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	if cfg.Img2TxtMaxTokens != 8192 {
+		t.Errorf("Img2TxtMaxTokens = %d, want 8192", cfg.Img2TxtMaxTokens)
 	}
 }
