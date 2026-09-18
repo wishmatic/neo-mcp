@@ -8,8 +8,8 @@ Related: none.
 ## Goal
 
 Let the service host its own URL shortener, backed by the existing SQLite database and served from the public web
-surface, as a fallback to `chhoto-url`. Short links are created for image URLs exactly as external ones are today, and
-the `shorten` tool keeps working for arbitrary URLs.
+surface, as a fallback to `chhoto-url`. Short links are created for image URLs exactly as external ones are today; the
+shortener is not exposed as a tool.
 
 ## Non-goals
 
@@ -35,7 +35,7 @@ Backend selection for the shortener mirrors storage:
 
 1. `SHORTENER_API_URL` and `SHORTENER_API_KEY` both set: the existing `chhoto-url` client.
 2. Otherwise `SHORTENER_ENABLED`: the built-in local shortener.
-3. Otherwise no shortener, and the `shorten` tool is not registered.
+3. Otherwise no shortener, and generated image URLs are returned unshortened.
 
 ### Link shape
 
@@ -62,8 +62,8 @@ falls through to the HTTP path, which keeps `chhoto-url` and external shorteners
 
 ### Interfaces
 
-`publish.Publisher` and `internal/mcp` hold a concrete `*shortener.Client`. They narrow to an interface so the local
-implementation is interchangeable:
+`publish.Publisher` holds a concrete `*shortener.Client`. It narrows to an interface so the local implementation is
+interchangeable:
 
 ```go
 type Shortener interface {
@@ -182,7 +182,7 @@ Acceptance criteria:
 
 ### Unit 4: wiring, resolution, and documentation
 
-Scope: config, backend selection, resolver integration, and the tool.
+Scope: config, backend selection, resolver integration, and documentation.
 
 Deliverables:
 
@@ -206,20 +206,21 @@ Deliverables:
     The resolver consults it only when the request host matches its public base and the path is `/s/<slug>`: a hit
     replaces the URL under resolution and the loop continues, a miss falls through to the existing HTTP fetch.
 
-- `internal/publish/publish.go`, `internal/mcp/server.go`, `internal/mcp/handlers.go`, `internal/mcp/shorten.go`:
-  switch to the `shortener.Shortener` interface; registration continues to be driven by a non-nil shortener.
+- `internal/publish/publish.go`: switch to the `shortener.Shortener` interface; a nil shortener keeps returning the
+  original URL.
 - `internal/server/server_test.go`, `internal/config/config_test.go`, `internal/resolve/resolver_test.go`: coverage for
   the validation, selection, and lookup behaviour.
 - `.env.example` and `README.md`: document the new envars and the local fallback.
 
 Acceptance criteria:
 
-- [ ] `SHORTENER_ENABLED=true` alone (no chhoto config) registers `shorten`, and shortening a URL returns
-      `<PUBLIC_HOST>/s/<slug>` that the mounted route resolves.
+- [ ] `SHORTENER_ENABLED=true` alone (no chhoto config) shortens generated image URLs to `<PUBLIC_HOST>/s/<slug>` that
+      the mounted route resolves.
 - [ ] `SHORTENER_ENABLED=true` together with `SHORTENER_API_URL` or `SHORTENER_API_KEY` fails startup naming both.
 - [ ] `SHORTENER_ENABLED=true` without `PUBLIC_HOST` fails startup naming `PUBLIC_HOST`.
 - [ ] `SHORTENER_SLUG_LENGTH` of `3` and of `33` fail; `7` succeeds.
-- [ ] `chhoto-url` configuration alone is unchanged, and neither shortener configured leaves `shorten` unregistered.
+- [ ] `chhoto-url` configuration alone is unchanged, and neither shortener configured leaves generated image URLs
+      unshortened.
 - [ ] `publicize` given a local short URL resolves it without an outbound HTTP request (asserted with an HTTP client
       that fails the test if called) when the destination is a local file.
 - [ ] Image URLs produced by `txt2img` are shortened when the local shortener is active.

@@ -9,7 +9,6 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/openai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
-	"github.com/wishmatic/neo-mcp/internal/shortener"
 	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
@@ -23,7 +22,6 @@ type Deps struct {
 	Resolver  *resolve.Resolver
 	OpenAI    *openai.Client
 	Store     *store.Client
-	Shortener *shortener.Client
 	Examples  ExamplesConfig
 
 	OutputFormat imgfmt.Format
@@ -42,17 +40,16 @@ func New(deps Deps) (*mcp.Server, error) {
 
 func buildHandlers(deps Deps) *handlers {
 	h := &handlers{
-		log:           deps.Log,
-		gen:           deps.Generator,
-		bgkillSvc:     deps.Bgkill,
-		publisher:     deps.Publisher,
-		novelai:       deps.NovelAI,
-		resolver:      deps.Resolver,
-		openai:        deps.OpenAI,
-		store:         deps.Store,
-		shortener:     deps.Shortener,
-		examples:      deps.Examples,
-		defaultFormat: deps.OutputFormat,
+		log:            deps.Log,
+		gen:            deps.Generator,
+		bgkillSvc:      deps.Bgkill,
+		publisher:      deps.Publisher,
+		novelai:        deps.NovelAI,
+		resolver:       deps.Resolver,
+		openai:         deps.OpenAI,
+		store:          deps.Store,
+		examplesConfig: deps.Examples,
+		defaultFormat:  deps.OutputFormat,
 	}
 
 	if h.gen == nil {
@@ -96,11 +93,7 @@ func registerTools(srv *mcp.Server, h *handlers) {
 		registerPublicize(srv, h)
 	}
 
-	if h.shortener != nil {
-		registerShorten(srv, h)
-	}
-
-	if h.examples.Enabled && h.store != nil && h.publisher.Enabled() {
-		registerGetExamples(srv, h)
+	if h.examplesConfig.Enabled && h.store != nil && h.publisher.Enabled() {
+		registerExamples(srv, h)
 	}
 }

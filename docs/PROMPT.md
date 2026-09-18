@@ -55,8 +55,8 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 ## Model memory
 
-- `get_examples` returns earlier queries and their image URLs for a model; look at them before generating with a model
-  you have not used.
+- `examples` returns earlier queries and their image URLs for a model, two by default or as many as you ask for with
+  `n`; look at them before generating with a model you have not used.
 
 ## Credits
 

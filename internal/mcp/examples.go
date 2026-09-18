@@ -12,46 +12,52 @@ import (
 	"go.uber.org/zap"
 )
 
-const examplesPerCall = 2
+const defaultExampleCount = 2
 
 type ExamplesConfig struct {
 	Enabled bool
 	Max     int
 }
 
-type getExamplesInput struct {
+type examplesInput struct {
 	Model string `json:"model" jsonschema:"model to fetch saved examples for: a Forge checkpoint filename or a NovelAI model id"`
+	N     int    `json:"n,omitempty" jsonschema:"optional: how many examples to return; defaults to 2"`
 }
 
-type getExamplesOutput struct {
+type examplesOutput struct {
 	Model string `json:"model" jsonschema:"the model the examples are for"`
 	Count int    `json:"count" jsonschema:"number of examples returned"`
 }
 
-func registerGetExamples(srv *mcp.Server, h *handlers) {
+func registerExamples(srv *mcp.Server, h *handlers) {
 	mcp.AddTool(srv, &mcp.Tool{
-		Name: "get_examples",
-		Description: "Return up to two randomly chosen examples of previous generations for a model: the query that " +
-			"produced them and the URL of the resulting image.",
-		InputSchema: getExamplesSchema(),
-	}, h.getExamples)
+		Name: "examples",
+		Description: "Return randomly chosen examples of previous generations for a model: the query that produced them " +
+			"and the URL of the resulting image. Pass `n` to choose how many to return; it defaults to 2.",
+		InputSchema: examplesSchema(),
+	}, h.examples)
 }
 
-func (h *handlers) getExamples(
+func (h *handlers) examples(
 	ctx context.Context,
 	_ *mcp.CallToolRequest,
-	in getExamplesInput,
-) (*mcp.CallToolResult, getExamplesOutput, error) {
-	h.log.Debug("tool called", zap.String("tool", "get_examples"), zap.String("model", in.Model))
-
-	examples, err := h.store.RandomExamples(ctx, in.Model, examplesPerCall)
-	if err != nil {
-		h.log.Error("get_examples failed", zap.String("model", in.Model), zap.Error(err))
-
-		return nil, getExamplesOutput{}, fmt.Errorf("get_examples: %w", err)
+	in examplesInput,
+) (*mcp.CallToolResult, examplesOutput, error) {
+	count := in.N
+	if count == 0 {
+		count = defaultExampleCount
 	}
 
-	out := getExamplesOutput{Model: in.Model, Count: len(examples)}
+	h.log.Debug("tool called", zap.String("tool", "examples"), zap.String("model", in.Model), zap.Int("n", count))
+
+	examples, err := h.store.RandomExamples(ctx, in.Model, count)
+	if err != nil {
+		h.log.Error("examples failed", zap.String("model", in.Model), zap.Error(err))
+
+		return nil, examplesOutput{}, fmt.Errorf("examples: %w", err)
+	}
+
+	out := examplesOutput{Model: in.Model, Count: len(examples)}
 
 	h.log.Info("examples fetched", zap.String("model", out.Model), zap.Int("count", out.Count))
 
@@ -62,7 +68,7 @@ func (h *handlers) getExamples(
 
 // Failures are swallowed: the generation already succeeded and the caller already holds the images.
 func (h *handlers) saveExamples(ctx context.Context, tool, model string, query any, urls []string) {
-	if !h.examples.Enabled || h.store == nil || len(urls) == 0 {
+	if !h.examplesConfig.Enabled || h.store == nil || len(urls) == 0 {
 		return
 	}
 
@@ -79,7 +85,7 @@ func (h *handlers) saveExamples(ctx context.Context, tool, model string, query a
 
 	meta := store.ExampleMeta{Model: model, Tool: tool, Query: string(raw)}
 
-	if err := h.store.SaveExamples(ctx, meta, urls, h.examples.Max); err != nil {
+	if err := h.store.SaveExamples(ctx, meta, urls, h.examplesConfig.Max); err != nil {
 		h.log.Warn("examples: saving failed",
 			zap.String("tool", tool),
 			zap.String("model", model),
@@ -88,11 +94,14 @@ func (h *handlers) saveExamples(ctx context.Context, tool, model string, query a
 	}
 }
 
-func getExamplesSchema() *jsonschema.Schema {
-	s, err := jsonschema.For[getExamplesInput](nil)
+func examplesSchema() *jsonschema.Schema {
+	s, err := jsonschema.For[examplesInput](nil)
 	if err != nil {
-		panic(fmt.Sprintf("get_examples: infer input schema: %v", err))
+		panic(fmt.Sprintf("examples: infer input schema: %v", err))
 	}
+
+	s.Properties["n"].Minimum = jsonschema.Ptr(float64(1))
+	setDefault(s.Properties, "n", defaultExampleCount)
 
 	return s
 }

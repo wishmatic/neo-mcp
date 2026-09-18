@@ -13,11 +13,25 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
+	"github.com/wishmatic/neo-mcp/internal/shortener"
 )
 
 type uploadCapture struct {
 	path        string
 	contentType string
+}
+
+func newShortenClient(t *testing.T, status int, body string) *shortener.Client {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(body))
+	}))
+
+	t.Cleanup(server.Close)
+
+	return shortener.New(server.URL, "key", 0)
 }
 
 func newPublicizeUploader(t *testing.T, captured *[]uploadCapture) *s3upload.Client {

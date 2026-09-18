@@ -33,13 +33,13 @@ Note that the only version of Forge we support is
       instead, for when you have explicitly asked for an image anyone can open. Super niche.
 - If you _also_ provide `SHORTENER_*` environment variables, any generated URLs are shortened first.
     - This assumes your URL shortener is [`chhoto-url`](https://github.com/SinTan1729/chhoto-url).
-    - This also registers the `shorten` tool, which shortens any URL you give it.
 - If you set `EXAMPLES_ENABLED=true`, every `txt2img`/`img2img` query and the URL of the image it produced are saved per
-  model, and `get_examples` returns two random ones. Only the newest `EXAMPLES_MAX` examples per model are kept.
+  model, and the `examples` tool returns random ones: two by default, or as many as you ask for with `n`. Only the newest
+  `EXAMPLES_MAX` examples per model are kept.
     - The database is created automatically at `DB_PATH` (`neo-mcp.db`; `/data/neo-mcp.db` in Docker).
     - This only works when generated images are uploaded, so `S3_*` must be configured; without it nothing is saved and
-      `get_examples` is not registered. That is expected rather than a bug: a saved example is the query plus a URL, not
-      a copy of the image.
+      the `examples` tool is not registered. That is expected rather than a bug: a saved example is the query plus a URL,
+      not a copy of the image.
     - A presigned URL expires after 7 days. Configure `GARAGEFRONT_URL`, or let the tools upload with `public`, for
       example links that stay open.
 - `publicize` downloads an image from any URL and stores it in the public namespace, returning a URL anyone can open.

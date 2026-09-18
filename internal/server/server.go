@@ -147,8 +147,8 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	}
 
 	if cfg.ExamplesEnabled && uploader == nil {
-		log.Warn("examples enabled but S3 upload is not configured; no examples will be saved and get_examples is not " +
-			"registered")
+		log.Warn("examples enabled but S3 upload is not configured; no examples will be saved and the examples tool " +
+			"is not registered")
 	}
 
 	mcpSrv, err := mcpServer.New(mcpServer.Deps{
@@ -160,7 +160,6 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		Resolver:  resolver,
 		OpenAI:    openaiClient,
 		Store:     storeClient,
-		Shortener: shortenerClient,
 		Examples: mcpServer.ExamplesConfig{
 			Enabled: cfg.ExamplesEnabled,
 			Max:     cfg.ExamplesMax,

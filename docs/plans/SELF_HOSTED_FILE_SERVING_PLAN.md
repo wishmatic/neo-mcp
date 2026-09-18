@@ -215,7 +215,7 @@ Acceptance criteria:
 
 - [ ] With no S3 and `FILES_ENABLED=true`, `txt2img` returns `<PUBLIC_HOST>/i/...` URLs and the mounted route serves
       them; verified at the router level in `server_test.go`.
-- [ ] `publicize` and `get_examples` register when local storage is the only backend.
+- [ ] `publicize` and `examples` register when local storage is the only backend.
 - [ ] `FILES_ENABLED=true` without `PUBLIC_HOST`, with an invalid `PUBLIC_HOST`, and with an empty `FILES_DIR` each
       fail `server.New` with an error naming the offending envar.
 - [ ] With both S3 and `FILES_ENABLED` configured, S3 is used and exactly one warning is logged.

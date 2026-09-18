@@ -341,11 +341,11 @@ func TestSaveExamplesFailureIsBestEffort(t *testing.T) {
 	}
 
 	h := &handlers{
-		log:       zap.New(core),
-		gen:       imagegen.New(newForgeBackend(t, &requestLog{}), nil),
-		publisher: publish.New(newExamplesUploader(t), nil, zapNop()),
-		store:     client,
-		examples:  ExamplesConfig{Enabled: true, Max: 4},
+		log:            zap.New(core),
+		gen:            imagegen.New(newForgeBackend(t, &requestLog{}), nil),
+		publisher:      publish.New(newExamplesUploader(t), nil, zapNop()),
+		store:          client,
+		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
 	}
 
 	result, out, err := h.txt2img(context.Background(), nil, txt2imgInput{
@@ -389,9 +389,9 @@ func TestSaveExamplesFailureIsBestEffort(t *testing.T) {
 func TestSaveExamplesCancelledContext(t *testing.T) {
 	client := newTestStore(t)
 	h := &handlers{
-		log:      zapNop(),
-		store:    client,
-		examples: ExamplesConfig{Enabled: true, Max: 4},
+		log:            zapNop(),
+		store:          client,
+		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -414,11 +414,11 @@ func TestSaveExamplesCancelledContext(t *testing.T) {
 func TestSaveExamplesCaptureNovelAIModel(t *testing.T) {
 	client := newTestStore(t)
 	h := &handlers{
-		log:       zapNop(),
-		gen:       imagegen.New(nil, newNovelAIBackend(t, &requestLog{})),
-		publisher: publish.New(newExamplesUploader(t), nil, zapNop()),
-		store:     client,
-		examples:  ExamplesConfig{Enabled: true, Max: 4},
+		log:            zapNop(),
+		gen:            imagegen.New(nil, newNovelAIBackend(t, &requestLog{})),
+		publisher:      publish.New(newExamplesUploader(t), nil, zapNop()),
+		store:          client,
+		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
 	}
 
 	_, out, err := h.txt2img(context.Background(), nil, txt2imgInput{
@@ -445,11 +445,11 @@ func TestSaveExamplesCaptureNovelAIModel(t *testing.T) {
 func TestSaveExamplesUploadFailureWritesNothing(t *testing.T) {
 	client := newTestStore(t)
 	h := &handlers{
-		log:       zapNop(),
-		gen:       imagegen.New(newForgeBackend(t, &requestLog{}), nil),
-		publisher: publish.New(newFailingUploader(t), nil, zapNop()),
-		store:     client,
-		examples:  ExamplesConfig{Enabled: true, Max: 4},
+		log:            zapNop(),
+		gen:            imagegen.New(newForgeBackend(t, &requestLog{}), nil),
+		publisher:      publish.New(newFailingUploader(t), nil, zapNop()),
+		store:          client,
+		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
 	}
 
 	_, _, err := h.txt2img(context.Background(), nil, txt2imgInput{
@@ -469,7 +469,7 @@ func TestSaveExamplesUploadFailureWritesNothing(t *testing.T) {
 	}
 }
 
-func TestGetExamplesRegistration(t *testing.T) {
+func TestExamplesRegistration(t *testing.T) {
 	tests := []struct {
 		name     string
 		store    bool
@@ -500,15 +500,15 @@ func TestGetExamplesRegistration(t *testing.T) {
 				t.Fatalf("New() error: %v", err)
 			}
 
-			if got := slices.Contains(toolNames(t, srv), "get_examples"); got != tt.want {
-				t.Errorf("get_examples registered = %v, want %v", got, tt.want)
+			if got := slices.Contains(toolNames(t, srv), "examples"); got != tt.want {
+				t.Errorf("examples registered = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestGetExamplesSchema(t *testing.T) {
-	s := getExamplesSchema()
+func TestExamplesSchema(t *testing.T) {
+	s := examplesSchema()
 
 	if !slices.Contains(s.Required, "model") {
 		t.Error("model is not required")
@@ -518,27 +518,44 @@ func TestGetExamplesSchema(t *testing.T) {
 		t.Error("model must not have a default")
 	}
 
-	if len(s.Properties) != 1 {
-		t.Errorf("properties = %v, want only model", s.Properties)
+	n := s.Properties["n"]
+	if n == nil {
+		t.Fatal("n property is missing")
+	}
+
+	if slices.Contains(s.Required, "n") {
+		t.Error("n must not be required")
+	}
+
+	if n.Minimum == nil || *n.Minimum != 1 {
+		t.Errorf("n minimum = %v, want 1", n.Minimum)
+	}
+
+	if string(n.Default) != "2" {
+		t.Errorf("n default = %s, want 2", n.Default)
+	}
+
+	if len(s.Properties) != 2 {
+		t.Errorf("properties = %v, want model and n", s.Properties)
 	}
 }
 
-func TestGetExamplesCallTool(t *testing.T) {
+func TestExamplesCallTool(t *testing.T) {
 	client := newTestStore(t)
 	ctx := context.Background()
 
 	session := newExamplesSession(t, client, newExamplesUploader(t), true, 16)
 
 	empty, err := session.CallTool(ctx, &mcp.CallToolParams{
-		Name:      "get_examples",
+		Name:      "examples",
 		Arguments: map[string]any{"model": examplesModel},
 	})
 	if err != nil {
-		t.Fatalf("CallTool(get_examples) error: %v", err)
+		t.Fatalf("CallTool(examples) error: %v", err)
 	}
 
 	if empty.IsError {
-		t.Fatalf("CallTool(get_examples) tool error: %+v", empty.Content)
+		t.Fatalf("CallTool(examples) tool error: %+v", empty.Content)
 	}
 
 	if text := textContent(t, empty); text != "No examples saved for "+examplesModel+" yet." {
@@ -558,15 +575,15 @@ func TestGetExamplesCallTool(t *testing.T) {
 	url := resultURL(t, result)
 
 	got, err := session.CallTool(ctx, &mcp.CallToolParams{
-		Name:      "get_examples",
+		Name:      "examples",
 		Arguments: map[string]any{"model": examplesModel},
 	})
 	if err != nil {
-		t.Fatalf("CallTool(get_examples) error: %v", err)
+		t.Fatalf("CallTool(examples) error: %v", err)
 	}
 
 	if got.IsError {
-		t.Fatalf("CallTool(get_examples) tool error: %+v", got.Content)
+		t.Fatalf("CallTool(examples) tool error: %+v", got.Content)
 	}
 
 	text := textContent(t, got)
@@ -592,7 +609,7 @@ func TestGetExamplesCallTool(t *testing.T) {
 	}
 }
 
-func TestGetExamplesStoreError(t *testing.T) {
+func TestExamplesStoreError(t *testing.T) {
 	client := newTestStore(t)
 
 	if err := client.Close(); err != nil {
@@ -600,17 +617,65 @@ func TestGetExamplesStoreError(t *testing.T) {
 	}
 
 	h := &handlers{
-		log:      zapNop(),
-		store:    client,
-		examples: ExamplesConfig{Enabled: true, Max: 4},
+		log:            zapNop(),
+		store:          client,
+		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
 	}
 
-	_, _, err := h.getExamples(context.Background(), nil, getExamplesInput{Model: "m"})
+	_, _, err := h.examples(context.Background(), nil, examplesInput{Model: "m"})
 	if err == nil {
-		t.Fatal("getExamples() error = nil, want a store error")
+		t.Fatal("examples() error = nil, want a store error")
 	}
 
-	if !strings.HasPrefix(err.Error(), "get_examples:") {
-		t.Errorf("error = %q, want a get_examples prefix", err.Error())
+	if !strings.HasPrefix(err.Error(), "examples:") {
+		t.Errorf("error = %q, want an examples prefix", err.Error())
+	}
+}
+
+func TestExamplesHonoursCount(t *testing.T) {
+	client := newTestStore(t)
+	ctx := context.Background()
+
+	for i := range 3 {
+		if _, err := client.SaveExample(ctx, store.ExampleMeta{
+			Model: examplesModel,
+			Tool:  "txt2img",
+			Query: `{"prompt":"a cat"}`,
+			URL:   fmt.Sprintf("https://cdn.example.com/%d.png", i),
+		}, 16); err != nil {
+			t.Fatalf("SaveExample() error: %v", err)
+		}
+	}
+
+	session := newExamplesSession(t, client, newExamplesUploader(t), true, 16)
+
+	for _, tt := range []struct {
+		name string
+		args map[string]any
+		want int
+	}{
+		{name: "default", args: map[string]any{"model": examplesModel}, want: defaultExampleCount},
+		{name: "explicit", args: map[string]any{"model": examplesModel, "n": 3}, want: 3},
+		{name: "one", args: map[string]any{"model": examplesModel, "n": 1}, want: 1},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "examples", Arguments: tt.args})
+			if err != nil {
+				t.Fatalf("CallTool(examples) error: %v", err)
+			}
+
+			if result.IsError {
+				t.Fatalf("CallTool(examples) tool error: %+v", result.Content)
+			}
+
+			structured, ok := result.StructuredContent.(map[string]any)
+			if !ok {
+				t.Fatalf("structured content = %T, want map[string]any", result.StructuredContent)
+			}
+
+			if structured["count"] != float64(tt.want) {
+				t.Errorf("count = %v, want %d", structured["count"], tt.want)
+			}
+		})
 	}
 }
