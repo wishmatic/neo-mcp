@@ -141,8 +141,8 @@ func TestShutdownClosesStore(t *testing.T) {
 		t.Fatalf("Shutdown() error: %v", err)
 	}
 
-	if _, err := srv.store.AddReview(context.Background(), "m", 5, "ok"); err == nil {
-		t.Error("AddReview() after Shutdown() error = nil, want a closed store error")
+	if _, err := srv.store.RandomExamples(context.Background(), "m", 1); err == nil {
+		t.Error("RandomExamples() after Shutdown() error = nil, want a closed store error")
 	}
 }
 

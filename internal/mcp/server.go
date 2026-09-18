@@ -96,10 +96,6 @@ func registerTools(srv *mcp.Server, h *handlers) {
 		registerPublicize(srv, h)
 	}
 
-	if h.store != nil {
-		registerReviews(srv, h)
-	}
-
 	if h.shortener != nil {
 		registerShorten(srv, h)
 	}

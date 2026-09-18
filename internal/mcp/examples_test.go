@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -21,6 +22,34 @@ import (
 )
 
 const examplesModel = "sd_xl_base_1.0.safetensors"
+
+func newTestStore(t *testing.T) *store.Client {
+	t.Helper()
+
+	client, err := store.New(filepath.Join(t.TempDir(), "neo.db"))
+	if err != nil {
+		t.Fatalf("store.New() error: %v", err)
+	}
+
+	t.Cleanup(func() { _ = client.Close() })
+
+	return client
+}
+
+func textContent(t *testing.T, result *mcp.CallToolResult) string {
+	t.Helper()
+
+	if len(result.Content) != 1 {
+		t.Fatalf("content = %d, want 1", len(result.Content))
+	}
+
+	text, ok := result.Content[0].(*mcp.TextContent)
+	if !ok {
+		t.Fatalf("content type = %T, want *mcp.TextContent", result.Content[0])
+	}
+
+	return text.Text
+}
 
 func newExamplesUploader(t *testing.T) *s3upload.Client {
 	t.Helper()
@@ -165,7 +194,7 @@ func storedQuery(t *testing.T, example store.Example) map[string]any {
 }
 
 func TestSaveExamplesCaptureTxt2Img(t *testing.T) {
-	client := newReviewStore(t)
+	client := newTestStore(t)
 	session := newExamplesSession(t, client, newExamplesUploader(t), true, 16)
 	ctx := context.Background()
 
@@ -218,7 +247,7 @@ func TestSaveExamplesCaptureTxt2Img(t *testing.T) {
 }
 
 func TestSaveExamplesCaptureImg2Img(t *testing.T) {
-	client := newReviewStore(t)
+	client := newTestStore(t)
 	session := newExamplesSession(t, client, newExamplesUploader(t), true, 16)
 	ctx := context.Background()
 
@@ -261,7 +290,7 @@ func TestSaveExamplesCaptureImg2Img(t *testing.T) {
 }
 
 func TestSaveExamplesDisabled(t *testing.T) {
-	client := newReviewStore(t)
+	client := newTestStore(t)
 	session := newExamplesSession(t, client, newExamplesUploader(t), false, 16)
 	ctx := context.Background()
 
@@ -278,7 +307,7 @@ func TestSaveExamplesDisabled(t *testing.T) {
 }
 
 func TestSaveExamplesWithoutUploader(t *testing.T) {
-	client := newReviewStore(t)
+	client := newTestStore(t)
 	session := newExamplesSession(t, client, nil, true, 16)
 	ctx := context.Background()
 
@@ -305,7 +334,7 @@ func TestSaveExamplesWithoutUploader(t *testing.T) {
 func TestSaveExamplesFailureIsBestEffort(t *testing.T) {
 	core, logs := observer.New(zapcore.DebugLevel)
 
-	client := newReviewStore(t)
+	client := newTestStore(t)
 
 	if err := client.Close(); err != nil {
 		t.Fatalf("Close() error: %v", err)
@@ -358,7 +387,7 @@ func TestSaveExamplesFailureIsBestEffort(t *testing.T) {
 }
 
 func TestSaveExamplesCancelledContext(t *testing.T) {
-	client := newReviewStore(t)
+	client := newTestStore(t)
 	h := &handlers{
 		log:      zapNop(),
 		store:    client,
@@ -383,7 +412,7 @@ func TestSaveExamplesCancelledContext(t *testing.T) {
 }
 
 func TestSaveExamplesCaptureNovelAIModel(t *testing.T) {
-	client := newReviewStore(t)
+	client := newTestStore(t)
 	h := &handlers{
 		log:       zapNop(),
 		gen:       imagegen.New(nil, newNovelAIBackend(t, &requestLog{})),
@@ -414,7 +443,7 @@ func TestSaveExamplesCaptureNovelAIModel(t *testing.T) {
 }
 
 func TestSaveExamplesUploadFailureWritesNothing(t *testing.T) {
-	client := newReviewStore(t)
+	client := newTestStore(t)
 	h := &handlers{
 		log:       zapNop(),
 		gen:       imagegen.New(newForgeBackend(t, &requestLog{}), nil),
@@ -459,7 +488,7 @@ func TestGetExamplesRegistration(t *testing.T) {
 			deps := Deps{Log: zapNop(), Examples: ExamplesConfig{Enabled: tt.enabled, Max: 4}}
 
 			if tt.store {
-				deps.Store = newReviewStore(t)
+				deps.Store = newTestStore(t)
 			}
 
 			if tt.uploader {
@@ -495,7 +524,7 @@ func TestGetExamplesSchema(t *testing.T) {
 }
 
 func TestGetExamplesCallTool(t *testing.T) {
-	client := newReviewStore(t)
+	client := newTestStore(t)
 	ctx := context.Background()
 
 	session := newExamplesSession(t, client, newExamplesUploader(t), true, 16)
@@ -564,7 +593,7 @@ func TestGetExamplesCallTool(t *testing.T) {
 }
 
 func TestGetExamplesStoreError(t *testing.T) {
-	client := newReviewStore(t)
+	client := newTestStore(t)
 
 	if err := client.Close(); err != nil {
 		t.Fatalf("Close() error: %v", err)

@@ -55,10 +55,6 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 ## Model memory
 
-- `get_reviews` lists saved reviews of the models you can use, optionally for one model; `get_review` reads a single
-  review in full by its id. `add_review` records a rating from 1 to 10 with one line of commentary, and can optionally
-  attach the prompt used, an image URL, and your own notes; check the reviews before choosing a model, and rate one once
-  you form an opinion.
 - `get_examples` returns earlier queries and their image URLs for a model; look at them before generating with a model
   you have not used.
 

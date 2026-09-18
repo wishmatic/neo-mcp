@@ -53,10 +53,12 @@ func TestNewCreatesDatabaseAndSchema(t *testing.T) {
 		t.Fatalf("stat database: %v", err)
 	}
 
-	for _, table := range []string{"reviews", "examples"} {
-		if !tableExists(t, client, table) {
-			t.Errorf("table %q is missing", table)
-		}
+	if !tableExists(t, client, "examples") {
+		t.Error("examples table is missing")
+	}
+
+	if tableExists(t, client, "reviews") {
+		t.Error("reviews table should no longer be created")
 	}
 }
 
@@ -104,8 +106,15 @@ func TestNewReopensExistingDatabase(t *testing.T) {
 		t.Fatalf("New() error: %v", err)
 	}
 
-	if _, err := first.AddReview(context.Background(), "m", 5, "ok"); err != nil {
-		t.Fatalf("AddReview() error: %v", err)
+	meta := ExampleMeta{
+		Model: "m",
+		Tool:  "txt2img",
+		Query: `{"prompt":"a cat"}`,
+		URL:   "https://cdn.example.com/a.png",
+	}
+
+	if _, err := first.SaveExample(context.Background(), meta, 16); err != nil {
+		t.Fatalf("SaveExample() error: %v", err)
 	}
 
 	if err := first.Close(); err != nil {
@@ -119,81 +128,13 @@ func TestNewReopensExistingDatabase(t *testing.T) {
 
 	t.Cleanup(func() { _ = second.Close() })
 
-	reviews, err := second.Reviews(context.Background())
+	examples, err := second.RandomExamples(context.Background(), "m", 10)
 	if err != nil {
-		t.Fatalf("Reviews() error: %v", err)
+		t.Fatalf("RandomExamples() error: %v", err)
 	}
 
-	if len(reviews) != 1 || reviews[0].Comment != "ok" {
-		t.Fatalf("reviews = %+v, want the row written before the reopen", reviews)
-	}
-}
-
-func TestNewAddsReviewDetailColumnsToExistingDatabase(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "neo.db")
-
-	raw, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatalf("sql.Open() error: %v", err)
-	}
-
-	if _, err := raw.Exec(`CREATE TABLE reviews (
-		id         INTEGER PRIMARY KEY AUTOINCREMENT,
-		model      TEXT    NOT NULL,
-		rating     INTEGER NOT NULL,
-		comment    TEXT    NOT NULL,
-		created_at TEXT    NOT NULL
-	)`); err != nil {
-		t.Fatalf("create legacy reviews table: %v", err)
-	}
-
-	if _, err := raw.Exec(
-		`INSERT INTO reviews (model, rating, comment, created_at) VALUES ('legacy', 5, 'kept', '2026-01-01T00:00:00Z')`,
-	); err != nil {
-		t.Fatalf("insert legacy review: %v", err)
-	}
-
-	if err := raw.Close(); err != nil {
-		t.Fatalf("close raw database: %v", err)
-	}
-
-	client, err := New(path)
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
-
-	t.Cleanup(func() { _ = client.Close() })
-
-	ctx := context.Background()
-
-	created, err := client.AddReviewDetails(ctx, ReviewInput{
-		Model:        "m",
-		Rating:       9,
-		Comment:      "new",
-		Prompt:       "a cat",
-		ImageURL:     "https://cdn.example.com/a.png",
-		AgentComment: "note",
-	})
-	if err != nil {
-		t.Fatalf("AddReviewDetails() error: %v", err)
-	}
-
-	got, err := client.Review(ctx, created.ID)
-	if err != nil {
-		t.Fatalf("Review() error: %v", err)
-	}
-
-	if got.Prompt != "a cat" || got.ImageURL != "https://cdn.example.com/a.png" || got.AgentComment != "note" {
-		t.Fatalf("review = %+v, want the recorded details", got)
-	}
-
-	legacy, err := client.Review(ctx, 1)
-	if err != nil {
-		t.Fatalf("Review(legacy) error: %v", err)
-	}
-
-	if legacy.Model != "legacy" || legacy.Prompt != "" || legacy.ImageURL != "" || legacy.AgentComment != "" {
-		t.Fatalf("legacy = %+v, want the migrated row with empty details", legacy)
+	if len(examples) != 1 || examples[0].URL != meta.URL {
+		t.Fatalf("examples = %+v, want the row written before the reopen", examples)
 	}
 }
 
@@ -204,8 +145,15 @@ func TestClosePreventsFurtherUse(t *testing.T) {
 		t.Fatalf("Close() error: %v", err)
 	}
 
-	if _, err := client.AddReview(context.Background(), "m", 5, "ok"); err == nil {
-		t.Fatal("AddReview() after Close() error = nil, want an error")
+	meta := ExampleMeta{
+		Model: "m",
+		Tool:  "txt2img",
+		Query: `{"prompt":"a cat"}`,
+		URL:   "https://cdn.example.com/a.png",
+	}
+
+	if _, err := client.SaveExample(context.Background(), meta, 16); err == nil {
+		t.Fatal("SaveExample() after Close() error = nil, want an error")
 	}
 }
 
@@ -257,19 +205,11 @@ func TestNewAddsMissingTablesToExistingDatabase(t *testing.T) {
 		t.Fatalf("sql.Open() error: %v", err)
 	}
 
-	if _, err := raw.Exec(`CREATE TABLE reviews (
-		id         INTEGER PRIMARY KEY AUTOINCREMENT,
-		model      TEXT    NOT NULL,
-		rating     INTEGER NOT NULL,
-		comment    TEXT    NOT NULL,
-		created_at TEXT    NOT NULL
-	)`); err != nil {
+	if _, err := raw.Exec(`CREATE TABLE reviews (id INTEGER PRIMARY KEY, model TEXT NOT NULL)`); err != nil {
 		t.Fatalf("create legacy reviews table: %v", err)
 	}
 
-	if _, err := raw.Exec(
-		`INSERT INTO reviews (model, rating, comment, created_at) VALUES ('legacy', 5, 'kept', '2026-01-01T00:00:00Z')`,
-	); err != nil {
+	if _, err := raw.Exec(`INSERT INTO reviews (model) VALUES ('legacy')`); err != nil {
 		t.Fatalf("insert legacy review: %v", err)
 	}
 
@@ -288,12 +228,12 @@ func TestNewAddsMissingTablesToExistingDatabase(t *testing.T) {
 		t.Error("examples table was not created")
 	}
 
-	reviews, err := client.Reviews(context.Background())
-	if err != nil {
-		t.Fatalf("Reviews() error: %v", err)
+	var model string
+	if err := client.db.QueryRow(`SELECT model FROM reviews`).Scan(&model); err != nil {
+		t.Fatalf("read legacy reviews row: %v", err)
 	}
 
-	if len(reviews) != 1 || reviews[0].Model != "legacy" {
-		t.Fatalf("reviews = %+v, want the pre-existing row untouched", reviews)
+	if model != "legacy" {
+		t.Fatalf("legacy model = %q, want the pre-existing row untouched", model)
 	}
 }
