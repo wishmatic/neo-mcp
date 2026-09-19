@@ -7,7 +7,6 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/openai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
@@ -26,16 +25,10 @@ func TestNewRegistersTools(t *testing.T) {
 }
 
 func TestToolRegistration(t *testing.T) {
-	openaiClient, err := openai.New(openai.Config{BaseURL: "http://example.com", Model: "m"})
-	if err != nil {
-		t.Fatalf("openai.New() error: %v", err)
-	}
-
 	tests := []struct {
 		name     string
 		forge    *sdwebui.Client
 		novelai  *novelai.Client
-		openai   *openai.Client
 		uploader *s3upload.Client
 		want     []string
 	}{
@@ -48,11 +41,6 @@ func TestToolRegistration(t *testing.T) {
 			name:  "forge only",
 			forge: sdwebui.New("http://example.com", false),
 			want:  []string{"txt2img", "img2img", "bgkill"},
-		},
-		{
-			name:   "openai only",
-			openai: openaiClient,
-			want:   []string{"img2txt"},
 		},
 		{
 			name:     "uploader only",
@@ -72,7 +60,6 @@ func TestToolRegistration(t *testing.T) {
 				Bgkill:    bgkill.New(tt.forge),
 				Publisher: publish.New(tt.uploader, nil, zapNop()),
 				NovelAI:   tt.novelai,
-				OpenAI:    tt.openai,
 			})
 			if err != nil {
 				t.Fatalf("New() error: %v", err)

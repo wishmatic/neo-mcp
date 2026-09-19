@@ -51,7 +51,6 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 - When a call returns a URL, pass it straight to the image tools that take one instead of exporting and re-uploading
   anything.
-- When the user pastes an image URL and asks about its contents, use `img2txt`.
 
 ## Model memory
 

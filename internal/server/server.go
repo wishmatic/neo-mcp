@@ -18,7 +18,6 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/openai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/s3upload"
@@ -118,27 +117,6 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		return nil, fmt.Errorf("build image resolver: %w", err)
 	}
 
-	var openaiClient *openai.Client
-	if cfg.Img2TxtBaseURL != "" {
-		openaiClient, err = openai.New(openai.Config{
-			BaseURL:      cfg.Img2TxtBaseURL,
-			APIKey:       cfg.Img2TxtAPIKey,
-			Model:        cfg.Img2TxtModel,
-			SystemPrompt: cfg.Img2TxtSystemPrompt,
-			Prompt:       cfg.Img2TxtPrompt,
-			MaxTokens:    cfg.Img2TxtMaxTokens,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("build img2txt client: %w", err)
-		}
-
-		log.Info("img2txt enabled",
-			zap.String("base_url", cfg.Img2TxtBaseURL),
-			zap.String("model", cfg.Img2TxtModel),
-			zap.Int("max_tokens", openaiClient.MaxTokens()),
-		)
-	}
-
 	var novelaiClient *novelai.Client
 	if cfg.NovelAIAPIKey != "" {
 		novelaiClient = novelai.New(novelai.DefaultBaseURL, cfg.NovelAIAPIKey, cfg.ErrorDetail == "verbose")
@@ -158,7 +136,6 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		Publisher: publish.New(uploader, shortenerClient, log),
 		NovelAI:   novelaiClient,
 		Resolver:  resolver,
-		OpenAI:    openaiClient,
 		Store:     storeClient,
 		Examples: mcpServer.ExamplesConfig{
 			Enabled: cfg.ExamplesEnabled,

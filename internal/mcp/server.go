@@ -6,7 +6,6 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/openai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/store"
@@ -20,7 +19,6 @@ type Deps struct {
 	Publisher *publish.Publisher
 	NovelAI   *novelai.Client
 	Resolver  *resolve.Resolver
-	OpenAI    *openai.Client
 	Store     *store.Client
 	Examples  ExamplesConfig
 
@@ -46,7 +44,6 @@ func buildHandlers(deps Deps) *handlers {
 		publisher:      deps.Publisher,
 		novelai:        deps.NovelAI,
 		resolver:       deps.Resolver,
-		openai:         deps.OpenAI,
 		store:          deps.Store,
 		examplesConfig: deps.Examples,
 		defaultFormat:  deps.OutputFormat,
@@ -83,10 +80,6 @@ func registerTools(srv *mcp.Server, h *handlers) {
 
 	if h.bgkillSvc.Enabled() {
 		registerBgkill(srv, h)
-	}
-
-	if h.openai != nil {
-		registerImg2Txt(srv, h)
 	}
 
 	if h.publisher.Enabled() {

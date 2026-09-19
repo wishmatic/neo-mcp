@@ -19,13 +19,7 @@ Note that the only version of Forge we support is
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
   foreground and produce a padded square, which is handy for logo generation.
-- `img2txt` recognises an image and returns an exhaustive textual description via any OpenAI-compatible vision
-  endpoint. Set `IMG2TXT_BASE_URL`, `IMG2TXT_API_KEY`, and `IMG2TXT_MODEL` to enable it. The call takes the image (a
-  URL, a base64 data URI, or raw base64 PNG, JPEG, or WebP data) and an optional `prompt` to focus the description;
-  omitting `prompt` uses the server-configured default. `IMG2TXT_PROMPT` sets that default, `IMG2TXT_SYSTEM_PROMPT`
-  the system instruction, and `IMG2TXT_MODEL`, sampling, and image detail are server configuration.
-  `IMG2TXT_MAX_TOKENS` (default `8192`) caps the response, and a response cut off at that cap is reported with
-  `truncated: true`.
+- `bgkill` removes the background from an image via the
 - If you provide `S3_*` environment variables, generated images are uploaded to an S3-compatible object store and
   returned as presigned URLs.
     - Without this, they're returned inline with the configured output format's media type.

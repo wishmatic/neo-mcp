@@ -96,10 +96,6 @@ func TestPublicFlagSchema(t *testing.T) {
 			}
 		}
 	}
-
-	if img2txtSchema().Properties["public"] != nil {
-		t.Error("img2txt: public property present, want none")
-	}
 }
 
 func TestFormatFlagSchema(t *testing.T) {
@@ -136,10 +132,6 @@ func TestFormatFlagSchema(t *testing.T) {
 		if slices.Contains(s.Required, "format") {
 			t.Errorf("%s: format must not be required", tool)
 		}
-	}
-
-	if img2txtSchema().Properties["format"] != nil {
-		t.Error("img2txt: format property present, want none")
 	}
 }
 

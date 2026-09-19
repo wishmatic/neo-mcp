@@ -75,7 +75,6 @@ flowchart TD
     subgraph clientLibraries[Backend and infrastructure clients]
         sdwebui["internal/sdwebui"]
         novelai["internal/novelai"]
-        openai["internal/openai"]
         resolve["internal/resolve"]
         s3upload["internal/s3upload"]
         shortener["internal/shortener"]
@@ -99,7 +98,6 @@ flowchart TD
     server --> config
     server --> sdwebui
     server --> novelai
-    server --> openai
     server --> resolve
     server --> s3upload
     server --> shortener
@@ -112,7 +110,6 @@ flowchart TD
     mcp --> publish
     mcp --> imgfmt
     mcp --> novelai
-    mcp --> openai
     mcp --> resolve
     mcp --> store
     mcp --> utils
@@ -127,7 +124,6 @@ flowchart TD
 
     sdwebui --> utils
     novelai --> utils
-    openai --> utils
     resolve --> utils
     shortener --> utils
 ```
