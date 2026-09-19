@@ -170,7 +170,7 @@ func TestResolveFollowsMultipleRedirects(t *testing.T) {
 	}
 }
 
-func TestResolveRedirectToGaragefrontReadsFromStore(t *testing.T) {
+func TestResolveRedirectToStoredURLReadsFromStore(t *testing.T) {
 	store := &fakeStore{data: pngBytes}
 
 	r, err := New(store, "https://cdn.example.com")
@@ -179,7 +179,7 @@ func TestResolveRedirectToGaragefrontReadsFromStore(t *testing.T) {
 	}
 
 	redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		http.Redirect(w, req, "https://cdn.example.com/i/images/abc/x.png", http.StatusFound)
+		http.Redirect(w, req, "https://cdn.example.com/i/2026-09/x.png", http.StatusFound)
 	}))
 	defer redirector.Close()
 
@@ -192,8 +192,8 @@ func TestResolveRedirectToGaragefrontReadsFromStore(t *testing.T) {
 		t.Errorf("Data = %q, want %q", img.Data, pngBytes)
 	}
 
-	if store.key != "i/images/abc/x.png" {
-		t.Errorf("store key = %q, want i/images/abc/x.png", store.key)
+	if store.key != "i/2026-09/x.png" {
+		t.Errorf("store key = %q, want i/2026-09/x.png", store.key)
 	}
 }
 

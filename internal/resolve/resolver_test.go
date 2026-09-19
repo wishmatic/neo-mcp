@@ -18,52 +18,52 @@ func (f *fakeStore) GetObject(_ context.Context, key string) ([]byte, error) {
 	return f.data, nil
 }
 
-func TestFetchGaragefrontURLReadsFromS3(t *testing.T) {
-	store := &fakeStore{data: []byte("from-s3")}
+func TestFetchStoredURLReadsFromStore(t *testing.T) {
+	store := &fakeStore{data: []byte("from-store")}
 
 	r, err := New(store, "https://cdn.example.com")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
 
-	data, err := r.Fetch(context.Background(), "https://cdn.example.com/i/images/abc/2026-09/x.png")
+	data, err := r.Fetch(context.Background(), "https://cdn.example.com/i/2026-09/x.png")
 	if err != nil {
 		t.Fatalf("Fetch() error: %v", err)
 	}
 
-	if string(data) != "from-s3" {
-		t.Errorf("data = %q, want from-s3", data)
+	if string(data) != "from-store" {
+		t.Errorf("data = %q, want from-store", data)
 	}
 
-	if store.key != "i/images/abc/2026-09/x.png" {
-		t.Errorf("key = %q, want i/images/abc/2026-09/x.png", store.key)
+	if store.key != "i/2026-09/x.png" {
+		t.Errorf("key = %q, want i/2026-09/x.png", store.key)
 	}
 }
 
-func TestFetchFollowsRedirectToGaragefront(t *testing.T) {
-	store := &fakeStore{data: []byte("from-s3")}
+func TestFetchFollowsRedirectToStoredURL(t *testing.T) {
+	store := &fakeStore{data: []byte("from-store")}
 
 	r, err := New(store, "https://cdn.example.com")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
 
-	shortener := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		http.Redirect(w, req, "https://cdn.example.com/a/avatars/abc/x.png", http.StatusFound)
+	redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		http.Redirect(w, req, "https://cdn.example.com/i/2026-09/x.png", http.StatusFound)
 	}))
-	defer shortener.Close()
+	defer redirector.Close()
 
-	data, err := r.Fetch(context.Background(), shortener.URL+"/abc")
+	data, err := r.Fetch(context.Background(), redirector.URL+"/abc")
 	if err != nil {
 		t.Fatalf("Fetch() error: %v", err)
 	}
 
-	if string(data) != "from-s3" {
-		t.Errorf("data = %q, want from-s3", data)
+	if string(data) != "from-store" {
+		t.Errorf("data = %q, want from-store", data)
 	}
 
-	if store.key != "a/avatars/abc/x.png" {
-		t.Errorf("key = %q, want a/avatars/abc/x.png", store.key)
+	if store.key != "i/2026-09/x.png" {
+		t.Errorf("key = %q, want i/2026-09/x.png", store.key)
 	}
 }
 
@@ -93,7 +93,7 @@ func TestFetchFollowsRedirectToPlainURL(t *testing.T) {
 	}
 }
 
-func TestFetchGaragefrontURLWithoutS3(t *testing.T) {
+func TestFetchStoredURLWithoutStore(t *testing.T) {
 	r, err := New(nil, "https://cdn.example.com")
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
@@ -101,6 +101,23 @@ func TestFetchGaragefrontURLWithoutS3(t *testing.T) {
 
 	if _, err := r.Fetch(context.Background(), "https://cdn.example.com/i/x.png"); err == nil {
 		t.Fatal("Fetch() expected error, got nil")
+	}
+}
+
+func TestFetchIgnoresOtherNamespaces(t *testing.T) {
+	store := &fakeStore{data: []byte("from-store")}
+
+	r, err := New(store, "https://cdn.example.com")
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	if _, err := r.Fetch(context.Background(), "https://cdn.example.com/a/avatars/x.png"); err == nil {
+		t.Fatal("Fetch() expected error, got nil")
+	}
+
+	if store.key != "" {
+		t.Errorf("key = %q, want no store access", store.key)
 	}
 }
 

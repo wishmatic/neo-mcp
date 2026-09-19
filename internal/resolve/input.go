@@ -22,7 +22,7 @@ type Image struct {
 }
 
 // Resolve normalises an image reference into raw bytes and a media type. The reference may be an http(s) URL, a
-// base64 data URI, or raw base64 data; URLs go through Fetch, so redirects and Garagefront S3 reads are shared.
+// base64 data URI, or raw base64 data; URLs go through Fetch, so redirects and stored-object reads are shared.
 func (r *Resolver) Resolve(ctx context.Context, input string) (Image, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {

@@ -38,6 +38,8 @@ func main() {
 		errCh <- srv.Run()
 	}()
 
+	go srv.RunMaintenance(ctx)
+
 	select {
 	case err := <-errCh:
 		if err != nil {

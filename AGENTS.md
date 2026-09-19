@@ -24,8 +24,7 @@ also mark those too as complete.
 
 Do not give caveats unless they are actually caveats. Err on the side of not presenting them; only if they are
 actually something you expect the user will face in the future. For example, if the user asked you to parse URLs that
-go to an img2img call to match Garagefront URLs, do not give a caveat saying this will not work for non-Garagefront
-URLs.
+go to an img2img call to match upstream URLs, do not give a caveat saying this will not work for other URLs.
 
 Do not remind the user what you've done after you've done it unless they ask; they can see the diff.
 
@@ -76,8 +75,7 @@ flowchart TD
         sdwebui["internal/sdwebui"]
         novelai["internal/novelai"]
         resolve["internal/resolve"]
-        s3upload["internal/s3upload"]
-        shortener["internal/shortener"]
+        filestore["internal/filestore"]
         store["internal/store"]
     end
 
@@ -99,8 +97,7 @@ flowchart TD
     server --> sdwebui
     server --> novelai
     server --> resolve
-    server --> s3upload
-    server --> shortener
+    server --> filestore
     server --> store
     server --> imgfmt
 
@@ -118,14 +115,12 @@ flowchart TD
     imagegen --> novelai
     bgkill --> sdwebui
     bgkill --> crop
-    publish --> s3upload
-    publish --> shortener
+    filestore --> imgfmt
     present --> store
 
     sdwebui --> utils
     novelai --> utils
     resolve --> utils
-    shortener --> utils
 ```
 
 ## Comments and Docstrings

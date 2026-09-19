@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -14,7 +12,6 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/publish"
-	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -51,42 +48,10 @@ func textContent(t *testing.T, result *mcp.CallToolResult) string {
 	return text.Text
 }
 
-func newExamplesUploader(t *testing.T) *s3upload.Client {
-	t.Helper()
-
-	return newPublicizeUploader(t, &[]uploadCapture{})
-}
-
-func newFailingUploader(t *testing.T) *s3upload.Client {
-	t.Helper()
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusForbidden)
-	}))
-
-	t.Cleanup(server.Close)
-
-	uploader, err := s3upload.New(s3upload.Config{
-		Endpoint:          server.URL,
-		Bucket:            "test-bucket",
-		Region:            "test-region",
-		AccessKey:         "write-key",
-		SecretKey:         "write-secret",
-		ReadonlyAccessKey: "read-key",
-		ReadonlySecretKey: "read-secret",
-		UsePathStyle:      true,
-	}, zapNop())
-	if err != nil {
-		t.Fatalf("s3upload.New() error: %v", err)
-	}
-
-	return uploader
-}
-
 func newExamplesSession(
 	t *testing.T,
 	client *store.Client,
-	uploader *s3upload.Client,
+	store publish.Store,
 	enabled bool,
 	max int,
 ) *mcp.ClientSession {
@@ -95,7 +60,7 @@ func newExamplesSession(
 	srv, err := New(Deps{
 		Log:       zapNop(),
 		Generator: imagegen.New(newForgeBackend(t, &requestLog{}), nil),
-		Publisher: publish.New(uploader, nil, zapNop()),
+		Publisher: publish.New(store, zapNop()),
 		Resolver:  newResolver(t),
 		Store:     client,
 		Examples:  ExamplesConfig{Enabled: enabled, Max: max},
@@ -195,7 +160,7 @@ func storedQuery(t *testing.T, example store.Example) map[string]any {
 
 func TestSaveExamplesCaptureTxt2Img(t *testing.T) {
 	client := newTestStore(t)
-	session := newExamplesSession(t, client, newExamplesUploader(t), true, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), true, 16)
 	ctx := context.Background()
 
 	result := callTxt2Img(t, session, nil)
@@ -248,7 +213,7 @@ func TestSaveExamplesCaptureTxt2Img(t *testing.T) {
 
 func TestSaveExamplesCaptureImg2Img(t *testing.T) {
 	client := newTestStore(t)
-	session := newExamplesSession(t, client, newExamplesUploader(t), true, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), true, 16)
 	ctx := context.Background()
 
 	result := callImg2Img(t, session, nil)
@@ -291,7 +256,7 @@ func TestSaveExamplesCaptureImg2Img(t *testing.T) {
 
 func TestSaveExamplesDisabled(t *testing.T) {
 	client := newTestStore(t)
-	session := newExamplesSession(t, client, newExamplesUploader(t), false, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), false, 16)
 	ctx := context.Background()
 
 	callTxt2Img(t, session, nil)
@@ -303,31 +268,6 @@ func TestSaveExamplesDisabled(t *testing.T) {
 
 	if len(examples) != 0 {
 		t.Fatalf("examples = %d, want none when the feature is disabled", len(examples))
-	}
-}
-
-func TestSaveExamplesWithoutUploader(t *testing.T) {
-	client := newTestStore(t)
-	session := newExamplesSession(t, client, nil, true, 16)
-	ctx := context.Background()
-
-	result := callTxt2Img(t, session, nil)
-
-	if len(result.Content) != 1 {
-		t.Fatalf("content = %d, want 1", len(result.Content))
-	}
-
-	if _, ok := result.Content[0].(*mcp.ImageContent); !ok {
-		t.Fatalf("content type = %T, want *mcp.ImageContent", result.Content[0])
-	}
-
-	examples, err := client.RandomExamples(ctx, examplesModel, 10)
-	if err != nil {
-		t.Fatalf("RandomExamples() error: %v", err)
-	}
-
-	if len(examples) != 0 {
-		t.Fatalf("examples = %d, want none without a URL", len(examples))
 	}
 }
 
@@ -343,7 +283,7 @@ func TestSaveExamplesFailureIsBestEffort(t *testing.T) {
 	h := &handlers{
 		log:            zap.New(core),
 		gen:            imagegen.New(newForgeBackend(t, &requestLog{}), nil),
-		publisher:      publish.New(newExamplesUploader(t), nil, zapNop()),
+		publisher:      publish.New(newFakeStore(t), zapNop()),
 		store:          client,
 		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
 	}
@@ -416,7 +356,7 @@ func TestSaveExamplesCaptureNovelAIModel(t *testing.T) {
 	h := &handlers{
 		log:            zapNop(),
 		gen:            imagegen.New(nil, newNovelAIBackend(t, &requestLog{})),
-		publisher:      publish.New(newExamplesUploader(t), nil, zapNop()),
+		publisher:      publish.New(newFakeStore(t), zapNop()),
 		store:          client,
 		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
 	}
@@ -447,7 +387,7 @@ func TestSaveExamplesUploadFailureWritesNothing(t *testing.T) {
 	h := &handlers{
 		log:            zapNop(),
 		gen:            imagegen.New(newForgeBackend(t, &requestLog{}), nil),
-		publisher:      publish.New(newFailingUploader(t), nil, zapNop()),
+		publisher:      publish.New(newFailingStore(t), zapNop()),
 		store:          client,
 		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
 	}
@@ -492,7 +432,7 @@ func TestExamplesRegistration(t *testing.T) {
 			}
 
 			if tt.uploader {
-				deps.Publisher = publish.New(newExamplesUploader(t), nil, zapNop())
+				deps.Publisher = publish.New(newFakeStore(t), zapNop())
 			}
 
 			srv, err := New(deps)
@@ -565,7 +505,7 @@ func TestExamplesCallTool(t *testing.T) {
 	client := newTestStore(t)
 	ctx := context.Background()
 
-	session := newExamplesSession(t, client, newExamplesUploader(t), true, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), true, 16)
 
 	empty, err := session.CallTool(ctx, &mcp.CallToolParams{
 		Name:      "examples",
@@ -668,7 +608,7 @@ func TestExamplesHonoursCount(t *testing.T) {
 		}
 	}
 
-	session := newExamplesSession(t, client, newExamplesUploader(t), true, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), true, 16)
 
 	for _, tt := range []struct {
 		name string
@@ -717,7 +657,7 @@ func TestSaveExamplesNSFWFlag(t *testing.T) {
 			h := &handlers{
 				log:            zapNop(),
 				gen:            imagegen.New(newForgeBackend(t, &requestLog{}), nil),
-				publisher:      publish.New(newExamplesUploader(t), nil, zapNop()),
+				publisher:      publish.New(newFakeStore(t), zapNop()),
 				store:          client,
 				examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
 			}
@@ -767,7 +707,7 @@ func TestExamplesNSFWFilter(t *testing.T) {
 		}
 	}
 
-	session := newExamplesSession(t, client, newExamplesUploader(t), true, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), true, 16)
 
 	for _, tt := range []struct {
 		name string

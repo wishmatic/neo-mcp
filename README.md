@@ -14,33 +14,22 @@ Note that the only version of Forge we support is
     - Both take an optional `nsfw` boolean to mark a generation as NSFW. It tags the saved example and places the image
       under an `nsfw/` subdirectory; it does not change generation.
 - Output images are WebP by default. `OUTPUT_FORMAT` sets the format for every tool (`png`, `jpeg`, `jxl`, or `webp`),
-  and the `format` input overrides it for a single call. `txt2img`, `img2img`, `bgkill`, and `publicize` all take it.
-  Transparency is kept for every format except JPEG, which composites onto white.
+  and the `format` input overrides it for a single call. Transparency is kept for every format except JPEG, which
+  composites onto white.
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
   foreground and produce a padded square, which is handy for logo generation.
-- `bgkill` removes the background from an image via the
-- If you provide `S3_*` environment variables, generated images are uploaded to an S3-compatible object store and
-  returned as presigned URLs.
-    - Without this, they're returned inline with the configured output format's media type.
-    - If you also provide `GARAGEFRONT_URL` and `GARAGEFRONT_USER_ID`, images are uploaded under that user's
-      directory and returned as unsigned URLs served by [Garagefront](https://github.com/wishmatic/garagefront).
-      The image tools also accept a `public` flag that writes to Garagefront's world-readable `/i/public/` namespace
-      instead, for when you have explicitly asked for an image anyone can open. Super niche.
-- If you _also_ provide `SHORTENER_*` environment variables, any generated URLs are shortened first.
-    - This assumes your URL shortener is [`chhoto-url`](https://github.com/SinTan1729/chhoto-url).
+- Generated images are written to local disk and returned as URLs served by this service. Set `PUBLIC_HOST` to the base
+  URL clients use to reach it, and `FILES_DIR` for where files live (`/data/files` in Docker).
+    - Stored files are unguessable and anonymous: anyone holding a URL can open the image, and nobody else can. There
+      is no other access control, and images are never returned inline, so every tool call produces a URL.
+    - Mount `FILES_DIR` on a volume to keep files across container replacements.
+    - `FILES_RETENTION_DAYS` deletes files older than that many days; `0` keeps everything.
 - If you set `EXAMPLES_ENABLED=true`, every `txt2img`/`img2img` query and the URL of the image it produced are saved per
   model, and the `examples` tool returns random ones: two by default, or as many as you ask for with `n`. A generation's
   `nsfw` flag tags its example, and the call's `nsfw` filters them: `-1` non-NSFW only, `1` NSFW only, `0` or omitted for
   either. Only the newest `EXAMPLES_MAX` examples per model are kept.
     - The database is created automatically at `DB_PATH` (`neo-mcp.db`; `/data/neo-mcp.db` in Docker).
-    - This only works when generated images are uploaded, so `S3_*` must be configured; without it nothing is saved and
-      the `examples` tool is not registered. That is expected rather than a bug: a saved example is the query plus a URL,
-      not a copy of the image.
-    - A presigned URL expires after 7 days. Configure `GARAGEFRONT_URL`, or let the tools upload with `public`, for
-      example links that stay open.
-- `publicize` downloads an image from any URL and stores it in the public namespace, returning a URL anyone can open.
-  It needs `S3_*` configured; with Garagefront configured the URL is a durable `/i/public/...` one.
 
 ## Usage
 
@@ -50,14 +39,16 @@ Deploy as a Docker image:
 docker run -d \
   -p 8080:8080 \
   -e API_KEY=change-me \
+  -e PUBLIC_HOST=http://192.168.1.10:8080 \
   -e SD_URL=http://host.docker.internal:7860 \
   -v /mnt/user/appdata/neo-mcp:/data \
   ghcr.io/wishmatic/neo-mcp:latest
 ```
 
-The MCP endpoint is served at `/mcp`.
+The MCP endpoint is served at `/mcp`; stored images are served from `/i/`.
 
-`/data` holds the SQLite database, so bind-mount a host directory there to keep it across container replacements; the container runs as uid 65532, so that directory must be writable by it.
+`/data` holds the SQLite database and, by default, the image store, so bind-mount a host directory there to keep them
+across container replacements; the container runs as uid 65532, so that directory must be writable by it.
 
 All other configuration is optional but strongly recommended; see [.env.example](.env.example).
 
@@ -70,7 +61,8 @@ No support will be provided for any issues related to your installation of Forge
 
 ### Authentication
 
-`API_KEY` is required on every request, sent as `Authorization: Bearer <API_KEY>`.
+`API_KEY` is required on every `/mcp` request, sent as `Authorization: Bearer <API_KEY>`. Stored images are served
+without authentication.
 
 ### Agent Model Knowledge
 
@@ -78,15 +70,10 @@ Your agent will need knowledge of VAE and text encoder models as well as availab
 these verbatim to your system prompt or a skill, along with checkpoints, LoRA, and anything else it needs. The same goes
 for NovelAI model ids: no list is maintained here, so the agent supplies them.
 
-### S3 and URL Shortening
+### Stored Images
 
-Please see [.env.example](.env.example) for a configuration.
-
-### Garagefront
-
-Garagefront support is single user for now: `GARAGEFRONT_USER_ID` is static, so every image is uploaded to one
-LibreChat user's directory. Please raise an issue if you want multi-user, especially if you'd want it without an admin
-having to add an envar per user.
+Please see [.env.example](.env.example) for a configuration. Put `PUBLIC_HOST` behind a reverse proxy or CDN if you want
+caching; responses are immutable and cacheable.
 
 ### Extensions Support
 
@@ -110,6 +97,5 @@ Current human understanding of this codebase is: 50%.
 
 Neo MCP is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE).
 
-This project is not affiliated with or endorsed by AUTOMATIC1111, Illyasviel, Haoming02, Amazon Web Services
-(particularly S3), `chhoto-url`, or any other third-party services. Those names are trademarks of their respective
-owners and are used here only to describe compatibility.
+This project is not affiliated with or endorsed by AUTOMATIC1111, Illyasviel, Haoming02, or any other third-party
+services. Those names are trademarks of their respective owners and are used here only to describe compatibility.

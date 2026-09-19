@@ -14,25 +14,28 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/auth"
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/config"
+	"github.com/wishmatic/neo-mcp/internal/filestore"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
-	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
-	"github.com/wishmatic/neo-mcp/internal/shortener"
 	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
 
-const writeTimeout = 10 * time.Minute
+const (
+	writeTimeout        = 10 * time.Minute
+	maintenanceInterval = 6 * time.Hour
+)
 
 type Server struct {
 	cfg    config.Config
 	log    *zap.Logger
 	store  *store.Client
+	files  *filestore.Client
 	router *chi.Mux
 	http   *http.Server
 }
@@ -42,8 +45,17 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		return nil, auth.ErrNoAPIKey
 	}
 
-	if cfg.GaragefrontURL != "" && cfg.GaragefrontUserID == "" {
-		return nil, fmt.Errorf("GARAGEFRONT_USER_ID is required when GARAGEFRONT_URL is set")
+	publicBase, err := cfg.PublicBase()
+	if err != nil {
+		return nil, err
+	}
+
+	if publicBase == nil {
+		return nil, fmt.Errorf("PUBLIC_HOST is required")
+	}
+
+	if cfg.FilesDir == "" {
+		return nil, fmt.Errorf("FILES_DIR must not be empty")
 	}
 
 	if cfg.ExamplesEnabled && cfg.ExamplesMax < 1 {
@@ -53,6 +65,15 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	outputFormat, err := outputFormatFrom(cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	files, err := filestore.New(filestore.Config{
+		Dir:           cfg.FilesDir,
+		PublicBase:    publicBase,
+		RetentionDays: cfg.FilesRetentionDays,
+	}, log)
+	if err != nil {
+		return nil, fmt.Errorf("configure file storage: %w", err)
 	}
 
 	storeClient, err := store.New(cfg.DBPath)
@@ -76,44 +97,20 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		MaxAge:           300,
 	}))
 
+	files.Register(router)
+
+	log.Info("local files enabled",
+		zap.String("dir", cfg.FilesDir),
+		zap.Int("retention_days", cfg.FilesRetentionDays),
+	)
+	log.Warn("stored files are readable by anyone with the URL")
+
 	sdClient := sdwebui.New(cfg.SDURL, cfg.ErrorDetail == "verbose")
 
-	uploader, err := s3upload.New(s3upload.Config{
-		Endpoint:          cfg.S3Endpoint,
-		PublicEndpoint:    cfg.S3PublicEndpoint,
-		Bucket:            cfg.S3Bucket,
-		Region:            cfg.S3Region,
-		AccessKey:         cfg.S3AccessKey,
-		SecretKey:         cfg.S3SecretKey,
-		ReadonlyAccessKey: cfg.S3ReadonlyAccessKey,
-		ReadonlySecretKey: cfg.S3ReadonlySecretKey,
-		UsePathStyle:      cfg.S3UsePathStyle,
-		PublicBaseURL:     cfg.GaragefrontURL,
-		KeyPrefix:         cfg.GaragefrontPrefix(),
-	}, log)
+	resolver, err := resolve.New(files, publicBase.String())
 	if err != nil {
-		log.Warn("s3 upload disabled", zap.Error(err))
-		uploader = nil
-	}
+		_ = storeClient.Close()
 
-	var shortenerClient *shortener.Client
-	if cfg.ShortenerAPIURL != "" && cfg.ShortenerAPIKey != "" {
-		shortenerClient = shortener.New(cfg.ShortenerAPIURL, cfg.ShortenerAPIKey, cfg.ShortenerExpiry)
-
-		log.Info(
-			"url shortener enabled",
-			zap.String("api_url", cfg.ShortenerAPIURL),
-			zap.Int("expiry_seconds", cfg.ShortenerExpiry),
-		)
-	}
-
-	var objectStore resolve.ObjectStore
-	if uploader != nil {
-		objectStore = uploader
-	}
-
-	resolver, err := resolve.New(objectStore, cfg.GaragefrontURL)
-	if err != nil {
 		return nil, fmt.Errorf("build image resolver: %w", err)
 	}
 
@@ -124,16 +121,11 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		log.Info("novelai enabled", zap.String("base_url", novelai.DefaultBaseURL))
 	}
 
-	if cfg.ExamplesEnabled && uploader == nil {
-		log.Warn("examples enabled but S3 upload is not configured; no examples will be saved and the examples tool " +
-			"is not registered")
-	}
-
 	mcpSrv, err := mcpServer.New(mcpServer.Deps{
 		Log:       log,
 		Generator: imagegen.New(sdClient, novelaiClient),
 		Bgkill:    bgkill.New(sdClient),
-		Publisher: publish.New(uploader, shortenerClient, log),
+		Publisher: publish.New(files, log),
 		NovelAI:   novelaiClient,
 		Resolver:  resolver,
 		Store:     storeClient,
@@ -165,6 +157,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		cfg:    cfg,
 		log:    log,
 		store:  storeClient,
+		files:  files,
 		router: router,
 		http: &http.Server{
 			Addr:              cfg.Addr(),
@@ -202,4 +195,34 @@ func (s *Server) Run() error {
 
 func (s *Server) Shutdown(ctx context.Context) error {
 	return errors.Join(s.http.Shutdown(ctx), s.store.Close())
+}
+
+// RunMaintenance sweeps expired stored files on a fixed interval until ctx is cancelled.
+func (s *Server) RunMaintenance(ctx context.Context) {
+	if s.files == nil {
+		return
+	}
+
+	ticker := time.NewTicker(maintenanceInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.sweep()
+		}
+	}
+}
+
+func (s *Server) sweep() {
+	deleted, err := s.files.Sweep(time.Now())
+	if err != nil {
+		s.log.Error("file retention sweep failed", zap.Error(err))
+
+		return
+	}
+
+	s.log.Info("file retention sweep finished", zap.Int("deleted", deleted))
 }

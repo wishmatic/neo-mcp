@@ -141,6 +141,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 	srv, err := New(Deps{
 		Log:          zapNop(),
 		Bgkill:       bgkill.New(sdwebui.New(forge.URL, false)),
+		Publisher:    newTestPublisher(t),
 		Resolver:     resolver,
 		OutputFormat: imgfmt.Default,
 	})
@@ -168,21 +169,8 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 		t.Fatalf("content = %d, want 1", len(result.Content))
 	}
 
-	content, ok := result.Content[0].(*mcp.ImageContent)
-	if !ok || content.MIMEType != "image/jpeg" {
-		t.Fatalf("content = %#v, want inline image/jpeg", result.Content[0])
-	}
-
-	img, decoded, err := image.Decode(bytes.NewReader(content.Data))
-	if err != nil {
-		t.Fatalf("decode returned content: %v", err)
-	}
-
-	if decoded != "jpeg" {
-		t.Errorf("decoded format = %q, want jpeg", decoded)
-	}
-
-	if bounds := img.Bounds(); bounds.Dx() != testImageSize || bounds.Dy() != testImageSize {
-		t.Errorf("bounds = %v, want %dx%d", bounds, testImageSize, testImageSize)
+	content, ok := result.Content[0].(*mcp.TextContent)
+	if !ok || !strings.HasSuffix(content.Text, ".jpg") {
+		t.Fatalf("content = %#v, want an uploaded .jpg URL", result.Content[0])
 	}
 }

@@ -12,7 +12,7 @@ func (h *handlers) publishImages(
 	ctx context.Context,
 	tool string,
 	images [][]byte,
-	public, nsfw bool,
+	nsfw bool,
 	format imgfmt.Format,
 ) (*mcp.CallToolResult, generationOutput, error) {
 	converted, err := convertImages(images, format)
@@ -20,21 +20,7 @@ func (h *handlers) publishImages(
 		return nil, generationOutput{}, fmt.Errorf("%s: %w", tool, err)
 	}
 
-	mediaType := format.MediaType()
-
-	if !h.publisher.Enabled() {
-		content := make([]mcp.Content, 0, len(converted))
-		for _, data := range converted {
-			content = append(content, &mcp.ImageContent{
-				Data:     data,
-				MIMEType: mediaType,
-			})
-		}
-
-		return &mcp.CallToolResult{Content: content}, generationOutput{Count: len(converted)}, nil
-	}
-
-	urls, err := h.publisher.Images(ctx, tool, converted, mediaType, public, nsfw)
+	urls, err := h.publisher.Images(ctx, tool, converted, format.MediaType(), nsfw)
 	if err != nil {
 		return nil, generationOutput{}, err
 	}

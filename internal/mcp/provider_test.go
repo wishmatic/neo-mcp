@@ -17,7 +17,6 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"go.uber.org/zap"
@@ -176,6 +175,7 @@ func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 	srv, err := New(Deps{
 		Log:       zapNop(),
 		Generator: imagegen.New(nil, backend),
+		Publisher: newTestPublisher(t),
 		NovelAI:   backend,
 	})
 	if err != nil {
@@ -227,7 +227,7 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 	h := &handlers{
 		log:       log,
 		gen:       imagegen.New(nil, newNovelAIBackend(t, novelaiLog)),
-		publisher: publish.New(nil, nil, zapNop()),
+		publisher: newTestPublisher(t),
 		resolver:  newResolver(t),
 	}
 
@@ -244,7 +244,7 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 	failing := &handlers{
 		log:       log,
 		gen:       imagegen.New(nil, novelai.New("http://127.0.0.1:1", "sk-test", false)),
-		publisher: publish.New(nil, nil, zapNop()),
+		publisher: newTestPublisher(t),
 	}
 
 	if _, _, err := failing.txt2img(context.Background(), nil, txt2imgInput{

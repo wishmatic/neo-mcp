@@ -52,7 +52,8 @@ func New(store ObjectStore, publicBase string) (*Resolver, error) {
 
 // Fetch returns the bytes for rawURL, following redirects.
 //
-// Garagefront URLs, including ones reached through a shortener redirect, are read straight from S3 by object key.
+// URLs on this service's own public base are read straight from the file store by object key, so a link the service
+// returned can be fed back in without a network round trip.
 func (r *Resolver) Fetch(ctx context.Context, rawURL string) ([]byte, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
@@ -62,7 +63,7 @@ func (r *Resolver) Fetch(ctx context.Context, rawURL string) ([]byte, error) {
 	for hop := 0; ; hop++ {
 		if key, ok := r.objectKey(u); ok {
 			if r.store == nil {
-				return nil, fmt.Errorf("resolve: %s resolves to an S3 object but S3 is not configured", u)
+				return nil, fmt.Errorf("resolve: %s resolves to a stored object but file storage is not configured", u)
 			}
 
 			return r.store.GetObject(ctx, key)
@@ -111,8 +112,8 @@ func (r *Resolver) get(ctx context.Context, u *url.URL) (*http.Response, error) 
 	return resp, nil
 }
 
-// objectKey mirrors Garagefront's path mapping: the URL path minus its leading slash is the object key, and only the
-// "i"/"a" namespaces are servable.
+// objectKey maps a URL on the public base to a store key: the path minus its leading slash, and only the "i"
+// namespace is servable.
 func (r *Resolver) objectKey(u *url.URL) (string, bool) {
 	if r.publicBase == nil || !strings.EqualFold(u.Host, r.publicBase.Host) {
 		return "", false
@@ -123,9 +124,7 @@ func (r *Resolver) objectKey(u *url.URL) (string, bool) {
 		return "", false
 	}
 
-	switch segments[0] {
-	case "i", "a":
-	default:
+	if segments[0] != "i" {
 		return "", false
 	}
 

@@ -54,7 +54,6 @@ func TestSchemasIncludeSharedFields(t *testing.T) {
 		"hr_second_pass_steps",
 		"hr_cfg",
 		"format",
-		"public",
 		"nsfw",
 	}
 
@@ -67,41 +66,9 @@ func TestSchemasIncludeSharedFields(t *testing.T) {
 	}
 }
 
-func TestPublicFlagSchema(t *testing.T) {
-	withFlag := schemas()
-	withFlag["bgkill"] = bgkillSchema(imgfmt.Default)
-
-	for name, s := range withFlag {
-		prop := s.Properties["public"]
-		if prop == nil {
-			t.Errorf("%s: public property is missing", name)
-			continue
-		}
-
-		if prop.Type != "boolean" {
-			t.Errorf("%s: public type = %q, want boolean", name, prop.Type)
-		}
-
-		if string(prop.Default) != "false" {
-			t.Errorf("%s: public default = %s, want false", name, prop.Default)
-		}
-
-		if slices.Contains(s.Required, "public") {
-			t.Errorf("%s: public must not be required", name)
-		}
-
-		for _, want := range []string{"explicit", "anyone"} {
-			if !strings.Contains(prop.Description, want) {
-				t.Errorf("%s: public description %q does not mention %q", name, prop.Description, want)
-			}
-		}
-	}
-}
-
 func TestFormatFlagSchema(t *testing.T) {
 	withFlag := schemas()
 	withFlag["bgkill"] = bgkillSchema(imgfmt.Default)
-	withFlag["publicize"] = publicizeSchema(imgfmt.Default)
 
 	for tool, s := range withFlag {
 		prop := s.Properties["format"]
@@ -145,10 +112,9 @@ func TestFormatFlagSchemaFollowsConfiguredDefault(t *testing.T) {
 		want := `"` + name + `"`
 
 		for tool, prop := range map[string]*jsonschema.Schema{
-			"txt2img":   txt2imgSchema(format).Properties["format"],
-			"img2img":   img2imgSchema(format).Properties["format"],
-			"bgkill":    bgkillSchema(format).Properties["format"],
-			"publicize": publicizeSchema(format).Properties["format"],
+			"txt2img": txt2imgSchema(format).Properties["format"],
+			"img2img": img2imgSchema(format).Properties["format"],
+			"bgkill":  bgkillSchema(format).Properties["format"],
 		} {
 			if string(prop.Default) != want {
 				t.Errorf("%s with default %s: format default = %s, want %s", tool, name, prop.Default, want)

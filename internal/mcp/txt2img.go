@@ -58,7 +58,6 @@ func (h *handlers) txt2img(
 		zap.Int("hr_second_pass_steps", in.HRSecondPassSteps),
 		zap.Float64("denoising_strength", in.DenoisingStrength),
 		zap.Float64("hr_cfg", in.HRCFGScale),
-		zap.Bool("public", in.Public),
 		zap.Bool("nsfw", in.NSFW),
 	)
 
@@ -77,7 +76,7 @@ func (h *handlers) txt2img(
 
 	h.log.Info("txt2img generation finished", zap.Int("images", len(images)))
 
-	result, out, err := h.publishImages(ctx, "txt2img", images, in.Public, in.NSFW, format)
+	result, out, err := h.publishImages(ctx, "txt2img", images, in.NSFW, format)
 	if err != nil {
 		return nil, generationOutput{}, err
 	}
@@ -101,7 +100,6 @@ func txt2imgSchema(def imgfmt.Format) *jsonschema.Schema {
 	setDefault(s.Properties, "cfg_scale", 7.0)
 	setDefault(s.Properties, "sampler_name", "")
 	setDefault(s.Properties, "scheduler", "")
-	setDefault(s.Properties, "public", false)
 	setDefault(s.Properties, "nsfw", false)
 	setFormatSchema(s, def)
 

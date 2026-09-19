@@ -86,6 +86,23 @@ func TestMediaTypeAndExtension(t *testing.T) {
 	}
 }
 
+func TestExtensionForMediaType(t *testing.T) {
+	tests := map[string]string{
+		"image/png":  "png",
+		"image/jpeg": "jpg",
+		"image/jxl":  "jxl",
+		"image/webp": "webp",
+		"text/plain": "png",
+		"":           "png",
+	}
+
+	for mediaType, want := range tests {
+		if got := ExtensionForMediaType(mediaType); got != want {
+			t.Errorf("ExtensionForMediaType(%q) = %q, want %q", mediaType, got, want)
+		}
+	}
+}
+
 func TestNames(t *testing.T) {
 	want := []string{"png", "jpeg", "jxl", "webp"}
 	got := Names()

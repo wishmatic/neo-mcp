@@ -68,3 +68,13 @@ func (f Format) Extension() string {
 		return ""
 	}
 }
+
+func ExtensionForMediaType(mediaType string) string {
+	for _, format := range []Format{PNG, JPEG, JXL, WebP} {
+		if format.MediaType() == mediaType {
+			return format.Extension()
+		}
+	}
+
+	return "png"
+}

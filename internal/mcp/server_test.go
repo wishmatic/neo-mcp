@@ -7,8 +7,6 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/publish"
-	"github.com/wishmatic/neo-mcp/internal/s3upload"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"go.uber.org/zap"
 )
@@ -26,11 +24,10 @@ func TestNewRegistersTools(t *testing.T) {
 
 func TestToolRegistration(t *testing.T) {
 	tests := []struct {
-		name     string
-		forge    *sdwebui.Client
-		novelai  *novelai.Client
-		uploader *s3upload.Client
-		want     []string
+		name    string
+		forge   *sdwebui.Client
+		novelai *novelai.Client
+		want    []string
 	}{
 		{
 			name:    "novelai only",
@@ -43,11 +40,6 @@ func TestToolRegistration(t *testing.T) {
 			want:  []string{"txt2img", "img2img", "bgkill"},
 		},
 		{
-			name:     "uploader only",
-			uploader: newPublicizeUploader(t, &[]uploadCapture{}),
-			want:     []string{"publicize"},
-		},
-		{
 			name: "none",
 		},
 	}
@@ -58,7 +50,6 @@ func TestToolRegistration(t *testing.T) {
 				Log:       zapNop(),
 				Generator: imagegen.New(tt.forge, tt.novelai),
 				Bgkill:    bgkill.New(tt.forge),
-				Publisher: publish.New(tt.uploader, nil, zapNop()),
 				NovelAI:   tt.novelai,
 			})
 			if err != nil {

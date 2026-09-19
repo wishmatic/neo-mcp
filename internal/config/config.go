@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
@@ -23,23 +25,9 @@ type Config struct {
 
 	NovelAIAPIKey string `env:"NOVELAI_API_KEY"`
 
-	S3Endpoint       string `env:"S3_ENDPOINT"`
-	S3PublicEndpoint string `env:"S3_PUBLIC_ENDPOINT"`
-
-	S3Bucket            string `env:"S3_BUCKET"`
-	S3Region            string `env:"S3_REGION"`
-	S3AccessKey         string `env:"S3_ACCESS_KEY"`
-	S3SecretKey         string `env:"S3_SECRET_KEY"`
-	S3ReadonlyAccessKey string `env:"S3_READONLY_ACCESS_KEY"`
-	S3ReadonlySecretKey string `env:"S3_READONLY_SECRET_KEY"`
-	S3UsePathStyle      bool   `env:"S3_USE_PATH_STYLE" envDefault:"true"`
-
-	GaragefrontURL    string `env:"GARAGEFRONT_URL"`
-	GaragefrontUserID string `env:"GARAGEFRONT_USER_ID"`
-
-	ShortenerAPIURL string `env:"SHORTENER_API_URL"`
-	ShortenerAPIKey string `env:"SHORTENER_API_KEY"`
-	ShortenerExpiry int    `env:"SHORTENER_EXPIRY_SECONDS" envDefault:"0"`
+	PublicHost         string `env:"PUBLIC_HOST"`
+	FilesDir           string `env:"FILES_DIR" envDefault:"files"`
+	FilesRetentionDays int    `env:"FILES_RETENTION_DAYS" envDefault:"0"`
 
 	ExamplesEnabled bool `env:"EXAMPLES_ENABLED" envDefault:"false"`
 	ExamplesMax     int  `env:"EXAMPLES_MAX" envDefault:"16"`
@@ -60,12 +48,30 @@ func (c Config) Addr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
 
-// GaragefrontPrefix is the object key prefix for garagefront-served images. LibreChat signs its image cookie for
-// i/images/<user id>/*, so uploads go under the configured user's directory to fall inside that cookie's resource.
-func (c Config) GaragefrontPrefix() string {
-	if c.GaragefrontUserID == "" {
-		return ""
+// PublicBase normalises PUBLIC_HOST into the base URL every returned image link is built from. It is nil when
+// PUBLIC_HOST is unset, and a trailing slash is accepted; any other path is rejected because the file routes are
+// mounted at the root and URLs must round-trip through the resolver.
+func (c Config) PublicBase() (*url.URL, error) {
+	if c.PublicHost == "" {
+		return nil, nil
 	}
 
-	return "i/images/" + c.GaragefrontUserID
+	base, err := url.Parse(strings.TrimSuffix(c.PublicHost, "/"))
+	if err != nil {
+		return nil, fmt.Errorf("PUBLIC_HOST %q is not a valid URL: %w", c.PublicHost, err)
+	}
+
+	if base.Scheme != "http" && base.Scheme != "https" {
+		return nil, fmt.Errorf("PUBLIC_HOST %q must use http or https", c.PublicHost)
+	}
+
+	if base.Host == "" {
+		return nil, fmt.Errorf("PUBLIC_HOST %q must include a host", c.PublicHost)
+	}
+
+	if base.Path != "" || base.RawQuery != "" || base.Fragment != "" {
+		return nil, fmt.Errorf("PUBLIC_HOST %q must not include a path, query, or fragment", c.PublicHost)
+	}
+
+	return base, nil
 }

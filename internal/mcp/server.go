@@ -58,7 +58,7 @@ func buildHandlers(deps Deps) *handlers {
 	}
 
 	if h.publisher == nil {
-		h.publisher = publish.New(nil, nil, deps.Log)
+		h.publisher = publish.New(nil, deps.Log)
 	}
 
 	if h.defaultFormat == "" {
@@ -80,10 +80,6 @@ func registerTools(srv *mcp.Server, h *handlers) {
 
 	if h.bgkillSvc.Enabled() {
 		registerBgkill(srv, h)
-	}
-
-	if h.publisher.Enabled() {
-		registerPublicize(srv, h)
 	}
 
 	if h.examplesConfig.Enabled && h.store != nil && h.publisher.Enabled() {

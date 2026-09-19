@@ -3,10 +3,13 @@ package server
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/wishmatic/neo-mcp/internal/config"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
@@ -19,22 +22,12 @@ func testConfig(t *testing.T) config.Config {
 	t.Helper()
 
 	return config.Config{
-		APIKey: "server-key",
-		SDURL:  "http://127.0.0.1:7860",
-		DBPath: filepath.Join(t.TempDir(), "neo.db"),
+		APIKey:     "server-key",
+		SDURL:      "http://127.0.0.1:7860",
+		DBPath:     filepath.Join(t.TempDir(), "neo.db"),
+		PublicHost: "https://neo.example.com",
+		FilesDir:   filepath.Join(t.TempDir(), "files"),
 	}
-}
-
-func withS3(cfg config.Config) config.Config {
-	cfg.S3Endpoint = "http://127.0.0.1:3900"
-	cfg.S3Bucket = "test-bucket"
-	cfg.S3Region = "test-region"
-	cfg.S3AccessKey = "write-key"
-	cfg.S3SecretKey = "write-secret"
-	cfg.S3ReadonlyAccessKey = "read-key"
-	cfg.S3ReadonlySecretKey = "read-secret"
-
-	return cfg
 }
 
 func TestNewWithNovelAIKey(t *testing.T) {
@@ -48,9 +41,7 @@ func TestNewWithNovelAIKey(t *testing.T) {
 		t.Fatalf("New() error: %v", err)
 	}
 
-	if srv == nil {
-		t.Fatal("New() returned nil server")
-	}
+	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
 
 	enabled := false
 	baseURL := ""
@@ -146,6 +137,47 @@ func TestShutdownClosesStore(t *testing.T) {
 	}
 }
 
+func TestNewRequiresPublicHost(t *testing.T) {
+	tests := []struct {
+		name       string
+		publicHost string
+	}{
+		{name: "missing", publicHost: ""},
+		{name: "no scheme", publicHost: "neo.example.com"},
+		{name: "with path", publicHost: "https://neo.example.com/neo"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := testConfig(t)
+			cfg.PublicHost = tt.publicHost
+
+			_, err := New(cfg, zap.NewNop())
+			if err == nil {
+				t.Fatal("New() error = nil, want an error")
+			}
+
+			if !strings.Contains(err.Error(), "PUBLIC_HOST") {
+				t.Errorf("error = %q, want it to name PUBLIC_HOST", err.Error())
+			}
+		})
+	}
+}
+
+func TestNewRequiresFilesDir(t *testing.T) {
+	cfg := testConfig(t)
+	cfg.FilesDir = ""
+
+	_, err := New(cfg, zap.NewNop())
+	if err == nil {
+		t.Fatal("New() error = nil, want an error")
+	}
+
+	if !strings.Contains(err.Error(), "FILES_DIR") {
+		t.Errorf("error = %q, want it to name FILES_DIR", err.Error())
+	}
+}
+
 func TestNewRejectsInvalidExamplesMax(t *testing.T) {
 	cfg := testConfig(t)
 	cfg.ExamplesEnabled = true
@@ -206,59 +238,100 @@ func TestNewAcceptsOutputFormat(t *testing.T) {
 	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
 }
 
-func TestNewWarnsWhenExamplesHaveNoUploader(t *testing.T) {
-	tests := []struct {
-		name     string
-		cfg      func(config.Config) config.Config
-		wantWarn bool
-	}{
-		{
-			name: "enabled without s3",
-			cfg: func(cfg config.Config) config.Config {
-				cfg.ExamplesEnabled = true
-				cfg.ExamplesMax = 4
+func TestNewLogsLocalFilesWarning(t *testing.T) {
+	core, logs := observer.New(zapcore.DebugLevel)
 
-				return cfg
-			},
-			wantWarn: true,
-		},
-		{
-			name: "enabled with s3",
-			cfg: func(cfg config.Config) config.Config {
-				cfg.ExamplesEnabled = true
-				cfg.ExamplesMax = 4
+	cfg := testConfig(t)
 
-				return withS3(cfg)
-			},
-		},
-		{
-			name: "disabled without s3",
-			cfg:  func(cfg config.Config) config.Config { return cfg },
-		},
+	srv, err := New(cfg, zap.New(core))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			core, logs := observer.New(zapcore.DebugLevel)
+	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
 
-			srv, err := New(tt.cfg(testConfig(t)), zap.New(core))
-			if err != nil {
-				t.Fatalf("New() error: %v", err)
-			}
+	var (
+		enabled bool
+		warned  bool
+	)
 
-			t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
+	for _, entry := range logs.All() {
+		if entry.Message == "local files enabled" && entry.ContextMap()["dir"] == cfg.FilesDir {
+			enabled = true
+		}
 
-			warned := false
+		if entry.Level == zapcore.WarnLevel && strings.Contains(entry.Message, "readable by anyone") {
+			warned = true
+		}
+	}
 
-			for _, entry := range logs.All() {
-				if entry.Level == zapcore.WarnLevel && strings.Contains(entry.Message, "examples") {
-					warned = true
-				}
-			}
+	if !enabled {
+		t.Error("no \"local files enabled\" log entry with the configured directory")
+	}
 
-			if warned != tt.wantWarn {
-				t.Errorf("warning logged = %v, want %v", warned, tt.wantWarn)
-			}
-		})
+	if !warned {
+		t.Error("no warning that stored files are readable by anyone with the URL")
+	}
+}
+
+func TestServesStoredFile(t *testing.T) {
+	cfg := testConfig(t)
+
+	srv, err := New(cfg, zap.NewNop())
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
+
+	url, err := srv.files.UploadFile(context.Background(), []byte("png-bytes"), "image/png", false)
+	if err != nil {
+		t.Fatalf("UploadFile() error: %v", err)
+	}
+
+	if !strings.HasPrefix(url, cfg.PublicHost+"/i/") {
+		t.Fatalf("url = %q, want a %s/i/ prefix", url, cfg.PublicHost)
+	}
+
+	rec := httptest.NewRecorder()
+	srv.router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+
+	if rec.Body.String() != "png-bytes" {
+		t.Errorf("body = %q, want png-bytes", rec.Body.String())
+	}
+
+	if ct := rec.Header().Get("Content-Type"); ct != "image/png" {
+		t.Errorf("Content-Type = %q, want image/png", ct)
+	}
+}
+
+func TestRunMaintenanceReturnsOnCancel(t *testing.T) {
+	cfg := testConfig(t)
+
+	srv, err := New(cfg, zap.NewNop())
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+
+	go func() {
+		srv.RunMaintenance(ctx)
+		close(done)
+	}()
+
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("RunMaintenance did not return after its context was cancelled")
 	}
 }

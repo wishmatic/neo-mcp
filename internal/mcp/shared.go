@@ -36,23 +36,17 @@ type generationInput struct {
 	HRCFGScale        float64 `json:"hr_cfg,omitempty" jsonschema:"if HR is enabled, the CFG scale for the hi-res second pass; ignored by NovelAI"`
 
 	formatInput
-	publishInput
 }
 
 type formatInput struct {
 	Format string `json:"format,omitempty" jsonschema:"output image format: png, jpeg, jxl (JPEG XL), or webp; defaults to the server's configured output format"`
 }
 
-type publishInput struct {
-	Public bool `json:"public,omitempty" jsonschema:"publish the output to a world-readable URL that anyone can open with no credentials, bypassing the normal access restrictions. Set this only when the user has explicitly asked for a public image and has been told anyone will be able to view it. Leave it false or unset otherwise, including when a call fails; never enable it to work around an error or an image the user cannot open"`
-}
-
 // generationOutput is the structured output shared by the image tools. The generated images always travel in the call
-// result's content (as inline image content, or as URLs when upload is configured), so URLs is a convenience mirror
-// that is only populated in the latter case.
+// result's content as URLs, and URLs mirrors them for structured clients.
 type generationOutput struct {
 	Count int      `json:"count" jsonschema:"number of images generated"`
-	URLs  []string `json:"urls,omitempty" jsonschema:"URLs for the generated images, only set when S3 upload is configured"`
+	URLs  []string `json:"urls" jsonschema:"URLs for the generated images"`
 }
 
 func setDefault(props map[string]*jsonschema.Schema, name string, value any) {

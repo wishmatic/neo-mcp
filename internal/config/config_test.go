@@ -124,68 +124,103 @@ func TestLoadOutputFormat(t *testing.T) {
 	}
 }
 
-func TestGaragefrontPrefix(t *testing.T) {
+func TestLoadFilesDefaults(t *testing.T) {
+	unsetEnv(t, "PUBLIC_HOST")
+	unsetEnv(t, "FILES_DIR")
+	unsetEnv(t, "FILES_RETENTION_DAYS")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	if cfg.PublicHost != "" {
+		t.Errorf("PublicHost = %q, want empty by default", cfg.PublicHost)
+	}
+
+	if cfg.FilesDir != "files" {
+		t.Errorf("FilesDir = %q, want files by default", cfg.FilesDir)
+	}
+
+	if cfg.FilesRetentionDays != 0 {
+		t.Errorf("FilesRetentionDays = %d, want 0 by default", cfg.FilesRetentionDays)
+	}
+}
+
+func TestLoadFiles(t *testing.T) {
+	t.Setenv("PUBLIC_HOST", "https://neo.example.com")
+	t.Setenv("FILES_DIR", filepath.Join("data", "files"))
+	t.Setenv("FILES_RETENTION_DAYS", "30")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	if cfg.PublicHost != "https://neo.example.com" {
+		t.Errorf("PublicHost = %q, want https://neo.example.com", cfg.PublicHost)
+	}
+
+	if cfg.FilesDir != filepath.Join("data", "files") {
+		t.Errorf("FilesDir = %q, want the configured path", cfg.FilesDir)
+	}
+
+	if cfg.FilesRetentionDays != 30 {
+		t.Errorf("FilesRetentionDays = %d, want 30", cfg.FilesRetentionDays)
+	}
+}
+
+func TestPublicBase(t *testing.T) {
 	tests := []struct {
-		name   string
-		userID string
-		want   string
+		name       string
+		publicHost string
+		want       string
+		wantErr    bool
 	}{
-		{
-			name:   "user id set",
-			userID: "6a7ee81dea3798015702d047",
-			want:   "i/images/6a7ee81dea3798015702d047",
-		},
-		{
-			name: "user id unset",
-			want: "",
-		},
+		{name: "unset", publicHost: "", wantErr: false},
+		{name: "valid", publicHost: "https://neo.example.com", want: "https://neo.example.com"},
+		{name: "valid with port", publicHost: "http://192.168.1.10:8080", want: "http://192.168.1.10:8080"},
+		{name: "trailing slash trimmed", publicHost: "https://neo.example.com/", want: "https://neo.example.com"},
+		{name: "missing scheme", publicHost: "neo.example.com", wantErr: true},
+		{name: "non-http scheme", publicHost: "ftp://neo.example.com", wantErr: true},
+		{name: "empty host", publicHost: "https://", wantErr: true},
+		{name: "path component", publicHost: "https://neo.example.com/neo", wantErr: true},
+		{name: "query component", publicHost: "https://neo.example.com?x=1", wantErr: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := Config{GaragefrontUserID: tt.userID}
+			cfg := Config{PublicHost: tt.publicHost}
 
-			if got := cfg.GaragefrontPrefix(); got != tt.want {
-				t.Fatalf("GaragefrontPrefix() = %q, want %q", got, tt.want)
+			base, err := cfg.PublicBase()
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("PublicBase() error = nil, want an error")
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("PublicBase() error: %v", err)
+			}
+
+			if tt.publicHost == "" {
+				if base != nil {
+					t.Fatalf("PublicBase() = %v, want nil when PUBLIC_HOST is unset", base)
+				}
+
+				return
+			}
+
+			if base == nil || base.Host == "" {
+				t.Fatalf("PublicBase() = %v, want a URL with a host", base)
+			}
+
+			if got := base.String(); got != tt.want {
+				t.Errorf("PublicBase() = %q, want %q", got, tt.want)
 			}
 		})
-	}
-}
-
-func TestLoadS3UsePathStyleDefault(t *testing.T) {
-	prev, had := os.LookupEnv("S3_USE_PATH_STYLE")
-	os.Unsetenv("S3_USE_PATH_STYLE")
-
-	defer func() {
-		if had {
-			os.Setenv("S3_USE_PATH_STYLE", prev)
-
-			return
-		}
-
-		os.Unsetenv("S3_USE_PATH_STYLE")
-	}()
-
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	if !cfg.S3UsePathStyle {
-		t.Fatalf("S3UsePathStyle = false, want true when unset")
-	}
-}
-
-func TestLoadS3UsePathStyleOverride(t *testing.T) {
-	t.Setenv("S3_USE_PATH_STYLE", "false")
-
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	if cfg.S3UsePathStyle {
-		t.Fatalf("S3UsePathStyle = true, want false when set")
 	}
 }
 

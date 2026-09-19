@@ -25,3 +25,4 @@ coverage.html
 *.db-wal
 *.db-shm
 *.db-journal
+files/
