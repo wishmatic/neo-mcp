@@ -119,6 +119,17 @@ func TestTxt2ImgRejectsInvalidFormatBeforeGenerating(t *testing.T) {
 	}
 }
 
+func TestTxt2ImgRejectsInvalidReturnAsBeforeGenerating(t *testing.T) {
+	h := &handlers{log: zapNop()}
+
+	_, _, err := h.txt2img(context.Background(), nil, txt2imgInput{
+		generationInput: generationInput{Model: "m.safetensors", Prompt: "p", ReturnAs: "inline"},
+	})
+	if err == nil || !strings.HasPrefix(err.Error(), "txt2img:") {
+		t.Fatalf("error = %v, want a txt2img: prefix", err)
+	}
+}
+
 func TestBgkillCallToolFormatsOutput(t *testing.T) {
 	forge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -155,6 +166,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 			"model_name": bgkill.Models[0],
 			"image_url":  images.URL + "/x.png",
 			"format":     "jpeg",
+			"return_as":  "url",
 		},
 	})
 	if err != nil {

@@ -1,11 +1,13 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"image"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -168,6 +170,82 @@ func numberField(t *testing.T, params map[string]any, key string) float64 {
 	return value
 }
 
+func TestTxt2ImgCallToolRequiresReturnAs(t *testing.T) {
+	backend := newNovelAIBackend(t, &requestLog{})
+
+	srv, err := New(Deps{
+		Log:       zapNop(),
+		Generator: imagegen.New(nil, backend),
+		Publisher: newTestPublisher(t),
+		NovelAI:   backend,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "txt2img",
+		Arguments: map[string]any{
+			"model":  "nai-diffusion-5-full",
+			"prompt": "a cat",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool() error: %v", err)
+	}
+
+	if !result.IsError {
+		t.Fatalf("omitting return_as was accepted: %+v", result.Content)
+	}
+}
+
+func TestTxt2ImgCallToolInline(t *testing.T) {
+	backend := newNovelAIBackend(t, &requestLog{})
+
+	srv, err := New(Deps{
+		Log:       zapNop(),
+		Generator: imagegen.New(nil, backend),
+		Publisher: newTestPublisher(t),
+		NovelAI:   backend,
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "txt2img",
+		Arguments: map[string]any{
+			"model":     "nai-diffusion-5-full",
+			"prompt":    "a cat",
+			"return_as": "image",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool() error: %v", err)
+	}
+
+	if result.IsError {
+		t.Fatalf("CallTool() tool error: %+v", result.Content)
+	}
+
+	if len(result.Content) != 2 {
+		t.Fatalf("content = %d, want a caption and one image", len(result.Content))
+	}
+
+	img, ok := result.Content[1].(*mcp.ImageContent)
+	if !ok {
+		t.Fatalf("content[1] = %#v, want an image block", result.Content[1])
+	}
+
+	if img.MIMEType != "image/webp" {
+		t.Errorf("mime type = %q, want image/webp", img.MIMEType)
+	}
+
+	if _, format, err := image.Decode(bytes.NewReader(img.Data)); err != nil || format != "webp" {
+		t.Errorf("decode inline image = %q, %v, want webp", format, err)
+	}
+}
+
 func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 	novelaiLog := &requestLog{}
 	backend := newNovelAIBackend(t, novelaiLog)
@@ -185,8 +263,9 @@ func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "txt2img",
 		Arguments: map[string]any{
-			"model":  "nai-diffusion-5-full",
-			"prompt": "a cat",
+			"model":     "nai-diffusion-5-full",
+			"prompt":    "a cat",
+			"return_as": "url",
 		},
 	})
 	if err != nil {

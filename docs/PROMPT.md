@@ -38,6 +38,9 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 - {{STYLE_NOTES}}, for example {{STYLE_EXAMPLE}}.
 - Images come back as WebP unless the server sets `OUTPUT_FORMAT`; pass `format` (`png`, `jpeg`, `jxl`, or `webp`) only
   when the user wants a different file type.
+- Pass `return_as` on every image call. `url` (the default mode) is cheap and returns a link. `image` also returns the
+  bytes inline so you can see the result, but it is very expensive in tokens; use it only when you can see images and
+  need to inspect the result.
 
 ## Prompting
 

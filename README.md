@@ -16,13 +16,17 @@ Note that the only version of Forge we support is
 - Output images are WebP by default. `OUTPUT_FORMAT` sets the format for every tool (`png`, `jpeg`, `jxl`, or `webp`),
   and the `format` input overrides it for a single call. Transparency is kept for every format except JPEG, which
   composites onto white.
+- Every image tool call must pass `return_as`. `url` (the default mode) stores the image and returns a link. `image`
+  also returns the bytes inline as an MCP image block, which vision-capable clients attach to the tool message; it is
+  very expensive in tokens, so it is only worth using when the model can see images.
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
   foreground and produce a padded square, which is handy for logo generation.
 - Generated images are written to local disk and returned as URLs served by this service. Set `PUBLIC_HOST` to the base
   URL clients use to reach it, and `FILES_DIR` for where files live (`/data/files` in Docker).
     - Stored files are unguessable and anonymous: anyone holding a URL can open the image, and nobody else can. There
-      is no other access control, and images are never returned inline, so every tool call produces a URL.
+      is no other access control, and every tool call stores the image and returns a URL; only a call's
+      `return_as: image` also returns the bytes inline.
     - Mount `FILES_DIR` on a volume to keep files across container replacements.
     - `FILES_RETENTION_DAYS` deletes files older than that many days; `0` keeps everything.
 - If you set `EXAMPLES_ENABLED=true`, every `txt2img`/`img2img` query and the URL of the image it produced are saved per
