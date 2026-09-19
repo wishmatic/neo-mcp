@@ -53,7 +53,6 @@ func newExamplesSession(
 	client *store.Client,
 	store publish.Store,
 	enabled bool,
-	max int,
 ) *mcp.ClientSession {
 	t.Helper()
 
@@ -63,7 +62,7 @@ func newExamplesSession(
 		Publisher: publish.New(store, zapNop()),
 		Resolver:  newResolver(t),
 		Store:     client,
-		Examples:  ExamplesConfig{Enabled: enabled, Max: max},
+		Examples:  ExamplesConfig{Enabled: enabled},
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
@@ -160,7 +159,7 @@ func storedQuery(t *testing.T, example store.Example) map[string]any {
 
 func TestSaveExamplesCaptureTxt2Img(t *testing.T) {
 	client := newTestStore(t)
-	session := newExamplesSession(t, client, newFakeStore(t), true, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), true)
 	ctx := context.Background()
 
 	result := callTxt2Img(t, session, nil)
@@ -213,7 +212,7 @@ func TestSaveExamplesCaptureTxt2Img(t *testing.T) {
 
 func TestSaveExamplesCaptureImg2Img(t *testing.T) {
 	client := newTestStore(t)
-	session := newExamplesSession(t, client, newFakeStore(t), true, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), true)
 	ctx := context.Background()
 
 	result := callImg2Img(t, session, nil)
@@ -256,7 +255,7 @@ func TestSaveExamplesCaptureImg2Img(t *testing.T) {
 
 func TestSaveExamplesDisabled(t *testing.T) {
 	client := newTestStore(t)
-	session := newExamplesSession(t, client, newFakeStore(t), false, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), false)
 	ctx := context.Background()
 
 	callTxt2Img(t, session, nil)
@@ -285,7 +284,7 @@ func TestSaveExamplesFailureIsBestEffort(t *testing.T) {
 		gen:            imagegen.New(newForgeBackend(t, &requestLog{}), nil),
 		publisher:      publish.New(newFakeStore(t), zapNop()),
 		store:          client,
-		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
+		examplesConfig: ExamplesConfig{Enabled: true},
 	}
 
 	result, out, err := h.txt2img(context.Background(), nil, txt2imgInput{
@@ -331,7 +330,7 @@ func TestSaveExamplesCancelledContext(t *testing.T) {
 	h := &handlers{
 		log:            zapNop(),
 		store:          client,
-		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
+		examplesConfig: ExamplesConfig{Enabled: true},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -358,7 +357,7 @@ func TestSaveExamplesCaptureNovelAIModel(t *testing.T) {
 		gen:            imagegen.New(nil, newNovelAIBackend(t, &requestLog{})),
 		publisher:      publish.New(newFakeStore(t), zapNop()),
 		store:          client,
-		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
+		examplesConfig: ExamplesConfig{Enabled: true},
 	}
 
 	_, out, err := h.txt2img(context.Background(), nil, txt2imgInput{
@@ -389,7 +388,7 @@ func TestSaveExamplesUploadFailureWritesNothing(t *testing.T) {
 		gen:            imagegen.New(newForgeBackend(t, &requestLog{}), nil),
 		publisher:      publish.New(newFailingStore(t), zapNop()),
 		store:          client,
-		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
+		examplesConfig: ExamplesConfig{Enabled: true},
 	}
 
 	_, _, err := h.txt2img(context.Background(), nil, txt2imgInput{
@@ -425,7 +424,7 @@ func TestExamplesRegistration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			deps := Deps{Log: zapNop(), Examples: ExamplesConfig{Enabled: tt.enabled, Max: 4}}
+			deps := Deps{Log: zapNop(), Examples: ExamplesConfig{Enabled: tt.enabled}}
 
 			if tt.store {
 				deps.Store = newTestStore(t)
@@ -505,7 +504,7 @@ func TestExamplesCallTool(t *testing.T) {
 	client := newTestStore(t)
 	ctx := context.Background()
 
-	session := newExamplesSession(t, client, newFakeStore(t), true, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), true)
 
 	empty, err := session.CallTool(ctx, &mcp.CallToolParams{
 		Name:      "examples",
@@ -580,7 +579,7 @@ func TestExamplesStoreError(t *testing.T) {
 	h := &handlers{
 		log:            zapNop(),
 		store:          client,
-		examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
+		examplesConfig: ExamplesConfig{Enabled: true},
 	}
 
 	_, _, err := h.examples(context.Background(), nil, examplesInput{Model: "m"})
@@ -603,12 +602,12 @@ func TestExamplesHonoursCount(t *testing.T) {
 			Tool:  "txt2img",
 			Query: `{"prompt":"a cat"}`,
 			URL:   fmt.Sprintf("https://cdn.example.com/%d.png", i),
-		}, 16); err != nil {
+		}); err != nil {
 			t.Fatalf("SaveExample() error: %v", err)
 		}
 	}
 
-	session := newExamplesSession(t, client, newFakeStore(t), true, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), true)
 
 	for _, tt := range []struct {
 		name string
@@ -659,7 +658,7 @@ func TestSaveExamplesNSFWFlag(t *testing.T) {
 				gen:            imagegen.New(newForgeBackend(t, &requestLog{}), nil),
 				publisher:      publish.New(newFakeStore(t), zapNop()),
 				store:          client,
-				examplesConfig: ExamplesConfig{Enabled: true, Max: 4},
+				examplesConfig: ExamplesConfig{Enabled: true},
 			}
 
 			_, out, err := h.txt2img(context.Background(), nil, txt2imgInput{
@@ -702,12 +701,12 @@ func TestExamplesNSFWFilter(t *testing.T) {
 			NSFW:  nsfw,
 		}
 
-		if _, err := client.SaveExample(ctx, meta, 16); err != nil {
+		if _, err := client.SaveExample(ctx, meta); err != nil {
 			t.Fatalf("SaveExample() error: %v", err)
 		}
 	}
 
-	session := newExamplesSession(t, client, newFakeStore(t), true, 16)
+	session := newExamplesSession(t, client, newFakeStore(t), true)
 
 	for _, tt := range []struct {
 		name string
@@ -739,7 +738,7 @@ func TestExamplesNSFWFilter(t *testing.T) {
 		})
 	}
 
-	_, _, err := (&handlers{log: zapNop(), store: client, examplesConfig: ExamplesConfig{Enabled: true, Max: 4}}).examples(
+	_, _, err := (&handlers{log: zapNop(), store: client, examplesConfig: ExamplesConfig{Enabled: true}}).examples(
 		ctx, nil, examplesInput{Model: examplesModel, NSFW: 2},
 	)
 	if err == nil {

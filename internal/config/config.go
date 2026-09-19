@@ -30,7 +30,6 @@ type Config struct {
 	FilesRetentionDays int    `env:"FILES_RETENTION_DAYS" envDefault:"0"`
 
 	ExamplesEnabled bool `env:"EXAMPLES_ENABLED" envDefault:"false"`
-	ExamplesMax     int  `env:"EXAMPLES_MAX" envDefault:"16"`
 }
 
 func Load() (Config, error) {

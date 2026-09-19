@@ -23,7 +23,7 @@ type Example struct {
 	CreatedAt time.Time
 }
 
-func (c *Client) SaveExample(ctx context.Context, meta ExampleMeta, retainPerModel int) (int64, error) {
+func (c *Client) SaveExample(ctx context.Context, meta ExampleMeta) (int64, error) {
 	meta.Model = strings.TrimSpace(meta.Model)
 	meta.Tool = strings.TrimSpace(meta.Tool)
 	meta.URL = strings.TrimSpace(meta.URL)
@@ -48,10 +48,6 @@ func (c *Client) SaveExample(ctx context.Context, meta ExampleMeta, retainPerMod
 		return 0, errors.New("store: example url is required")
 	}
 
-	if retainPerModel < 1 {
-		return 0, errors.New("store: example retention must be at least 1")
-	}
-
 	tx, err := c.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, fmt.Errorf("store: begin example transaction: %w", err)
@@ -68,16 +64,6 @@ func (c *Client) SaveExample(ctx context.Context, meta ExampleMeta, retainPerMod
 		return 0, fmt.Errorf("store: insert example: %w", err)
 	}
 
-	if _, err := tx.ExecContext(
-		ctx,
-		`DELETE FROM examples
-		 WHERE model = ?
-		   AND id NOT IN (SELECT id FROM examples WHERE model = ? ORDER BY id DESC LIMIT ?)`,
-		meta.Model, meta.Model, retainPerModel,
-	); err != nil {
-		return 0, fmt.Errorf("store: prune examples: %w", err)
-	}
-
 	if err := tx.Commit(); err != nil {
 		return 0, fmt.Errorf("store: commit example: %w", err)
 	}
@@ -90,18 +76,14 @@ func (c *Client) SaveExample(ctx context.Context, meta ExampleMeta, retainPerMod
 	return id, nil
 }
 
-func (c *Client) SaveExamples(ctx context.Context, meta ExampleMeta, urls []string, retainPerModel int) error {
-	if retainPerModel < 1 {
-		return errors.New("store: example retention must be at least 1")
-	}
-
+func (c *Client) SaveExamples(ctx context.Context, meta ExampleMeta, urls []string) error {
 	var errs []error
 
 	for _, url := range urls {
 		single := meta
 		single.URL = url
 
-		if _, err := c.SaveExample(ctx, single, retainPerModel); err != nil {
+		if _, err := c.SaveExample(ctx, single); err != nil {
 			errs = append(errs, err)
 		}
 	}

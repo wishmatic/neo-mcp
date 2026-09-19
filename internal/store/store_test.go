@@ -113,7 +113,7 @@ func TestNewReopensExistingDatabase(t *testing.T) {
 		URL:   "https://cdn.example.com/a.png",
 	}
 
-	if _, err := first.SaveExample(context.Background(), meta, 16); err != nil {
+	if _, err := first.SaveExample(context.Background(), meta); err != nil {
 		t.Fatalf("SaveExample() error: %v", err)
 	}
 
@@ -152,7 +152,7 @@ func TestClosePreventsFurtherUse(t *testing.T) {
 		URL:   "https://cdn.example.com/a.png",
 	}
 
-	if _, err := client.SaveExample(context.Background(), meta, 16); err == nil {
+	if _, err := client.SaveExample(context.Background(), meta); err == nil {
 		t.Fatal("SaveExample() after Close() error = nil, want an error")
 	}
 }

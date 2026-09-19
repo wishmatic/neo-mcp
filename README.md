@@ -28,7 +28,7 @@ Note that the only version of Forge we support is
 - If you set `EXAMPLES_ENABLED=true`, every `txt2img`/`img2img` query and the URL of the image it produced are saved per
   model, and the `examples` tool returns random ones: two by default, or as many as you ask for with `n`. A generation's
   `nsfw` flag tags its example, and the call's `nsfw` filters them: `-1` non-NSFW only, `1` NSFW only, `0` or omitted for
-  either. Only the newest `EXAMPLES_MAX` examples per model are kept.
+  either. Examples accumulate for as long as the setting stays on.
     - The database is created automatically at `DB_PATH` (`neo-mcp.db`; `/data/neo-mcp.db` in Docker).
 
 ## Usage

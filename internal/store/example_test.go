@@ -25,7 +25,7 @@ func TestSaveExampleRoundTrip(t *testing.T) {
 
 	meta := exampleMeta("nai-diffusion-5-full", "https://cdn.example.com/a.png")
 
-	id, err := client.SaveExample(ctx, meta, 16)
+	id, err := client.SaveExample(ctx, meta)
 	if err != nil {
 		t.Fatalf("SaveExample() error: %v", err)
 	}
@@ -53,19 +53,16 @@ func TestSaveExampleRoundTrip(t *testing.T) {
 	}
 }
 
-func TestSaveExampleRetainsNewest(t *testing.T) {
+func TestSaveExampleKeepsEveryExample(t *testing.T) {
 	client := newTestClient(t)
 	ctx := context.Background()
 
-	var ids []int64
+	for i := range 20 {
+		url := fmt.Sprintf("https://cdn.example.com/%d.png", i)
 
-	for i := range 17 {
-		id, err := client.SaveExample(ctx, exampleMeta("m", fmt.Sprintf("https://cdn.example.com/%d.png", i)), 16)
-		if err != nil {
+		if _, err := client.SaveExample(ctx, exampleMeta("m", url)); err != nil {
 			t.Fatalf("SaveExample() error: %v", err)
 		}
-
-		ids = append(ids, id)
 	}
 
 	examples, err := client.RandomExamples(ctx, "m", 100)
@@ -73,80 +70,8 @@ func TestSaveExampleRetainsNewest(t *testing.T) {
 		t.Fatalf("RandomExamples() error: %v", err)
 	}
 
-	if len(examples) != 16 {
-		t.Fatalf("examples = %d, want 16", len(examples))
-	}
-
-	kept := make(map[int64]bool, len(examples))
-	for _, example := range examples {
-		kept[example.ID] = true
-	}
-
-	if kept[ids[0]] {
-		t.Error("the oldest example was kept")
-	}
-
-	for _, id := range ids[1:] {
-		if !kept[id] {
-			t.Errorf("example %d was pruned", id)
-		}
-	}
-}
-
-func TestSaveExampleRetentionIsPerModel(t *testing.T) {
-	client := newTestClient(t)
-	ctx := context.Background()
-
-	if _, err := client.SaveExample(ctx, exampleMeta("a", "https://cdn.example.com/a1.png"), 2); err != nil {
-		t.Fatalf("SaveExample() error: %v", err)
-	}
-
-	for i := range 5 {
-		url := fmt.Sprintf("https://cdn.example.com/b%d.png", i)
-
-		if _, err := client.SaveExample(ctx, exampleMeta("b", url), 2); err != nil {
-			t.Fatalf("SaveExample() error: %v", err)
-		}
-	}
-
-	a, err := client.RandomExamples(ctx, "a", 10)
-	if err != nil {
-		t.Fatalf("RandomExamples() error: %v", err)
-	}
-
-	if len(a) != 1 {
-		t.Fatalf("examples for a = %d, want 1", len(a))
-	}
-
-	b, err := client.RandomExamples(ctx, "b", 10)
-	if err != nil {
-		t.Fatalf("RandomExamples() error: %v", err)
-	}
-
-	if len(b) != 2 {
-		t.Fatalf("examples for b = %d, want 2", len(b))
-	}
-}
-
-func TestSaveExampleCountNeverExceedsRetention(t *testing.T) {
-	client := newTestClient(t)
-	ctx := context.Background()
-
-	for i := range 20 {
-		url := fmt.Sprintf("https://cdn.example.com/%d.png", i)
-
-		if _, err := client.SaveExample(ctx, exampleMeta("m", url), 5); err != nil {
-			t.Fatalf("SaveExample() error: %v", err)
-		}
-
-		examples, err := client.RandomExamples(ctx, "m", 100)
-		if err != nil {
-			t.Fatalf("RandomExamples() error: %v", err)
-		}
-
-		if len(examples) > 5 {
-			t.Fatalf("after save %d: examples = %d, want at most 5", i, len(examples))
-		}
+	if len(examples) != 20 {
+		t.Fatalf("examples = %d, want all 20 retained", len(examples))
 	}
 }
 
@@ -159,16 +84,13 @@ func TestSaveExampleValidation(t *testing.T) {
 	tests := []struct {
 		name   string
 		mutate func(*ExampleMeta)
-		retain int
 	}{
-		{name: "empty model", mutate: func(m *ExampleMeta) { m.Model = "" }, retain: 1},
-		{name: "whitespace model", mutate: func(m *ExampleMeta) { m.Model = "  " }, retain: 1},
-		{name: "empty tool", mutate: func(m *ExampleMeta) { m.Tool = "" }, retain: 1},
-		{name: "empty query", mutate: func(m *ExampleMeta) { m.Query = "" }, retain: 1},
-		{name: "invalid query", mutate: func(m *ExampleMeta) { m.Query = "not json" }, retain: 1},
-		{name: "empty url", mutate: func(m *ExampleMeta) { m.URL = "" }, retain: 1},
-		{name: "retention zero", mutate: func(*ExampleMeta) {}, retain: 0},
-		{name: "retention negative", mutate: func(*ExampleMeta) {}, retain: -1},
+		{name: "empty model", mutate: func(m *ExampleMeta) { m.Model = "" }},
+		{name: "whitespace model", mutate: func(m *ExampleMeta) { m.Model = "  " }},
+		{name: "empty tool", mutate: func(m *ExampleMeta) { m.Tool = "" }},
+		{name: "empty query", mutate: func(m *ExampleMeta) { m.Query = "" }},
+		{name: "invalid query", mutate: func(m *ExampleMeta) { m.Query = "not json" }},
+		{name: "empty url", mutate: func(m *ExampleMeta) { m.URL = "" }},
 	}
 
 	for _, tt := range tests {
@@ -176,7 +98,7 @@ func TestSaveExampleValidation(t *testing.T) {
 			meta := valid
 			tt.mutate(&meta)
 
-			if _, err := client.SaveExample(ctx, meta, tt.retain); err == nil {
+			if _, err := client.SaveExample(ctx, meta); err == nil {
 				t.Fatal("SaveExample() error = nil, want an error")
 			}
 		})
@@ -203,7 +125,7 @@ func TestSaveExampleTrimsModelToolAndURL(t *testing.T) {
 		URL:   "  https://cdn.example.com/a.png  ",
 	}
 
-	if _, err := client.SaveExample(ctx, meta, 1); err != nil {
+	if _, err := client.SaveExample(ctx, meta); err != nil {
 		t.Fatalf("SaveExample() error: %v", err)
 	}
 
@@ -229,7 +151,7 @@ func TestSaveExamplePreservesQueryAndURL(t *testing.T) {
 	query := "{\n  \"prompt\": \"a cat | dog\",\n  \"negative_prompt\": \"blurry\\nbad\",\n  \"note\": \"multi-byte: 猫\"\n}"
 	url := "https://cdn.example.com/i/mcp/a b.png?X-Amz-Signature=abc&x=1#frag"
 
-	if _, err := client.SaveExample(ctx, ExampleMeta{Model: "m", Tool: "img2img", Query: query, URL: url}, 1); err != nil {
+	if _, err := client.SaveExample(ctx, ExampleMeta{Model: "m", Tool: "img2img", Query: query, URL: url}); err != nil {
 		t.Fatalf("SaveExample() error: %v", err)
 	}
 
@@ -254,7 +176,7 @@ func TestSaveExamplePreservesQueryAndURL(t *testing.T) {
 
 	meta := ExampleMeta{Model: "m", Tool: "txt2img", Query: query, URL: longURL}
 
-	if _, err := client.SaveExample(ctx, meta, 2); err != nil {
+	if _, err := client.SaveExample(ctx, meta); err != nil {
 		t.Fatalf("SaveExample() error: %v", err)
 	}
 
@@ -283,12 +205,12 @@ func TestRandomExamples(t *testing.T) {
 	for i := range 16 {
 		url := fmt.Sprintf("https://cdn.example.com/%d.png", i)
 
-		if _, err := client.SaveExample(ctx, exampleMeta("m", url), 16); err != nil {
+		if _, err := client.SaveExample(ctx, exampleMeta("m", url)); err != nil {
 			t.Fatalf("SaveExample() error: %v", err)
 		}
 	}
 
-	if _, err := client.SaveExample(ctx, exampleMeta("other", "https://cdn.example.com/other.png"), 16); err != nil {
+	if _, err := client.SaveExample(ctx, exampleMeta("other", "https://cdn.example.com/other.png")); err != nil {
 		t.Fatalf("SaveExample() error: %v", err)
 	}
 
@@ -339,7 +261,7 @@ func TestRandomExamplesFewerThanRequested(t *testing.T) {
 		t.Fatalf("examples = %v, want an empty slice", empty)
 	}
 
-	if _, err := client.SaveExample(ctx, exampleMeta("m", "https://cdn.example.com/a.png"), 1); err != nil {
+	if _, err := client.SaveExample(ctx, exampleMeta("m", "https://cdn.example.com/a.png")); err != nil {
 		t.Fatalf("SaveExample() error: %v", err)
 	}
 
@@ -381,7 +303,7 @@ func TestSaveExamplesWritesEachURL(t *testing.T) {
 	meta := exampleMeta("m", "ignored")
 
 	urls := []string{"https://cdn.example.com/a.png", "https://cdn.example.com/b.png"}
-	if err := client.SaveExamples(ctx, meta, urls, 16); err != nil {
+	if err := client.SaveExamples(ctx, meta, urls); err != nil {
 		t.Fatalf("SaveExamples() error: %v", err)
 	}
 
@@ -414,7 +336,7 @@ func TestSaveExamplesEmptyURLsIsNoOp(t *testing.T) {
 	client := newTestClient(t)
 	ctx := context.Background()
 
-	if err := client.SaveExamples(ctx, exampleMeta("m", ""), nil, 4); err != nil {
+	if err := client.SaveExamples(ctx, exampleMeta("m", ""), nil); err != nil {
 		t.Fatalf("SaveExamples() error: %v", err)
 	}
 
@@ -428,42 +350,12 @@ func TestSaveExamplesEmptyURLsIsNoOp(t *testing.T) {
 	}
 }
 
-func TestSaveExamplesRetention(t *testing.T) {
-	client := newTestClient(t)
-	ctx := context.Background()
-
-	urls := []string{
-		"https://cdn.example.com/1.png",
-		"https://cdn.example.com/2.png",
-		"https://cdn.example.com/3.png",
-	}
-
-	if err := client.SaveExamples(ctx, exampleMeta("m", ""), urls, 2); err != nil {
-		t.Fatalf("SaveExamples() error: %v", err)
-	}
-
-	examples, err := client.RandomExamples(ctx, "m", 10)
-	if err != nil {
-		t.Fatalf("RandomExamples() error: %v", err)
-	}
-
-	if len(examples) != 2 {
-		t.Fatalf("examples = %d, want the newest 2", len(examples))
-	}
-
-	for _, example := range examples {
-		if example.URL == urls[0] {
-			t.Error("the oldest example was kept")
-		}
-	}
-}
-
 func TestSaveExamplesInvalidURLStillWritesValid(t *testing.T) {
 	client := newTestClient(t)
 	ctx := context.Background()
 
 	urls := []string{"", "https://cdn.example.com/a.png"}
-	if err := client.SaveExamples(ctx, exampleMeta("m", ""), urls, 4); err == nil {
+	if err := client.SaveExamples(ctx, exampleMeta("m", ""), urls); err == nil {
 		t.Fatal("SaveExamples() error = nil, want the invalid URL error")
 	}
 
@@ -474,25 +366,6 @@ func TestSaveExamplesInvalidURLStillWritesValid(t *testing.T) {
 
 	if len(examples) != 1 || examples[0].URL != "https://cdn.example.com/a.png" {
 		t.Fatalf("examples = %+v, want the valid URL written", examples)
-	}
-}
-
-func TestSaveExamplesInvalidRetention(t *testing.T) {
-	client := newTestClient(t)
-	ctx := context.Background()
-
-	err := client.SaveExamples(ctx, exampleMeta("m", ""), []string{"https://cdn.example.com/a.png"}, 0)
-	if err == nil {
-		t.Fatal("SaveExamples() error = nil, want an error")
-	}
-
-	examples, err := client.RandomExamples(ctx, "m", 10)
-	if err != nil {
-		t.Fatalf("RandomExamples() error: %v", err)
-	}
-
-	if len(examples) != 0 {
-		t.Fatalf("examples = %d, want nothing written", len(examples))
 	}
 }
 
@@ -522,7 +395,7 @@ func TestSaveExampleConcurrent(t *testing.T) {
 
 			for i := range perWriter {
 				url := fmt.Sprintf("https://cdn.example.com/%s-%d-%d.png", model, writer, i)
-				if _, err := client.SaveExample(ctx, exampleMeta(model, url), 4); err != nil {
+				if _, err := client.SaveExample(ctx, exampleMeta(model, url)); err != nil {
 					errs <- err
 				}
 			}
@@ -536,14 +409,16 @@ func TestSaveExampleConcurrent(t *testing.T) {
 		t.Fatalf("concurrent SaveExample() error: %v", err)
 	}
 
+	perModel := writers / len(models) * perWriter
+
 	for _, model := range models {
 		examples, err := client.RandomExamples(ctx, model, 100)
 		if err != nil {
 			t.Fatalf("RandomExamples() error: %v", err)
 		}
 
-		if len(examples) > 4 {
-			t.Fatalf("model %s has %d examples, want at most 4", model, len(examples))
+		if len(examples) != perModel {
+			t.Fatalf("model %s has %d examples, want %d", model, len(examples), perModel)
 		}
 	}
 }
@@ -556,7 +431,7 @@ func TestExampleNSFWRoundTripAndFilter(t *testing.T) {
 		meta := exampleMeta("m", fmt.Sprintf("https://cdn.example.com/%d.png", i))
 		meta.NSFW = nsfw
 
-		if _, err := client.SaveExample(ctx, meta, 16); err != nil {
+		if _, err := client.SaveExample(ctx, meta); err != nil {
 			t.Fatalf("SaveExample() error: %v", err)
 		}
 	}

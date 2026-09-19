@@ -178,30 +178,6 @@ func TestNewRequiresFilesDir(t *testing.T) {
 	}
 }
 
-func TestNewRejectsInvalidExamplesMax(t *testing.T) {
-	cfg := testConfig(t)
-	cfg.ExamplesEnabled = true
-	cfg.ExamplesMax = 0
-
-	_, err := New(cfg, zap.NewNop())
-	if err == nil {
-		t.Fatal("New() error = nil, want an error")
-	}
-
-	if !strings.Contains(err.Error(), "EXAMPLES_MAX") {
-		t.Errorf("error = %q, want it to name EXAMPLES_MAX", err.Error())
-	}
-
-	cfg.ExamplesMax = 1
-
-	srv, err := New(cfg, zap.NewNop())
-	if err != nil {
-		t.Fatalf("New() with EXAMPLES_MAX=1 error: %v", err)
-	}
-
-	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
-}
-
 func TestNewRejectsInvalidOutputFormat(t *testing.T) {
 	cfg := testConfig(t)
 	cfg.OutputFormat = "nonsense"

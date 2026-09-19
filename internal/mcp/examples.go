@@ -16,7 +16,6 @@ const defaultExampleCount = 2
 
 type ExamplesConfig struct {
 	Enabled bool
-	Max     int
 }
 
 type examplesInput struct {
@@ -111,7 +110,7 @@ func (h *handlers) saveExamples(ctx context.Context, tool, model string, nsfw bo
 		NSFW:  nsfw,
 	}
 
-	if err := h.store.SaveExamples(ctx, meta, urls, h.examplesConfig.Max); err != nil {
+	if err := h.store.SaveExamples(ctx, meta, urls); err != nil {
 		h.log.Warn("examples: saving failed",
 			zap.String("tool", tool),
 			zap.String("model", model),

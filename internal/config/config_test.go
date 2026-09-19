@@ -54,7 +54,6 @@ func TestLoadDBPath(t *testing.T) {
 
 func TestLoadExamplesDefaults(t *testing.T) {
 	unsetEnv(t, "EXAMPLES_ENABLED")
-	unsetEnv(t, "EXAMPLES_MAX")
 
 	cfg, err := Load()
 	if err != nil {
@@ -64,15 +63,10 @@ func TestLoadExamplesDefaults(t *testing.T) {
 	if cfg.ExamplesEnabled {
 		t.Error("ExamplesEnabled = true, want false by default")
 	}
-
-	if cfg.ExamplesMax != 16 {
-		t.Errorf("ExamplesMax = %d, want 16 by default", cfg.ExamplesMax)
-	}
 }
 
 func TestLoadExamples(t *testing.T) {
 	t.Setenv("EXAMPLES_ENABLED", "true")
-	t.Setenv("EXAMPLES_MAX", "3")
 
 	cfg, err := Load()
 	if err != nil {
@@ -81,10 +75,6 @@ func TestLoadExamples(t *testing.T) {
 
 	if !cfg.ExamplesEnabled {
 		t.Error("ExamplesEnabled = false, want true")
-	}
-
-	if cfg.ExamplesMax != 3 {
-		t.Errorf("ExamplesMax = %d, want 3", cfg.ExamplesMax)
 	}
 }
 

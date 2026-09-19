@@ -58,10 +58,6 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		return nil, fmt.Errorf("FILES_DIR must not be empty")
 	}
 
-	if cfg.ExamplesEnabled && cfg.ExamplesMax < 1 {
-		return nil, fmt.Errorf("EXAMPLES_MAX must be at least 1 when EXAMPLES_ENABLED is set")
-	}
-
 	outputFormat, err := outputFormatFrom(cfg)
 	if err != nil {
 		return nil, err
@@ -131,7 +127,6 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		Store:     storeClient,
 		Examples: mcpServer.ExamplesConfig{
 			Enabled: cfg.ExamplesEnabled,
-			Max:     cfg.ExamplesMax,
 		},
 		OutputFormat: outputFormat,
 	})
