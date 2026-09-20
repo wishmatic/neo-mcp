@@ -53,37 +53,23 @@ If you make changes to the architecture, update this diagram.
 
 ```mermaid
 flowchart TD
-    subgraph entry[Entrypoint]
-        cmd["cmd/server"]
-        server["internal/server"]
-    end
-
-    subgraph mcpLayer[MCP adapter]
-        mcp["internal/mcp"]
-    end
-
-    subgraph domainLibraries[Domain libraries]
-        imagegen["internal/imagegen"]
-        bgkill["internal/bgkill"]
-        present["internal/present"]
-        publish["internal/publish"]
-        crop["internal/crop"]
-        imgfmt["internal/imgfmt"]
-    end
-
-    subgraph clientLibraries[Backend and infrastructure clients]
-        sdwebui["internal/sdwebui"]
-        novelai["internal/novelai"]
-        resolve["internal/resolve"]
-        filestore["internal/filestore"]
-        store["internal/store"]
-    end
-
-    subgraph platform[Platform]
-        config["internal/config"]
-        auth["internal/auth"]
-        utils["internal/utils"]
-    end
+    cmd["cmd/server"]
+    server["internal/server"]
+    mcp["internal/mcp"]
+    imagegen["internal/imagegen"]
+    bgkill["internal/bgkill"]
+    present["internal/present"]
+    publish["internal/publish"]
+    crop["internal/crop"]
+    imgfmt["internal/imgfmt"]
+    sdwebui["internal/sdwebui"]
+    novelai["internal/novelai"]
+    resolve["internal/resolve"]
+    filestore["internal/filestore"]
+    store["internal/store"]
+    config["internal/config"]
+    auth["internal/auth"]
+    utils["internal/utils"]
 
     cmd --> server
     cmd --> config
