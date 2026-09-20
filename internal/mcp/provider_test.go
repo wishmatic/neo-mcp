@@ -188,8 +188,9 @@ func TestTxt2ImgCallToolImageAudience(t *testing.T) {
 	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "txt2img",
 		Arguments: map[string]any{
-			"model":  "nai-diffusion-5-full",
-			"prompt": "a cat",
+			"model":        "nai-diffusion-5-full",
+			"prompt":       "a cat",
+			"forge_preset": "",
 		},
 	})
 	if err != nil {
@@ -243,8 +244,9 @@ func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "txt2img",
 		Arguments: map[string]any{
-			"model":  "nai-diffusion-5-full",
-			"prompt": "a cat",
+			"model":        "nai-diffusion-5-full",
+			"prompt":       "a cat",
+			"forge_preset": "",
 		},
 	})
 	if err != nil {

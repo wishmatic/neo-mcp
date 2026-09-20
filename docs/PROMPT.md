@@ -50,8 +50,6 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 - When a call returns a URL, pass it straight to the image tools that take one instead of exporting and re-uploading
   anything.
-- To look at an image the user links to, or one another tool points at, call `inline` with its URL to get it back as an
-  image you can see.
 
 ## Credits
 

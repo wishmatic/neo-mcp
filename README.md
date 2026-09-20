@@ -19,8 +19,6 @@ Note that the only version of Forge we support is
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
   foreground and produce a padded square, which is handy for logo generation.
-- `inline` fetches an image from any URL and returns it inline as an MCP image block, downscaled and re-encoded to
-  WebP, so a vision-capable model can read an image it was given a link to.
 - Generated images are written to local disk and returned as URLs served by this service. Set `PUBLIC_HOST` to the base
   URL clients use to reach it, and `FILES_DIR` for where files live (`/data/files` in Docker).
     - Stored files are unguessable and anonymous: anyone holding a URL can open the image, and nobody else can. There

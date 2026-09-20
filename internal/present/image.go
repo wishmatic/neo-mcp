@@ -45,19 +45,6 @@ func StoredImages(images [][]byte, urls []string) ([]mcp.Content, []AttachmentFa
 	return content, failures
 }
 
-// InlineImage presents an image fetched from url.
-func InlineImage(url string, image imgfmt.InlineImage) []mcp.Content {
-	return []mcp.Content{
-		&mcp.TextContent{Text: fmt.Sprintf("Inline image from %s (%s, %d bytes).", url, image.MediaType, len(image.Data))},
-		imageBlock(image),
-	}
-}
-
-// InlineImageFailure presents a fetched image that could not be prepared for the wire. The call still succeeds.
-func InlineImageFailure(url string, err error) []mcp.Content {
-	return []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Could not inline %s: %v", url, err)}}
-}
-
 // imageBlock annotates the image for both the user and the assistant, which is what lets a vision-capable model see it.
 func imageBlock(image imgfmt.InlineImage) *mcp.ImageContent {
 	return &mcp.ImageContent{

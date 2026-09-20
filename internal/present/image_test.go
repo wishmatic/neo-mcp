@@ -2,7 +2,6 @@ package present
 
 import (
 	"bytes"
-	"errors"
 	"image"
 	"image/color"
 	"image/png"
@@ -11,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 )
 
 func TestStoredImagesPairsURLsWithImages(t *testing.T) {
@@ -84,44 +82,6 @@ func TestStoredImagesWithoutImageData(t *testing.T) {
 	content, failures := StoredImages(nil, []string{"https://cdn.example.com/i/1.png"})
 	if len(content) != 1 || len(failures) != 0 {
 		t.Fatalf("content = %d, failures = %v, want the URL alone", len(content), failures)
-	}
-}
-
-func TestInlineImage(t *testing.T) {
-	image, err := imgfmt.Inline(testPNG(t), imgfmt.InlineMaxEdge, imgfmt.InlineMaxBytes)
-	if err != nil {
-		t.Fatalf("imgfmt.Inline() error: %v", err)
-	}
-
-	content := InlineImage("https://cdn.example.com/i/1.png", image)
-	if len(content) != 2 {
-		t.Fatalf("content = %d, want a caption and one image", len(content))
-	}
-
-	caption, ok := content[0].(*mcp.TextContent)
-	if !ok || !strings.Contains(caption.Text, "https://cdn.example.com/i/1.png") {
-		t.Fatalf("content[0] = %#v, want a caption naming the URL", content[0])
-	}
-
-	block, ok := content[1].(*mcp.ImageContent)
-	if !ok {
-		t.Fatalf("content[1] = %#v, want an image block", content[1])
-	}
-
-	if block.Annotations == nil || !slices.Equal(block.Annotations.Audience, []mcp.Role{RoleUser, RoleAssistant}) {
-		t.Errorf("audience = %+v, want [user assistant]", block.Annotations)
-	}
-}
-
-func TestInlineImageFailure(t *testing.T) {
-	content := InlineImageFailure("https://cdn.example.com/i/1.png", errors.New("boom"))
-	if len(content) != 1 {
-		t.Fatalf("content = %d, want a single note", len(content))
-	}
-
-	note, ok := content[0].(*mcp.TextContent)
-	if !ok || !strings.Contains(note.Text, "Could not inline") {
-		t.Fatalf("content[0] = %#v, want a failure note", content[0])
 	}
 }
 

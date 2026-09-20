@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
@@ -71,4 +72,22 @@ func TestToolRegistration(t *testing.T) {
 
 func zapNop() *zap.Logger {
 	return zap.NewNop()
+}
+
+func TestGenerationDescriptionsRequireDenoisingStrengthForUpscaling(t *testing.T) {
+	srv, err := New(Deps{
+		Log:       zapNop(),
+		Generator: imagegen.New(sdwebui.New("http://example.com", false), nil),
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	for _, name := range []string{"txt2img", "img2img"} {
+		desc := toolByName(t, srv, name).Description
+
+		if !strings.Contains(desc, "When HR upscaling is enabled, denoising_strength is required") {
+			t.Errorf("%s description %q does not state that HR upscaling requires denoising_strength", name, desc)
+		}
+	}
 }

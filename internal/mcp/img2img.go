@@ -26,7 +26,9 @@ func registerImg2Img(srv *mcp.Server, h *handlers) {
 		Name: "img2img",
 		Description: "Transform an existing image, via the local Stable Diffusion WebUI (Forge Neo) instance or " +
 			"via NovelAI when the model is a NovelAI model id. Downloads the input image from a URL (following redirects), " +
-			"then blocks until generation completes and returns the image.",
+			"then blocks until generation completes and returns the image. Hi-res (HR) second-pass upscaling is Forge only: " +
+			"NovelAI ignores the hr_ fields and returns the requested size. When HR upscaling is enabled, denoising_strength " +
+			"is required.",
 		InputSchema: img2imgSchema(h.defaultFormat),
 	}, h.img2img)
 }

@@ -76,8 +76,4 @@ func registerTools(srv *mcp.Server, h *handlers) {
 	if h.bgkillSvc.Enabled() {
 		registerBgkill(srv, h)
 	}
-
-	if h.resolver != nil {
-		registerInline(srv, h)
-	}
 }

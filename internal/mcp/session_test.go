@@ -45,3 +45,22 @@ func toolNames(t *testing.T, srv *mcp.Server) []string {
 
 	return names
 }
+
+func toolByName(t *testing.T, srv *mcp.Server, name string) *mcp.Tool {
+	t.Helper()
+
+	result, err := connectSession(t, srv).ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("ListTools() error: %v", err)
+	}
+
+	for _, tool := range result.Tools {
+		if tool.Name == name {
+			return tool
+		}
+	}
+
+	t.Fatalf("tool %q is not registered", name)
+
+	return nil
+}

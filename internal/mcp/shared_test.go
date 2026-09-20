@@ -34,6 +34,14 @@ func TestModelIsRequired(t *testing.T) {
 	}
 }
 
+func TestForgePresetIsRequired(t *testing.T) {
+	for name, s := range schemas() {
+		if !slices.Contains(s.Required, "forge_preset") {
+			t.Errorf("%s: forge_preset is not required", name)
+		}
+	}
+}
+
 func TestSchemasIncludeSharedFields(t *testing.T) {
 	shared := []string{
 		"model",
@@ -132,6 +140,27 @@ func TestModelDescriptionRoutesNovelAI(t *testing.T) {
 
 		if len(model.Enum) != 0 {
 			t.Errorf("%s: model enum = %v, want none", name, model.Enum)
+		}
+	}
+}
+
+func TestHiresFieldsAreForgeOnly(t *testing.T) {
+	for name, s := range schemas() {
+		fields := []string{"enable_hr", "hr_scale", "hr_upscaler", "hr_second_pass_steps", "hr_cfg"}
+		if name == "txt2img" {
+			fields = append(fields, "denoising_strength")
+		}
+
+		for _, field := range fields {
+			desc := s.Properties[field].Description
+
+			if !strings.HasPrefix(desc, "Forge only:") {
+				t.Errorf("%s: %s description %q does not start with Forge only", name, field, desc)
+			}
+
+			if !strings.Contains(desc, "ignored by NovelAI") {
+				t.Errorf("%s: %s description %q does not say NovelAI ignores it", name, field, desc)
+			}
 		}
 	}
 }

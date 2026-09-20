@@ -10,7 +10,7 @@ import (
 
 type generationInput struct {
 	Model       string `json:"model" jsonschema:"checkpoint (model) filename to load, or a NovelAI model id starting with nai-diffusion- for the NovelAI backend; the id is passed through as-is"`
-	ForgePreset string `json:"forge_preset,omitempty" jsonschema:"Forge UI preset; ignored by NovelAI"`
+	ForgePreset string `json:"forge_preset" jsonschema:"Forge UI preset; ignored by NovelAI"`
 
 	VAEAndTextModels []string `json:"vae_and_text_models,omitempty" jsonschema:"VAE and text encoder model filenames to load. Leave empty to use the defaults bundled with the checkpoint; ignored by NovelAI"`
 
@@ -27,11 +27,11 @@ type generationInput struct {
 
 	Seed int `json:"seed,omitempty" jsonschema:"random seed; use -1 for a random seed"`
 
-	EnableHR          bool    `json:"enable_hr,omitempty" jsonschema:"enable hi-res (HR) (second-pass) upscaling; ignored by NovelAI"`
-	HRScale           float64 `json:"hr_scale,omitempty" jsonschema:"if HR is enabled, the hi-res upscaling factor (e.g. 2 for 2x); ignored by NovelAI"`
-	HRUpscaler        string  `json:"hr_upscaler,omitempty" jsonschema:"if HR is enabled, the hi-res upscaler to use. Leave empty to disable upscaling; ignored by NovelAI"`
-	HRSecondPassSteps int     `json:"hr_second_pass_steps,omitempty" jsonschema:"if HR is enabled, the number of steps for the hi-res second pass; ignored by NovelAI"`
-	HRCFGScale        float64 `json:"hr_cfg,omitempty" jsonschema:"if HR is enabled, the CFG scale for the hi-res second pass; ignored by NovelAI"`
+	EnableHR          bool    `json:"enable_hr,omitempty" jsonschema:"Forge only: enable hi-res (HR) (second-pass) upscaling; ignored by NovelAI, as are the other hr_ fields"`
+	HRScale           float64 `json:"hr_scale,omitempty" jsonschema:"Forge only: if HR is enabled, the hi-res upscaling factor (e.g. 2 for 2x); ignored by NovelAI"`
+	HRUpscaler        string  `json:"hr_upscaler,omitempty" jsonschema:"Forge only: if HR is enabled, the hi-res upscaler to use. Leave empty to disable upscaling; ignored by NovelAI"`
+	HRSecondPassSteps int     `json:"hr_second_pass_steps,omitempty" jsonschema:"Forge only: if HR is enabled, the number of steps for the hi-res second pass; ignored by NovelAI"`
+	HRCFGScale        float64 `json:"hr_cfg,omitempty" jsonschema:"Forge only: if HR is enabled, the CFG scale for the hi-res second pass; ignored by NovelAI"`
 
 	formatInput
 }

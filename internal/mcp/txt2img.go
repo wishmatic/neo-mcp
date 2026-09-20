@@ -14,14 +14,16 @@ import (
 type txt2imgInput struct {
 	generationInput
 
-	DenoisingStrength float64 `json:"denoising_strength,omitempty" jsonschema:"if HR is enabled, the denoising strength for the hi-res second pass"`
+	DenoisingStrength float64 `json:"denoising_strength,omitempty" jsonschema:"Forge only: if HR is enabled, the denoising strength for the hi-res second pass; ignored by NovelAI"`
 }
 
 func registerTxt2Img(srv *mcp.Server, h *handlers) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "txt2img",
 		Description: "Generate images synchronously via the local Stable Diffusion WebUI (Forge Neo) instance, " +
-			"or via NovelAI when the model is a NovelAI model id. Blocks until generation completes and returns the image(s).",
+			"or via NovelAI when the model is a NovelAI model id. Blocks until generation completes and returns the image(s). " +
+			"Hi-res (HR) second-pass upscaling is Forge only: NovelAI ignores the hr_ fields and returns the requested size. " +
+			"When HR upscaling is enabled, denoising_strength is required.",
 		InputSchema: txt2imgSchema(h.defaultFormat),
 	}, h.txt2img)
 }
