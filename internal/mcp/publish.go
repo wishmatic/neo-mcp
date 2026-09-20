@@ -16,7 +16,6 @@ func (h *handlers) publishImages(
 	images [][]byte,
 	nsfw bool,
 	format imgfmt.Format,
-	forAssistant bool,
 ) (*mcp.CallToolResult, generationOutput, error) {
 	converted, err := convertImages(images, format)
 	if err != nil {
@@ -28,7 +27,7 @@ func (h *handlers) publishImages(
 		return nil, generationOutput{}, err
 	}
 
-	content, failures := present.StoredImages(images, urls, forAssistant)
+	content, failures := present.StoredImages(images, urls)
 	for _, failure := range failures {
 		h.log.Warn("inline image encoding failed", zap.Int("image", failure.Index), zap.Error(failure.Err))
 	}

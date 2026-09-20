@@ -42,7 +42,6 @@ func (h *handlers) txt2img(
 		zap.String("tool", "txt2img"),
 		zap.String("provider", provider),
 		zap.String("format", format.String()),
-		zap.Bool("for_assistant", in.ForAssistant),
 		zap.String("model", in.Model),
 		zap.String("forge_preset", in.ForgePreset),
 		zap.Strings("vae_and_text_models", in.VAEAndTextModels),
@@ -77,7 +76,7 @@ func (h *handlers) txt2img(
 
 	h.log.Info("txt2img generation finished", zap.Int("images", len(images)))
 
-	result, out, err := h.publishImages(ctx, "txt2img", images, in.NSFW, format, in.ForAssistant)
+	result, out, err := h.publishImages(ctx, "txt2img", images, in.NSFW, format)
 	if err != nil {
 		return nil, generationOutput{}, err
 	}
@@ -100,7 +99,6 @@ func txt2imgSchema(def imgfmt.Format) *jsonschema.Schema {
 	setDefault(s.Properties, "sampler_name", "")
 	setDefault(s.Properties, "scheduler", "")
 	setDefault(s.Properties, "nsfw", false)
-	setAudienceSchema(s)
 	setFormatSchema(s, def)
 
 	return s

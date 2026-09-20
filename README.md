@@ -17,8 +17,7 @@ Note that the only version of Forge we support is
   and the `format` input overrides it for a single call. Transparency is kept for every format except JPEG, which
   composites onto white.
 - Every call to an image tool stores the image, returns its URL as text, and attaches the image as an MCP image block.
-  Image blocks carry an `audience`, which is the user's by default; set `for_assistant` true to add the assistant so a
-  vision-capable model can see the result.
+  Image blocks are in the user's and the assistant's audience, so a vision-capable model can see the result.
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
   foreground and produce a padded square, which is handy for logo generation.

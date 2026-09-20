@@ -38,8 +38,7 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 - {{STYLE_NOTES}}, for example {{STYLE_EXAMPLE}}.
 - Images come back as WebP unless the server sets `OUTPUT_FORMAT`; pass `format` (`png`, `jpeg`, `jxl`, or `webp`) only
   when the user wants a different file type.
-- Every image call returns the image inline with its URL as text, in the user's audience. Set `for_assistant` true
-  (default false) to put the image in your audience too, so you can see it.
+- Every image call returns the image inline with its URL as text, in the user's and your audience, so you can see it.
 
 ## Prompting
 

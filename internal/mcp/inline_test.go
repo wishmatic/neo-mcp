@@ -61,8 +61,8 @@ func TestInlineCallTool(t *testing.T) {
 		t.Errorf("mime type = %q, want image/webp", img.MIMEType)
 	}
 
-	if img.Annotations == nil || !slices.Equal(img.Annotations.Audience, []mcp.Role{present.RoleAssistant, present.RoleUser}) {
-		t.Errorf("audience = %+v, want [assistant user]", img.Annotations)
+	if img.Annotations == nil || !slices.Equal(img.Annotations.Audience, []mcp.Role{present.RoleUser, present.RoleAssistant}) {
+		t.Errorf("audience = %+v, want [user assistant]", img.Annotations)
 	}
 
 	if _, format, err := image.Decode(bytes.NewReader(img.Data)); err != nil || format != "webp" {

@@ -152,10 +152,9 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "bgkill",
 		Arguments: map[string]any{
-			"model_name":    bgkill.Models[0],
-			"image_url":     images.URL + "/x.png",
-			"format":        "jpeg",
-			"for_assistant": false,
+			"model_name": bgkill.Models[0],
+			"image_url":  images.URL + "/x.png",
+			"format":     "jpeg",
 		},
 	})
 	if err != nil {

@@ -20,9 +20,7 @@ type AttachmentFailure struct {
 // StoredImages presents stored images as [text(url), image, ...], one text block per image immediately before it.
 //
 // An image that cannot be prepared keeps its URL line and yields a note in place of its image block.
-//
-// `forAssistant` adds the assistant to each image's audience, which is what lets a vision-capable model see it.
-func StoredImages(images [][]byte, urls []string, forAssistant bool) ([]mcp.Content, []AttachmentFailure) {
+func StoredImages(images [][]byte, urls []string) ([]mcp.Content, []AttachmentFailure) {
 	content := make([]mcp.Content, 0, 2*len(urls))
 	var failures []AttachmentFailure
 
@@ -41,19 +39,17 @@ func StoredImages(images [][]byte, urls []string, forAssistant bool) ([]mcp.Cont
 			continue
 		}
 
-		content = append(content, imageBlock(image, forAssistant))
+		content = append(content, imageBlock(image))
 	}
 
 	return content, failures
 }
 
 // InlineImage presents an image fetched from url.
-//
-// Its block is always in the assistant audience as well as the user's as that's the whole point.
 func InlineImage(url string, image imgfmt.InlineImage) []mcp.Content {
 	return []mcp.Content{
 		&mcp.TextContent{Text: fmt.Sprintf("Inline image from %s (%s, %d bytes).", url, image.MediaType, len(image.Data))},
-		imageBlock(image, true),
+		imageBlock(image),
 	}
 }
 
@@ -62,20 +58,13 @@ func InlineImageFailure(url string, err error) []mcp.Content {
 	return []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Could not inline %s: %v", url, err)}}
 }
 
-func imageBlock(image imgfmt.InlineImage, forAssistant bool) *mcp.ImageContent {
+// imageBlock annotates the image for both the user and the assistant, which is what lets a vision-capable model see it.
+func imageBlock(image imgfmt.InlineImage) *mcp.ImageContent {
 	return &mcp.ImageContent{
 		Data:        image.Data,
 		MIMEType:    image.MediaType,
-		Annotations: imageAudience(forAssistant),
+		Annotations: &mcp.Annotations{Audience: []mcp.Role{RoleUser, RoleAssistant}},
 	}
-}
-
-func imageAudience(forAssistant bool) *mcp.Annotations {
-	if forAssistant {
-		return &mcp.Annotations{Audience: []mcp.Role{RoleAssistant, RoleUser}}
-	}
-
-	return &mcp.Annotations{Audience: []mcp.Role{RoleUser}}
 }
 
 func attachmentFailureNote(index int, err error) string {

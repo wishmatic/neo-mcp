@@ -55,7 +55,6 @@ func TestSchemasIncludeSharedFields(t *testing.T) {
 		"hr_cfg",
 		"format",
 		"nsfw",
-		"for_assistant",
 	}
 
 	for name, s := range schemas() {
@@ -120,31 +119,6 @@ func TestFormatFlagSchemaFollowsConfiguredDefault(t *testing.T) {
 			if string(prop.Default) != want {
 				t.Errorf("%s with default %s: format default = %s, want %s", tool, name, prop.Default, want)
 			}
-		}
-	}
-}
-
-func TestForAssistantFlagSchema(t *testing.T) {
-	withFlag := schemas()
-	withFlag["bgkill"] = bgkillSchema(imgfmt.Default)
-
-	for tool, s := range withFlag {
-		prop := s.Properties["for_assistant"]
-		if prop == nil {
-			t.Errorf("%s: for_assistant property is missing", tool)
-			continue
-		}
-
-		if prop.Type != "boolean" {
-			t.Errorf("%s: for_assistant type = %q, want boolean", tool, prop.Type)
-		}
-
-		if string(prop.Default) != "false" {
-			t.Errorf("%s: for_assistant default = %s, want false", tool, prop.Default)
-		}
-
-		if slices.Contains(s.Required, "for_assistant") {
-			t.Errorf("%s: for_assistant must not be required", tool)
 		}
 	}
 }

@@ -15,7 +15,7 @@ import (
 )
 
 func TestStoredImagesPairsURLsWithImages(t *testing.T) {
-	content, failures := StoredImages([][]byte{testPNG(t)}, []string{"https://cdn.example.com/i/1.png"}, false)
+	content, failures := StoredImages([][]byte{testPNG(t)}, []string{"https://cdn.example.com/i/1.png"})
 	if len(failures) != 0 {
 		t.Fatalf("failures = %v, want none", failures)
 	}
@@ -44,22 +44,15 @@ func TestStoredImagesPairsURLsWithImages(t *testing.T) {
 }
 
 func TestStoredImagesAudience(t *testing.T) {
-	tests := map[bool][]mcp.Role{
-		false: {RoleUser},
-		true:  {RoleAssistant, RoleUser},
+	content, _ := StoredImages([][]byte{testPNG(t)}, []string{"https://cdn.example.com/i/1.png"})
+
+	img, ok := content[1].(*mcp.ImageContent)
+	if !ok {
+		t.Fatalf("content[1] = %#v, want an image block", content[1])
 	}
 
-	for forAssistant, want := range tests {
-		content, _ := StoredImages([][]byte{testPNG(t)}, []string{"https://cdn.example.com/i/1.png"}, forAssistant)
-
-		img, ok := content[1].(*mcp.ImageContent)
-		if !ok {
-			t.Fatalf("content[1] = %#v, want an image block", content[1])
-		}
-
-		if img.Annotations == nil || !slices.Equal(img.Annotations.Audience, want) {
-			t.Errorf("StoredImages(forAssistant=%v) audience = %v, want %v", forAssistant, img.Annotations, want)
-		}
+	if img.Annotations == nil || !slices.Equal(img.Annotations.Audience, []mcp.Role{RoleUser, RoleAssistant}) {
+		t.Errorf("audience = %+v, want [user assistant]", img.Annotations)
 	}
 }
 
@@ -67,7 +60,6 @@ func TestStoredImagesFailsSoft(t *testing.T) {
 	content, failures := StoredImages(
 		[][]byte{[]byte("not an image"), testPNG(t)},
 		[]string{"https://cdn.example.com/i/1.png", "https://cdn.example.com/i/2.png"},
-		false,
 	)
 
 	if len(failures) != 1 || failures[0].Index != 1 {
@@ -89,7 +81,7 @@ func TestStoredImagesFailsSoft(t *testing.T) {
 }
 
 func TestStoredImagesWithoutImageData(t *testing.T) {
-	content, failures := StoredImages(nil, []string{"https://cdn.example.com/i/1.png"}, false)
+	content, failures := StoredImages(nil, []string{"https://cdn.example.com/i/1.png"})
 	if len(content) != 1 || len(failures) != 0 {
 		t.Fatalf("content = %d, failures = %v, want the URL alone", len(content), failures)
 	}
@@ -116,8 +108,8 @@ func TestInlineImage(t *testing.T) {
 		t.Fatalf("content[1] = %#v, want an image block", content[1])
 	}
 
-	if block.Annotations == nil || !slices.Equal(block.Annotations.Audience, []mcp.Role{RoleAssistant, RoleUser}) {
-		t.Errorf("audience = %+v, want [assistant user]", block.Annotations)
+	if block.Annotations == nil || !slices.Equal(block.Annotations.Audience, []mcp.Role{RoleUser, RoleAssistant}) {
+		t.Errorf("audience = %+v, want [user assistant]", block.Annotations)
 	}
 }
 

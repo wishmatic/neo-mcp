@@ -36,15 +36,10 @@ type generationInput struct {
 	HRCFGScale        float64 `json:"hr_cfg,omitempty" jsonschema:"if HR is enabled, the CFG scale for the hi-res second pass; ignored by NovelAI"`
 
 	formatInput
-	audienceInput
 }
 
 type formatInput struct {
 	Format string `json:"format,omitempty" jsonschema:"output image format: png, jpeg, jxl (JPEG XL), or webp; defaults to the server's configured output format"`
-}
-
-type audienceInput struct {
-	ForAssistant bool `json:"for_assistant,omitempty" jsonschema:"set true to include the assistant in the image's audience so you (the model) can see the generated result; defaults to false, which keeps the image in the user's audience only"`
 }
 
 // generationOutput is the structured output shared by the image tools. URLs lists the stored images for structured
@@ -61,10 +56,6 @@ func setDefault(props map[string]*jsonschema.Schema, name string, value any) {
 	}
 
 	props[name].Default = raw
-}
-
-func setAudienceSchema(s *jsonschema.Schema) {
-	setDefault(s.Properties, "for_assistant", false)
 }
 
 func setFormatSchema(s *jsonschema.Schema, def imgfmt.Format) {

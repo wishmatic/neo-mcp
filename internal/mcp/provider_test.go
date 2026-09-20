@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -173,7 +172,7 @@ func numberField(t *testing.T, params map[string]any, key string) float64 {
 	return value
 }
 
-func TestTxt2ImgCallToolDefaultsToUserAudience(t *testing.T) {
+func TestTxt2ImgCallToolImageAudience(t *testing.T) {
 	backend := newNovelAIBackend(t, &requestLog{})
 
 	srv, err := New(Deps{
@@ -198,11 +197,15 @@ func TestTxt2ImgCallToolDefaultsToUserAudience(t *testing.T) {
 	}
 
 	if result.IsError {
-		t.Fatalf("omitting for_assistant was rejected: %+v", result.Content)
+		t.Fatalf("CallTool() tool error: %+v", result.Content)
 	}
 
 	if len(result.Content) != 2 {
 		t.Fatalf("content = %d, want a URL and one image", len(result.Content))
+	}
+
+	if _, ok := result.Content[0].(*mcp.TextContent); !ok {
+		t.Fatalf("content[0] = %#v, want the URL as text", result.Content[0])
 	}
 
 	img, ok := result.Content[1].(*mcp.ImageContent)
@@ -210,72 +213,16 @@ func TestTxt2ImgCallToolDefaultsToUserAudience(t *testing.T) {
 		t.Fatalf("content[1] = %#v, want an image block", result.Content[1])
 	}
 
-	if img.Annotations == nil || !slices.Equal(img.Annotations.Audience, []mcp.Role{present.RoleUser}) {
-		t.Errorf("audience = %+v, want [user]", img.Annotations)
-	}
-}
-
-func TestTxt2ImgCallToolImageAudience(t *testing.T) {
-	tests := map[bool][]mcp.Role{
-		false: {present.RoleUser},
-		true:  {present.RoleAssistant, present.RoleUser},
+	if img.MIMEType != "image/webp" {
+		t.Errorf("mime type = %q, want image/webp", img.MIMEType)
 	}
 
-	for forAssistant, want := range tests {
-		t.Run(strconv.FormatBool(forAssistant), func(t *testing.T) {
-			backend := newNovelAIBackend(t, &requestLog{})
+	if img.Annotations == nil || !slices.Equal(img.Annotations.Audience, []mcp.Role{present.RoleUser, present.RoleAssistant}) {
+		t.Errorf("audience = %+v, want [user assistant]", img.Annotations)
+	}
 
-			srv, err := New(Deps{
-				Log:       zapNop(),
-				Generator: imagegen.New(nil, backend),
-				Publisher: newTestPublisher(t),
-				NovelAI:   backend,
-			})
-			if err != nil {
-				t.Fatalf("New() error: %v", err)
-			}
-
-			result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
-				Name: "txt2img",
-				Arguments: map[string]any{
-					"model":         "nai-diffusion-5-full",
-					"prompt":        "a cat",
-					"for_assistant": forAssistant,
-				},
-			})
-			if err != nil {
-				t.Fatalf("CallTool() error: %v", err)
-			}
-
-			if result.IsError {
-				t.Fatalf("CallTool() tool error: %+v", result.Content)
-			}
-
-			if len(result.Content) != 2 {
-				t.Fatalf("content = %d, want a URL and one image", len(result.Content))
-			}
-
-			if _, ok := result.Content[0].(*mcp.TextContent); !ok {
-				t.Fatalf("content[0] = %#v, want the URL as text", result.Content[0])
-			}
-
-			img, ok := result.Content[1].(*mcp.ImageContent)
-			if !ok {
-				t.Fatalf("content[1] = %#v, want an image block", result.Content[1])
-			}
-
-			if img.MIMEType != "image/webp" {
-				t.Errorf("mime type = %q, want image/webp", img.MIMEType)
-			}
-
-			if img.Annotations == nil || !slices.Equal(img.Annotations.Audience, want) {
-				t.Errorf("audience = %+v, want %v", img.Annotations, want)
-			}
-
-			if _, format, err := image.Decode(bytes.NewReader(img.Data)); err != nil || format != "webp" {
-				t.Errorf("decode inline image = %q, %v, want webp", format, err)
-			}
-		})
+	if _, format, err := image.Decode(bytes.NewReader(img.Data)); err != nil || format != "webp" {
+		t.Errorf("decode inline image = %q, %v, want webp", format, err)
 	}
 }
 

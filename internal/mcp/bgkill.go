@@ -13,7 +13,6 @@ import (
 
 type bgkillInput struct {
 	formatInput
-	audienceInput
 
 	ModelName string `json:"model_name" jsonschema:"BiRefNet model to load"`
 
@@ -49,7 +48,6 @@ func (h *handlers) bgkill(
 	h.log.Debug("tool called",
 		zap.String("tool", "bgkill"),
 		zap.String("format", format.String()),
-		zap.Bool("for_assistant", in.ForAssistant),
 		zap.String("model_name", in.ModelName),
 		zap.String("image_url", in.ImageURL),
 		zap.Bool("full_mode", in.IsFullMode),
@@ -77,7 +75,7 @@ func (h *handlers) bgkill(
 		return nil, generationOutput{}, h.generationFailure(ctx, "bgkill", err)
 	}
 
-	return h.publishImages(ctx, "bgkill", [][]byte{out}, false, format, in.ForAssistant)
+	return h.publishImages(ctx, "bgkill", [][]byte{out}, false, format)
 }
 
 func bgkillRequest(in bgkillInput, image []byte) bgkill.Request {
@@ -106,7 +104,6 @@ func bgkillSchema(def imgfmt.Format) *jsonschema.Schema {
 	setDefault(s.Properties, "full_mode", false)
 	setDefault(s.Properties, "crop", false)
 	setDefault(s.Properties, "square", false)
-	setAudienceSchema(s)
 	setFormatSchema(s, def)
 
 	return s
