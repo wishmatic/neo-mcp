@@ -67,7 +67,11 @@ func TestImg2ImgRequest(t *testing.T) {
 		t.Errorf("extra_noise_seed = %v, want 99", got)
 	}
 
-	for _, key := range []string{"stream", "sm", "sm_dyn"} {
+	if params["stream"] != streamMsgpack {
+		t.Errorf("stream = %v, want %s", params["stream"], streamMsgpack)
+	}
+
+	for _, key := range []string{"sm", "sm_dyn"} {
 		if _, ok := params[key]; ok {
 			t.Errorf("%s is present, want it absent", key)
 		}

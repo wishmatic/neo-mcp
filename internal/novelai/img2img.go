@@ -36,6 +36,7 @@ func (c *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, err
 		Scale:          req.Scale,
 		Seed:           c.resolveSeed(req.Seed),
 	})
+	params["stream"] = streamMsgpack
 	params["image"] = base64.StdEncoding.EncodeToString(req.InitImage)
 	params["strength"] = req.Strength
 	params["noise"] = req.Noise

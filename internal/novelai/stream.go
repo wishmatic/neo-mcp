@@ -13,6 +13,7 @@ import (
 const (
 	finalEventType = "final"
 	maxFrameBytes  = 64 << 20
+	streamMsgpack  = "msgpack"
 )
 
 var errNoFinalImage = errors.New("novelai stream ended without producing an image")
