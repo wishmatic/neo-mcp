@@ -1,5 +1,21 @@
 # AGENTS.md
 
+## General Flow
+
+- Do the work first. Don't research in depth, or really at all.
+- Did it work? Even if it did, now verify your method, including research.
+- Iterate repeatedly, biasing to doing work first before verifying.
+- Then, in a polish phase, _then_ you can do a lot more research to ensure you did the right thing.
+
+Do not make the user wait for a long research period. Allow making the codebase broken temporarily, and allow making
+exploratory mistakes so long as they're cleaned up later.
+
+Do not read any external files such as module code until you've thoroughly read the internal code first.
+
+Never "double check the diff" or read git status, git history, unless you have a really good reason.
+
+Always assume the user is working in the same space as you.
+
 ## PLAN.md files
 
 Any "large" work needs an all-caps `_PLAN.md` suffixed file in `docs/plans`. "Large" is defined as anything that has
@@ -19,6 +35,10 @@ test everything for confidence. Some tests will need to be completed by the huma
 
 Move plans to done when they are done, even without full human verification completed. When AC are finished, you must
 also mark those too as complete.
+
+## Tool Calls
+
+Do not needlessly call `git` commands just to check history. Only when absolutely necessary.
 
 ## Output
 
