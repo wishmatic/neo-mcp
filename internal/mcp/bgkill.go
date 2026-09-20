@@ -24,7 +24,9 @@ type bgkillInput struct {
 
 	IsSquare bool `json:"square,omitempty" jsonschema:"make the cropped output square by centering the foreground on a transparent canvas; implies crop"`
 
-	Padding *int `json:"padding,omitempty" jsonschema:"transparent padding in pixels added around the cropped foreground; defaults to 32 when the output is square"`
+	IsCircle bool `json:"circle,omitempty" jsonschema:"cut the output into the circle inscribed in the square crop; implies square"`
+
+	Padding *int `json:"padding,omitempty" jsonschema:"transparent padding in pixels added around the cropped foreground; defaults to 32 for a square and to none for a circle"`
 }
 
 func registerBgkill(srv *mcp.Server, h *handlers) {
@@ -53,6 +55,7 @@ func (h *handlers) bgkill(
 		zap.Bool("full_mode", in.IsFullMode),
 		zap.Bool("crop", in.IsCrop),
 		zap.Bool("square", in.IsSquare),
+		zap.Bool("circle", in.IsCircle),
 	)
 
 	image, err := h.resolver.Fetch(ctx, in.ImageURL)
@@ -85,6 +88,7 @@ func bgkillRequest(in bgkillInput, image []byte) bgkill.Request {
 		IsFullMode: in.IsFullMode,
 		IsCrop:     in.IsCrop,
 		IsSquare:   in.IsSquare,
+		IsCircle:   in.IsCircle,
 		Padding:    in.Padding,
 	}
 }
@@ -104,6 +108,7 @@ func bgkillSchema(def imgfmt.Format) *jsonschema.Schema {
 	setDefault(s.Properties, "full_mode", false)
 	setDefault(s.Properties, "crop", false)
 	setDefault(s.Properties, "square", false)
+	setDefault(s.Properties, "circle", false)
 	setFormatSchema(s, def)
 
 	return s

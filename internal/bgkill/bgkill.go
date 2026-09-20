@@ -30,6 +30,7 @@ type Request struct {
 	IsFullMode bool
 	IsCrop     bool
 	IsSquare   bool
+	IsCircle   bool
 	Padding    *int
 }
 
@@ -55,7 +56,12 @@ func (s *Service) Remove(ctx context.Context, req Request) ([]byte, error) {
 		return nil, err
 	}
 
-	opts, ok := crop.OptionsFor(req.IsCrop, req.IsSquare, req.Padding)
+	opts, ok := crop.OptionsFor(crop.Request{
+		IsCrop:   req.IsCrop,
+		IsSquare: req.IsSquare,
+		IsCircle: req.IsCircle,
+		Padding:  req.Padding,
+	})
 	if !ok {
 		return foreground, nil
 	}

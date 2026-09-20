@@ -14,6 +14,9 @@ type Options struct {
 
 	IsSquare bool
 
+	// IsCircle cuts the square output into the circle inscribed in it. It implies IsSquare.
+	IsCircle bool
+
 	// Padding is the number of transparent pixels added on each side of the content.
 	Padding int
 }
@@ -69,18 +72,21 @@ func contentBounds(src image.Image, threshold uint8) (image.Rectangle, error) {
 
 func render(src image.Image, content image.Rectangle, opts Options) *image.RGBA {
 	width, height := content.Dx(), content.Dy()
+	size := image.Pt(width+2*opts.Padding, height+2*opts.Padding)
+	offset := image.Pt(opts.Padding, opts.Padding)
 
 	if opts.IsSquare {
 		side := max(width, height) + 2*opts.Padding
-		dst := image.NewRGBA(image.Rect(0, 0, side, side))
-		offset := image.Pt((side-width)/2, (side-height)/2)
-		drawContent(dst, src, content, offset)
-
-		return dst
+		size = image.Pt(side, side)
+		offset = image.Pt((side-width)/2, (side-height)/2)
 	}
 
-	dst := image.NewRGBA(image.Rect(0, 0, width+2*opts.Padding, height+2*opts.Padding))
-	drawContent(dst, src, content, image.Pt(opts.Padding, opts.Padding))
+	dst := image.NewRGBA(image.Rect(0, 0, size.X, size.Y))
+	drawContent(dst, src, content, offset)
+
+	if opts.IsCircle {
+		applyCircle(dst)
+	}
 
 	return dst
 }

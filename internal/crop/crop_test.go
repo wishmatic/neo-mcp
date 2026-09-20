@@ -47,6 +47,12 @@ func mustCrop(t *testing.T, img image.Image, opts Options) image.Image {
 	return decoded
 }
 
+func alphaAt(img image.Image, x, y int) uint8 {
+	_, _, _, alpha := img.At(x, y).RGBA()
+
+	return uint8(alpha >> 8)
+}
+
 func opaqueAt(img image.Image, x, y int) bool {
 	_, _, _, alpha := img.At(x, y).RGBA()
 
@@ -160,6 +166,65 @@ func TestToContentSquareWithPadding(t *testing.T) {
 
 	if !transparentAt(out, 1, 1) || !transparentAt(out, 4, 1) || !transparentAt(out, 2, 0) {
 		t.Error("expected transparent padding around the content")
+	}
+}
+
+func TestToContentCircle(t *testing.T) {
+	src := newImage(20, 20)
+	fill(src, image.Rect(2, 2, 18, 18), 255)
+
+	out := mustCrop(t, src, Options{IsSquare: true, IsCircle: true})
+
+	if got, want := out.Bounds(), image.Rect(0, 0, 16, 16); got != want {
+		t.Fatalf("bounds = %v, want %v", got, want)
+	}
+
+	for _, p := range []image.Point{{0, 0}, {15, 0}, {0, 15}, {15, 15}} {
+		if !transparentAt(out, p.X, p.Y) {
+			t.Errorf("corner %v is visible, want it cut off by the circle", p)
+		}
+	}
+
+	for _, p := range []image.Point{{8, 8}, {0, 7}, {0, 8}, {7, 0}} {
+		if !opaqueAt(out, p.X, p.Y) {
+			t.Errorf("pixel %v is not opaque, want it inside the circle", p)
+		}
+	}
+
+	want := color.NRGBA{R: 200, G: 100, B: 50, A: 255}
+	if got := color.NRGBAModel.Convert(out.At(8, 8)).(color.NRGBA); got != want {
+		t.Errorf("pixel = %v, want %v", got, want)
+	}
+
+	if alpha := alphaAt(out, 2, 2); alpha == 0 || alpha == 255 {
+		t.Errorf("edge pixel alpha = %d, want a partial alpha for an antialiased outline", alpha)
+	}
+
+	if got, want := alphaAt(out, 2, 2), alphaAt(out, 13, 13); got != want {
+		t.Errorf("alpha = %d and %d, want the circle to be symmetric", got, want)
+	}
+}
+
+func TestToContentCircleWithPadding(t *testing.T) {
+	src := newImage(6, 6)
+	fill(src, image.Rect(1, 1, 5, 5), 255)
+
+	out := mustCrop(t, src, Options{IsSquare: true, IsCircle: true, Padding: 2})
+
+	if got, want := out.Bounds(), image.Rect(0, 0, 8, 8); got != want {
+		t.Fatalf("bounds = %v, want %v", got, want)
+	}
+
+	if !transparentAt(out, 0, 0) || !transparentAt(out, 7, 0) {
+		t.Error("expected the circle to leave the corners transparent")
+	}
+
+	for y := 2; y < 6; y++ {
+		for x := 2; x < 6; x++ {
+			if !opaqueAt(out, x, y) {
+				t.Errorf("pixel (%d, %d) was cut off, want the padding to clear the circle", x, y)
+			}
+		}
 	}
 }
 

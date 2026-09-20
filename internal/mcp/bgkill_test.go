@@ -17,12 +17,14 @@ func TestBgkillRequestMapsInput(t *testing.T) {
 		IsFullMode: true,
 		IsCrop:     true,
 		IsSquare:   true,
+		IsCircle:   true,
 		Padding:    &five,
 	}
 
 	got := bgkillRequest(in, []byte("image"))
 
-	if got.ModelName != "Portrait" || got.IsFullMode != true || got.IsCrop != true || got.IsSquare != true {
+	if got.ModelName != "Portrait" || got.IsFullMode != true || got.IsCrop != true || got.IsSquare != true ||
+		got.IsCircle != true {
 		t.Errorf("request = %+v, want the input flags copied", got)
 	}
 
@@ -61,7 +63,7 @@ func TestBgkillSchema(t *testing.T) {
 func TestBgkillCropSchema(t *testing.T) {
 	s := bgkillSchema(imgfmt.Default)
 
-	for _, field := range []string{"full_mode", "crop", "square"} {
+	for _, field := range []string{"full_mode", "crop", "square", "circle"} {
 		prop := s.Properties[field]
 		if prop == nil {
 			t.Fatalf("bgkill: %q property is missing", field)

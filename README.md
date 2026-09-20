@@ -18,7 +18,7 @@ Note that the only version of Forge we support is
   Image blocks are in the user's and the assistant's audience, so a vision-capable model can see the result.
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
-  foreground and produce a padded square, which is handy for logo generation.
+  foreground, produce a padded square, or cut the result into a circle, which is handy for logos and avatars.
 - Generated images are written to local disk and returned as URLs served by this service. Set `PUBLIC_HOST` to the base
   URL clients use to reach it, and `FILES_DIR` for where files live (`/data/files` in Docker).
     - Stored files are unguessable and anonymous: anyone holding a URL can open the image, and nobody else can. There
