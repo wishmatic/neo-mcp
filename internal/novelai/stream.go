@@ -1,65 +1,51 @@
 package novelai
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/base64"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
-
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 const (
-	finalEventType = "final"
-	maxFrameBytes  = 64 << 20
-	streamMsgpack  = "msgpack"
+	finalEventType   = "final"
+	errorEventType   = "error"
+	maxFrameBytes    = 64 << 20
+	streamMsgpack    = "msgpack"
+	streamProbeBytes = 16
 )
 
 var errNoFinalImage = errors.New("novelai stream ended without producing an image")
 
 type streamEvent struct {
-	EventType string `msgpack:"event_type"`
-	Image     any    `msgpack:"image"`
+	EventType string `msgpack:"event_type" json:"event_type"`
+	Image     any    `msgpack:"image" json:"image"`
+	Message   string `msgpack:"message" json:"message"`
 }
 
+// decodeFinalImage reads NovelAI's generation stream and returns the first final image. The stream is framed as
+// length-prefixed msgpack unless the server picks Server-Sent Events instead, so the framing is detected up front.
 func decodeFinalImage(r io.Reader) ([]byte, error) {
-	var header [4]byte
+	buffered := bufio.NewReader(r)
 
-	for {
-		if _, err := io.ReadFull(r, header[:]); err != nil {
-			if errors.Is(err, io.EOF) {
-				return nil, errNoFinalImage
-			}
-
-			return nil, fmt.Errorf("novelai: read frame header: %w", err)
-		}
-
-		size := int(binary.BigEndian.Uint32(header[:]))
-		if size > maxFrameBytes {
-			return nil, fmt.Errorf("novelai: frame length %d exceeds the %d byte cap", size, maxFrameBytes)
-		}
-
-		frame := make([]byte, size)
-		if _, err := io.ReadFull(r, frame); err != nil {
-			return nil, fmt.Errorf("novelai: read frame body: %w", err)
-		}
-
-		image, ok, err := decodeFrame(frame)
-		if err != nil {
-			return nil, err
-		}
-
-		if ok {
-			return image, nil
-		}
+	if isSSEStream(buffered) {
+		return decodeSSEStream(buffered)
 	}
+
+	return decodeMsgpackStream(buffered)
 }
 
-func decodeFrame(frame []byte) ([]byte, bool, error) {
-	var event streamEvent
-	if err := msgpack.Unmarshal(frame, &event); err != nil {
-		return nil, false, fmt.Errorf("novelai: decode frame: %w", err)
+func isSSEStream(r *bufio.Reader) bool {
+	head, _ := r.Peek(streamProbeBytes)
+
+	return bytes.Contains(head, []byte("data:")) || bytes.Contains(head, []byte("event:"))
+}
+
+func finalImage(event streamEvent) ([]byte, bool, error) {
+	if event.EventType == errorEventType {
+		return nil, false, fmt.Errorf("novelai: generation failed: %s", event.Message)
 	}
 
 	if event.EventType != finalEventType {
