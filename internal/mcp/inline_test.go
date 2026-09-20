@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/present"
 )
 
 func newInlineSession(t *testing.T) *mcp.ClientSession {
@@ -60,7 +61,7 @@ func TestInlineCallTool(t *testing.T) {
 		t.Errorf("mime type = %q, want image/webp", img.MIMEType)
 	}
 
-	if img.Annotations == nil || !slices.Equal(img.Annotations.Audience, []mcp.Role{roleAssistant, roleUser}) {
+	if img.Annotations == nil || !slices.Equal(img.Annotations.Audience, []mcp.Role{present.RoleAssistant, present.RoleUser}) {
 		t.Errorf("audience = %+v, want [assistant user]", img.Annotations)
 	}
 

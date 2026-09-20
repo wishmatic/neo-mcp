@@ -46,7 +46,8 @@ lines of code, and even if it might influence readability, do so at unacceptably
 ## Architecture
 
 Arrows point from a package to the packages it imports. Only `internal/server` may import `internal/mcp`; the
-libraries below it must not import `internal/mcp` or the MCP SDK. `internal/utils` is the shared leaf and must stay
+libraries below it must not import `internal/mcp` or the MCP SDK, except `internal/present`, which is the presentation
+layer for MCP content: it may import the SDK, but never `internal/mcp`. `internal/utils` is the shared leaf and must stay
 dependency-free.
 
 If you make changes to the architecture, update this diagram.
@@ -99,6 +100,7 @@ flowchart TD
     bgkill --> sdwebui
     bgkill --> crop
     filestore --> imgfmt
+    present --> imgfmt
 
     sdwebui --> utils
     novelai --> utils

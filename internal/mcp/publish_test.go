@@ -55,24 +55,6 @@ func TestPublishImagesReturnsURLAndImage(t *testing.T) {
 	}
 }
 
-func TestImageAudience(t *testing.T) {
-	tests := map[bool][]mcp.Role{
-		false: {roleUser},
-		true:  {roleAssistant, roleUser},
-	}
-
-	for forAssistant, want := range tests {
-		annotations := imageAudience(forAssistant)
-		if annotations == nil {
-			t.Fatalf("imageAudience(%v) = nil", forAssistant)
-		}
-
-		if !slices.Equal(annotations.Audience, want) {
-			t.Errorf("imageAudience(%v) audience = %v, want %v", forAssistant, annotations.Audience, want)
-		}
-	}
-}
-
 func TestImageContentWireShape(t *testing.T) {
 	h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
 
@@ -138,23 +120,5 @@ func TestPublishImagesConvertFailure(t *testing.T) {
 	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{[]byte("not an image")}, false, imgfmt.WebP, false)
 	if err == nil || !strings.HasPrefix(err.Error(), "txt2img:") {
 		t.Fatalf("error = %v, want a txt2img: prefix", err)
-	}
-}
-
-func TestInlineContentFailsSoft(t *testing.T) {
-	h := &handlers{log: zapNop()}
-
-	content := h.imageContent([][]byte{[]byte("not an image")}, []string{"https://cdn.example.com/i/1.png"}, false)
-	if len(content) != 2 {
-		t.Fatalf("content = %d, want the URL and a failure note", len(content))
-	}
-
-	if _, ok := content[1].(*mcp.ImageContent); ok {
-		t.Fatal("content[1] is an image block, want a text failure note")
-	}
-
-	note, ok := content[1].(*mcp.TextContent)
-	if !ok || !strings.Contains(note.Text, "could not be attached inline") {
-		t.Fatalf("content[1] = %#v, want a failure note", content[1])
 	}
 }

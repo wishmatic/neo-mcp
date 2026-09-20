@@ -21,6 +21,7 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
+	"github.com/wishmatic/neo-mcp/internal/present"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"go.uber.org/zap"
@@ -209,15 +210,15 @@ func TestTxt2ImgCallToolDefaultsToUserAudience(t *testing.T) {
 		t.Fatalf("content[1] = %#v, want an image block", result.Content[1])
 	}
 
-	if img.Annotations == nil || !slices.Equal(img.Annotations.Audience, []mcp.Role{roleUser}) {
+	if img.Annotations == nil || !slices.Equal(img.Annotations.Audience, []mcp.Role{present.RoleUser}) {
 		t.Errorf("audience = %+v, want [user]", img.Annotations)
 	}
 }
 
 func TestTxt2ImgCallToolImageAudience(t *testing.T) {
 	tests := map[bool][]mcp.Role{
-		false: {roleUser},
-		true:  {roleAssistant, roleUser},
+		false: {present.RoleUser},
+		true:  {present.RoleAssistant, present.RoleUser},
 	}
 
 	for forAssistant, want := range tests {

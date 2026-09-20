@@ -7,6 +7,7 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/present"
 	"go.uber.org/zap"
 )
 
@@ -49,9 +50,7 @@ func (h *handlers) inline(
 	if err != nil {
 		h.log.Warn("inline encoding failed", zap.String("image_url", in.ImageURL), zap.Error(err))
 
-		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf(
-			"Could not inline %s: %v", in.ImageURL, err,
-		)}}}, out, nil
+		return &mcp.CallToolResult{Content: present.InlineImageFailure(in.ImageURL, err)}, out, nil
 	}
 
 	out.MediaType = image.MediaType
@@ -63,12 +62,7 @@ func (h *handlers) inline(
 		zap.Int("bytes", out.Bytes),
 	)
 
-	content := []mcp.Content{
-		&mcp.TextContent{Text: fmt.Sprintf("Inline image from %s (%s, %d bytes).", in.ImageURL, out.MediaType, out.Bytes)},
-		&mcp.ImageContent{Data: image.Data, MIMEType: image.MediaType, Annotations: imageAudience(true)},
-	}
-
-	return &mcp.CallToolResult{Content: content}, out, nil
+	return &mcp.CallToolResult{Content: present.InlineImage(in.ImageURL, image)}, out, nil
 }
 
 func inlineSchema() *jsonschema.Schema {
