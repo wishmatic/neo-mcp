@@ -55,7 +55,7 @@ func TestSchemasIncludeSharedFields(t *testing.T) {
 		"hr_cfg",
 		"format",
 		"nsfw",
-		"return_as",
+		"for_assistant",
 	}
 
 	for name, s := range schemas() {
@@ -124,55 +124,28 @@ func TestFormatFlagSchemaFollowsConfiguredDefault(t *testing.T) {
 	}
 }
 
-func TestReturnAsFlagSchema(t *testing.T) {
+func TestForAssistantFlagSchema(t *testing.T) {
 	withFlag := schemas()
 	withFlag["bgkill"] = bgkillSchema(imgfmt.Default)
 
-	want := []any{string(returnURL), string(returnImage)}
-
 	for tool, s := range withFlag {
-		prop := s.Properties["return_as"]
+		prop := s.Properties["for_assistant"]
 		if prop == nil {
-			t.Errorf("%s: return_as property is missing", tool)
+			t.Errorf("%s: for_assistant property is missing", tool)
 			continue
 		}
 
-		if prop.Type != "string" {
-			t.Errorf("%s: return_as type = %q, want string", tool, prop.Type)
+		if prop.Type != "boolean" {
+			t.Errorf("%s: for_assistant type = %q, want boolean", tool, prop.Type)
 		}
 
-		if !slices.Equal(prop.Enum, want) {
-			t.Errorf("%s: return_as enum = %v, want %v", tool, prop.Enum, want)
+		if string(prop.Default) != "false" {
+			t.Errorf("%s: for_assistant default = %s, want false", tool, prop.Default)
 		}
 
-		if prop.Default != nil {
-			t.Errorf("%s: return_as default = %s, want none", tool, prop.Default)
+		if slices.Contains(s.Required, "for_assistant") {
+			t.Errorf("%s: for_assistant must not be required", tool)
 		}
-
-		if !slices.Contains(s.Required, "return_as") {
-			t.Errorf("%s: return_as is not required", tool)
-		}
-	}
-}
-
-func TestParseReturnMode(t *testing.T) {
-	tests := map[string]returnMode{
-		"":        returnURL,
-		"url":     returnURL,
-		"  URL  ": returnURL,
-		"image":   returnImage,
-		"IMAGE":   returnImage,
-	}
-
-	for value, want := range tests {
-		got, err := parseReturnMode(value)
-		if err != nil || got != want {
-			t.Errorf("parseReturnMode(%q) = %q, %v, want %q", value, got, err, want)
-		}
-	}
-
-	if _, err := parseReturnMode("inline"); err == nil {
-		t.Error("parseReturnMode(inline) error = nil, want an error")
 	}
 }
 

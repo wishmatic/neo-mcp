@@ -38,9 +38,8 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 - {{STYLE_NOTES}}, for example {{STYLE_EXAMPLE}}.
 - Images come back as WebP unless the server sets `OUTPUT_FORMAT`; pass `format` (`png`, `jpeg`, `jxl`, or `webp`) only
   when the user wants a different file type.
-- Pass `return_as` on every image call. `url` (the default mode) is cheap and returns a link. `image` also returns the
-  bytes inline so you can see the result, but it is very expensive in tokens; use it only when you can see images and
-  need to inspect the result.
+- Every image call returns the image inline with its URL as text, in the user's audience. Set `for_assistant` true
+  (default false) to put the image in your audience too, so you can see it.
 
 ## Prompting
 
@@ -52,6 +51,8 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 - When a call returns a URL, pass it straight to the image tools that take one instead of exporting and re-uploading
   anything.
+- To look at an image the user links to, or one another tool points at, call `inline` with its URL to get it back as an
+  image you can see.
 
 ## Model memory
 

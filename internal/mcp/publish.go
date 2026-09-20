@@ -3,11 +3,15 @@ package mcp
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"go.uber.org/zap"
+)
+
+const (
+	roleUser      mcp.Role = "user"
+	roleAssistant mcp.Role = "assistant"
 )
 
 func (h *handlers) publishImages(
@@ -16,7 +20,7 @@ func (h *handlers) publishImages(
 	images [][]byte,
 	nsfw bool,
 	format imgfmt.Format,
-	mode returnMode,
+	forAssistant bool,
 ) (*mcp.CallToolResult, generationOutput, error) {
 	converted, err := convertImages(images, format)
 	if err != nil {
@@ -28,27 +32,20 @@ func (h *handlers) publishImages(
 		return nil, generationOutput{}, err
 	}
 
-	return &mcp.CallToolResult{Content: h.imageContent(images, urls, mode)}, generationOutput{Count: len(urls), URLs: urls}, nil
+	return &mcp.CallToolResult{Content: h.imageContent(images, urls, forAssistant)}, generationOutput{Count: len(urls), URLs: urls}, nil
 }
 
-func (h *handlers) imageContent(images [][]byte, urls []string, mode returnMode) []mcp.Content {
-	if mode == returnImage {
-		return h.inlineContent(images, urls)
-	}
+func (h *handlers) imageContent(images [][]byte, urls []string, forAssistant bool) []mcp.Content {
+	content := make([]mcp.Content, 0, 2*len(urls))
 
-	content := make([]mcp.Content, 0, len(urls))
-	for _, url := range urls {
+	for i, url := range urls {
 		content = append(content, &mcp.TextContent{Text: url})
-	}
 
-	return content
-}
+		if i >= len(images) {
+			continue
+		}
 
-func (h *handlers) inlineContent(images [][]byte, urls []string) []mcp.Content {
-	content := []mcp.Content{&mcp.TextContent{Text: inlineCaption(urls)}}
-
-	for i, image := range images {
-		inlined, err := imgfmt.Inline(image, imgfmt.InlineMaxEdge, imgfmt.InlineMaxBytes)
+		inlined, err := imgfmt.Inline(images[i], imgfmt.InlineMaxEdge, imgfmt.InlineMaxBytes)
 		if err != nil {
 			h.log.Warn("inline image encoding failed", zap.Int("image", i+1), zap.Error(err))
 
@@ -57,19 +54,24 @@ func (h *handlers) inlineContent(images [][]byte, urls []string) []mcp.Content {
 			continue
 		}
 
-		content = append(content, &mcp.ImageContent{Data: inlined.Data, MIMEType: inlined.MediaType})
+		content = append(content, &mcp.ImageContent{
+			Data:        inlined.Data,
+			MIMEType:    inlined.MediaType,
+			Annotations: imageAudience(forAssistant),
+		})
 	}
 
 	return content
 }
 
-func inlineCaption(urls []string) string {
-	caption := fmt.Sprintf("Returned %d image(s) inline for a vision-capable model; inline images are very token-expensive.", len(urls))
-	if len(urls) == 0 {
-		return caption
+// imageAudience scopes an image block to the user, and to the assistant too when the call asked for it. A block whose
+// audience is only the user is shown in the client but never reaches the model.
+func imageAudience(forAssistant bool) *mcp.Annotations {
+	if forAssistant {
+		return &mcp.Annotations{Audience: []mcp.Role{roleAssistant, roleUser}}
 	}
 
-	return caption + " Stored URLs: " + strings.Join(urls, " ")
+	return &mcp.Annotations{Audience: []mcp.Role{roleUser}}
 }
 
 func convertImages(images [][]byte, format imgfmt.Format) ([][]byte, error) {

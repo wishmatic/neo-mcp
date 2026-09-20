@@ -3,7 +3,6 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
@@ -37,37 +36,19 @@ type generationInput struct {
 	HRCFGScale        float64 `json:"hr_cfg,omitempty" jsonschema:"if HR is enabled, the CFG scale for the hi-res second pass; ignored by NovelAI"`
 
 	formatInput
-	returnInput
+	audienceInput
 }
 
 type formatInput struct {
 	Format string `json:"format,omitempty" jsonschema:"output image format: png, jpeg, jxl (JPEG XL), or webp; defaults to the server's configured output format"`
 }
 
-type returnInput struct {
-	ReturnAs string `json:"return_as" jsonschema:"required: how the image comes back. url (the default mode) stores the image and returns a link, which is cheap. image also returns the raw image bytes inline as an MCP image block so a vision-capable model can see it, at a very high token cost; only use it when you can see images and need to inspect the result"`
-}
-
-type returnMode string
-
-const (
-	returnURL   returnMode = "url"
-	returnImage returnMode = "image"
-)
-
-func parseReturnMode(value string) (returnMode, error) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", string(returnURL):
-		return returnURL, nil
-	case string(returnImage):
-		return returnImage, nil
-	default:
-		return "", fmt.Errorf("return_as must be %q or %q", returnURL, returnImage)
-	}
+type audienceInput struct {
+	ForAssistant bool `json:"for_assistant,omitempty" jsonschema:"set true to include the assistant in the image's audience so you (the model) can see the generated result; defaults to false, which keeps the image in the user's audience only"`
 }
 
 // generationOutput is the structured output shared by the image tools. URLs lists the stored images for structured
-// clients; the call result's content carries those URLs as text, plus the images themselves when return_as is image.
+// clients; the call result's content carries each URL as text alongside the image itself.
 type generationOutput struct {
 	Count int      `json:"count" jsonschema:"number of images generated"`
 	URLs  []string `json:"urls" jsonschema:"URLs for the generated images"`
@@ -82,8 +63,8 @@ func setDefault(props map[string]*jsonschema.Schema, name string, value any) {
 	props[name].Default = raw
 }
 
-func setReturnSchema(s *jsonschema.Schema) {
-	s.Properties["return_as"].Enum = []any{string(returnURL), string(returnImage)}
+func setAudienceSchema(s *jsonschema.Schema) {
+	setDefault(s.Properties, "for_assistant", false)
 }
 
 func setFormatSchema(s *jsonschema.Schema, def imgfmt.Format) {

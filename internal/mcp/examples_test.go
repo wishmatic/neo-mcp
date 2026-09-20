@@ -84,7 +84,6 @@ func callTxt2Img(t *testing.T, session *mcp.ClientSession, args map[string]any) 
 			"height":          512,
 			"cfg_scale":       6.5,
 			"seed":            1234,
-			"return_as":       "url",
 		}
 	}
 
@@ -111,7 +110,6 @@ func callImg2Img(t *testing.T, session *mcp.ClientSession, args map[string]any) 
 			"denoising_strength": 0.6,
 			"noise":              0.1,
 			"sampler_name":       "DPM++ 2M",
-			"return_as":          "url",
 		}
 	}
 

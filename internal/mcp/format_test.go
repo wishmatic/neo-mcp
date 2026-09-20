@@ -119,17 +119,6 @@ func TestTxt2ImgRejectsInvalidFormatBeforeGenerating(t *testing.T) {
 	}
 }
 
-func TestTxt2ImgRejectsInvalidReturnAsBeforeGenerating(t *testing.T) {
-	h := &handlers{log: zapNop()}
-
-	_, _, err := h.txt2img(context.Background(), nil, txt2imgInput{
-		generationInput: generationInput{Model: "m.safetensors", Prompt: "p", ReturnAs: "inline"},
-	})
-	if err == nil || !strings.HasPrefix(err.Error(), "txt2img:") {
-		t.Fatalf("error = %v, want a txt2img: prefix", err)
-	}
-}
-
 func TestBgkillCallToolFormatsOutput(t *testing.T) {
 	forge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -163,10 +152,10 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "bgkill",
 		Arguments: map[string]any{
-			"model_name": bgkill.Models[0],
-			"image_url":  images.URL + "/x.png",
-			"format":     "jpeg",
-			"return_as":  "url",
+			"model_name":    bgkill.Models[0],
+			"image_url":     images.URL + "/x.png",
+			"format":        "jpeg",
+			"for_assistant": false,
 		},
 	})
 	if err != nil {
@@ -177,12 +166,16 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 		t.Fatalf("CallTool() tool error: %+v", result.Content)
 	}
 
-	if len(result.Content) != 1 {
-		t.Fatalf("content = %d, want 1", len(result.Content))
+	if len(result.Content) != 2 {
+		t.Fatalf("content = %d, want a URL and one image", len(result.Content))
 	}
 
 	content, ok := result.Content[0].(*mcp.TextContent)
 	if !ok || !strings.HasSuffix(content.Text, ".jpg") {
-		t.Fatalf("content = %#v, want an uploaded .jpg URL", result.Content[0])
+		t.Fatalf("content[0] = %#v, want an uploaded .jpg URL", result.Content[0])
+	}
+
+	if _, ok := result.Content[1].(*mcp.ImageContent); !ok {
+		t.Fatalf("content[1] = %#v, want an image block", result.Content[1])
 	}
 }

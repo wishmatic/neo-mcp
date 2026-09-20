@@ -16,17 +16,18 @@ Note that the only version of Forge we support is
 - Output images are WebP by default. `OUTPUT_FORMAT` sets the format for every tool (`png`, `jpeg`, `jxl`, or `webp`),
   and the `format` input overrides it for a single call. Transparency is kept for every format except JPEG, which
   composites onto white.
-- Every image tool call must pass `return_as`. `url` (the default mode) stores the image and returns a link. `image`
-  also returns the bytes inline as an MCP image block, which vision-capable clients attach to the tool message; it is
-  very expensive in tokens, so it is only worth using when the model can see images.
+- Every call to an image tool stores the image, returns its URL as text, and attaches the image as an MCP image block.
+  Image blocks carry an `audience`, which is the user's by default; set `for_assistant` true to add the assistant so a
+  vision-capable model can see the result.
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
   foreground and produce a padded square, which is handy for logo generation.
+- `inline` fetches an image from any URL and returns it inline as an MCP image block, downscaled and re-encoded to
+  WebP, so a vision-capable model can read an image it was given a link to.
 - Generated images are written to local disk and returned as URLs served by this service. Set `PUBLIC_HOST` to the base
   URL clients use to reach it, and `FILES_DIR` for where files live (`/data/files` in Docker).
     - Stored files are unguessable and anonymous: anyone holding a URL can open the image, and nobody else can. There
-      is no other access control, and every tool call stores the image and returns a URL; only a call's
-      `return_as: image` also returns the bytes inline.
+      is no other access control, and every tool call stores the image, returns its URL, and attaches the image block.
     - Mount `FILES_DIR` on a volume to keep files across container replacements.
     - `FILES_RETENTION_DAYS` deletes files older than that many days; `0` keeps everything.
 - If you set `EXAMPLES_ENABLED=true`, every `txt2img`/`img2img` query and the URL of the image it produced are saved per

@@ -43,16 +43,11 @@ func (h *handlers) img2img(
 		return nil, generationOutput{}, fmt.Errorf("img2img: %w", err)
 	}
 
-	mode, err := parseReturnMode(in.ReturnAs)
-	if err != nil {
-		return nil, generationOutput{}, fmt.Errorf("img2img: %w", err)
-	}
-
 	h.log.Debug("tool called",
 		zap.String("tool", "img2img"),
 		zap.String("provider", provider),
 		zap.String("format", format.String()),
-		zap.String("return_as", string(mode)),
+		zap.Bool("for_assistant", in.ForAssistant),
 		zap.String("model", in.Model),
 		zap.String("forge_preset", in.ForgePreset),
 		zap.Strings("vae_and_text_models", in.VAEAndTextModels),
@@ -99,7 +94,7 @@ func (h *handlers) img2img(
 
 	h.log.Info("img2img generation finished", zap.Int("images", len(images)))
 
-	result, out, err := h.publishImages(ctx, "img2img", images, in.NSFW, format, mode)
+	result, out, err := h.publishImages(ctx, "img2img", images, in.NSFW, format, in.ForAssistant)
 	if err != nil {
 		return nil, generationOutput{}, err
 	}
@@ -126,7 +121,7 @@ func img2imgSchema(def imgfmt.Format) *jsonschema.Schema {
 	setDefault(s.Properties, "sampler_name", "")
 	setDefault(s.Properties, "scheduler", "")
 	setDefault(s.Properties, "nsfw", false)
-	setReturnSchema(s)
+	setAudienceSchema(s)
 	setFormatSchema(s, def)
 
 	return s

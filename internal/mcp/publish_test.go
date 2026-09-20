@@ -3,8 +3,10 @@ package mcp
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"image"
+	"slices"
 	"strings"
 	"testing"
 
@@ -14,12 +16,12 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestPublishImagesUploads(t *testing.T) {
+func TestPublishImagesReturnsURLAndImage(t *testing.T) {
 	for _, format := range []imgfmt.Format{imgfmt.PNG, imgfmt.JPEG, imgfmt.JXL, imgfmt.WebP} {
 		t.Run(format.String(), func(t *testing.T) {
 			h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
 
-			result, out, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, false, format, returnURL)
+			result, out, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, false, format, false)
 			if err != nil {
 				t.Fatalf("publishImages(format=%s) error: %v", format, err)
 			}
@@ -28,15 +30,83 @@ func TestPublishImagesUploads(t *testing.T) {
 				t.Fatalf("output = %+v, want one URL", out)
 			}
 
-			if len(result.Content) != 1 {
-				t.Fatalf("content = %d, want 1", len(result.Content))
+			if len(result.Content) != 2 {
+				t.Fatalf("content = %d, want a URL and one image", len(result.Content))
 			}
 
 			text, ok := result.Content[0].(*mcp.TextContent)
 			if !ok || text.Text != out.URLs[0] {
-				t.Fatalf("content = %#v, want the uploaded URL", result.Content[0])
+				t.Fatalf("content[0] = %#v, want the uploaded URL as text", result.Content[0])
+			}
+
+			img, ok := result.Content[1].(*mcp.ImageContent)
+			if !ok {
+				t.Fatalf("content[1] = %#v, want an image block", result.Content[1])
+			}
+
+			if img.MIMEType != "image/webp" {
+				t.Errorf("mime type = %q, want image/webp", img.MIMEType)
+			}
+
+			if _, decoded, err := image.Decode(bytes.NewReader(img.Data)); err != nil || decoded != "webp" {
+				t.Errorf("decode inline image = %q, %v, want webp", decoded, err)
 			}
 		})
+	}
+}
+
+func TestImageAudience(t *testing.T) {
+	tests := map[bool][]mcp.Role{
+		false: {roleUser},
+		true:  {roleAssistant, roleUser},
+	}
+
+	for forAssistant, want := range tests {
+		annotations := imageAudience(forAssistant)
+		if annotations == nil {
+			t.Fatalf("imageAudience(%v) = nil", forAssistant)
+		}
+
+		if !slices.Equal(annotations.Audience, want) {
+			t.Errorf("imageAudience(%v) audience = %v, want %v", forAssistant, annotations.Audience, want)
+		}
+	}
+}
+
+func TestImageContentWireShape(t *testing.T) {
+	h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
+
+	result, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, false, imgfmt.PNG, true)
+	if err != nil {
+		t.Fatalf("publishImages() error: %v", err)
+	}
+
+	raw, err := json.Marshal(result.Content)
+	if err != nil {
+		t.Fatalf("marshal content: %v", err)
+	}
+
+	var decoded []map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("decode content: %v", err)
+	}
+
+	if decoded[0]["type"] != "text" || decoded[0]["text"] == "" {
+		t.Errorf("text block = %v, want {type: text, text: ...}", decoded[0])
+	}
+
+	if decoded[1]["type"] != "image" || decoded[1]["mimeType"] != "image/webp" || decoded[1]["data"] == "" {
+		t.Errorf("image block = %v, want {type: image, mimeType: image/webp, data: ...}", decoded[1])
+	}
+
+	annotations, ok := decoded[1]["annotations"].(map[string]any)
+	if !ok {
+		t.Fatalf("image block annotations = %v, want an object", decoded[1]["annotations"])
+	}
+
+	audience, ok := annotations["audience"].([]any)
+	if !ok || !slices.Equal(audience, []any{"assistant", "user"}) {
+		t.Errorf("audience = %v, want [assistant user]", annotations["audience"])
 	}
 }
 
@@ -44,7 +114,7 @@ func TestPublishImagesNSFW(t *testing.T) {
 	store := &fakeStore{}
 	h := &handlers{log: zapNop(), publisher: publish.New(store, zap.NewNop())}
 
-	if _, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, true, imgfmt.PNG, returnURL); err != nil {
+	if _, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, true, imgfmt.PNG, false); err != nil {
 		t.Fatalf("publishImages() error: %v", err)
 	}
 
@@ -56,7 +126,7 @@ func TestPublishImagesNSFW(t *testing.T) {
 func TestPublishImagesUploadFailure(t *testing.T) {
 	h := &handlers{log: zapNop(), publisher: publish.New(&fakeStore{err: errors.New("boom")}, zap.NewNop())}
 
-	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, false, imgfmt.PNG, returnURL)
+	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, false, imgfmt.PNG, false)
 	if err == nil {
 		t.Fatal("publishImages() error = nil, want the upload failure")
 	}
@@ -65,57 +135,18 @@ func TestPublishImagesUploadFailure(t *testing.T) {
 func TestPublishImagesConvertFailure(t *testing.T) {
 	h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
 
-	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{[]byte("not an image")}, false, imgfmt.WebP, returnURL)
+	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{[]byte("not an image")}, false, imgfmt.WebP, false)
 	if err == nil || !strings.HasPrefix(err.Error(), "txt2img:") {
 		t.Fatalf("error = %v, want a txt2img: prefix", err)
-	}
-}
-
-func TestPublishImagesInline(t *testing.T) {
-	h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
-
-	result, out, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, false, imgfmt.PNG, returnImage)
-	if err != nil {
-		t.Fatalf("publishImages() error: %v", err)
-	}
-
-	if out.Count != 1 || len(out.URLs) != 1 {
-		t.Fatalf("output = %+v, want one URL", out)
-	}
-
-	if len(result.Content) != 2 {
-		t.Fatalf("content = %d, want a caption and one image", len(result.Content))
-	}
-
-	caption, ok := result.Content[0].(*mcp.TextContent)
-	if !ok || !strings.Contains(caption.Text, out.URLs[0]) {
-		t.Fatalf("content[0] = %#v, want a caption naming the stored URL", result.Content[0])
-	}
-
-	img, ok := result.Content[1].(*mcp.ImageContent)
-	if !ok {
-		t.Fatalf("content[1] = %#v, want an image block", result.Content[1])
-	}
-
-	if img.MIMEType != "image/webp" {
-		t.Errorf("mime type = %q, want image/webp", img.MIMEType)
-	}
-
-	if len(img.Data) == 0 {
-		t.Fatal("image data is empty")
-	}
-
-	if _, format, err := image.Decode(bytes.NewReader(img.Data)); err != nil || format != "webp" {
-		t.Errorf("decode inline image = %q, %v, want webp", format, err)
 	}
 }
 
 func TestInlineContentFailsSoft(t *testing.T) {
 	h := &handlers{log: zapNop()}
 
-	content := h.imageContent([][]byte{[]byte("not an image")}, []string{"https://cdn.example.com/i/1.png"}, returnImage)
+	content := h.imageContent([][]byte{[]byte("not an image")}, []string{"https://cdn.example.com/i/1.png"}, false)
 	if len(content) != 2 {
-		t.Fatalf("content = %d, want a caption and a failure note", len(content))
+		t.Fatalf("content = %d, want the URL and a failure note", len(content))
 	}
 
 	if _, ok := content[1].(*mcp.ImageContent); ok {

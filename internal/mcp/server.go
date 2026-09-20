@@ -85,4 +85,8 @@ func registerTools(srv *mcp.Server, h *handlers) {
 	if h.examplesConfig.Enabled && h.store != nil && h.publisher.Enabled() {
 		registerExamples(srv, h)
 	}
+
+	if h.resolver != nil {
+		registerInline(srv, h)
+	}
 }
