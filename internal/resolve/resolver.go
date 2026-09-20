@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -15,6 +16,10 @@ import (
 const (
 	fetchTimeout = 60 * time.Second
 	maxRedirects = 10
+
+	// Note: Wikimedia and similar sites answer generic or missing agents with a 403.
+
+	userAgent = "neo-mcp/0.1.0 (https://github.com/wishmatic/neo-mcp; bot)"
 )
 
 type ObjectStore interface {
@@ -52,8 +57,8 @@ func New(store ObjectStore, publicBase string) (*Resolver, error) {
 
 // Fetch returns the bytes for rawURL, following redirects.
 //
-// URLs on this service's own public base are read straight from the file store by object key, so a link the service
-// returned can be fed back in without a network round trip.
+// URLs on this service's own public base are read straight from the file store by object key, so a link the
+// service returns can be fed back in without a network round trip.
 func (r *Resolver) Fetch(ctx context.Context, rawURL string) ([]byte, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
@@ -104,6 +109,8 @@ func (r *Resolver) get(ctx context.Context, u *url.URL) (*http.Response, error) 
 		return nil, fmt.Errorf("resolve: build request for %s: %w", u, err)
 	}
 
+	req.Header.Set("User-Agent", userAgent)
+
 	resp, err := r.http.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("resolve: fetch %s: %w", u, err)
@@ -112,7 +119,7 @@ func (r *Resolver) get(ctx context.Context, u *url.URL) (*http.Response, error) 
 	return resp, nil
 }
 
-// objectKey maps a URL on the public base to a store key: the path minus its leading slash, and only the "i"
+// objectKey maps a URL on the public base to a store key: the path sans leading slash, and only the "i"
 // namespace is servable.
 func (r *Resolver) objectKey(u *url.URL) (string, bool) {
 	if r.publicBase == nil || !strings.EqualFold(u.Host, r.publicBase.Host) {
@@ -128,10 +135,8 @@ func (r *Resolver) objectKey(u *url.URL) (string, bool) {
 		return "", false
 	}
 
-	for _, segment := range segments {
-		if segment == ".." {
-			return "", false
-		}
+	if slices.Contains(segments, "..") {
+		return "", false
 	}
 
 	return strings.Join(segments, "/"), true

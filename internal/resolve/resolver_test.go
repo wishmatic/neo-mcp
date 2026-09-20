@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
 )
 
@@ -90,6 +92,54 @@ func TestFetchFollowsRedirectToPlainURL(t *testing.T) {
 
 	if string(data) != "from-http" {
 		t.Errorf("data = %q, want from-http", data)
+	}
+}
+
+func TestFetchSetsUserAgent(t *testing.T) {
+	var (
+		mu     sync.Mutex
+		agents []string
+	)
+
+	record := func(req *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+
+		agents = append(agents, req.UserAgent())
+	}
+
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		record(req)
+		_, _ = w.Write([]byte("from-http"))
+	}))
+	defer origin.Close()
+
+	redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		record(req)
+		http.Redirect(w, req, origin.URL+"/x.png", http.StatusFound)
+	}))
+	defer redirector.Close()
+
+	r, err := New(nil, "")
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	if _, err := r.Fetch(context.Background(), redirector.URL+"/start"); err != nil {
+		t.Fatalf("Fetch() error: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if len(agents) != 2 {
+		t.Fatalf("requests = %d, want one per redirect hop", len(agents))
+	}
+
+	for i, agent := range agents {
+		if !strings.Contains(agent, "neo-mcp") || !strings.Contains(agent, "bot") {
+			t.Errorf("hop %d User-Agent = %q, want a descriptive agent naming neo-mcp and bot", i, agent)
+		}
 	}
 }
 
