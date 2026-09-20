@@ -1,3 +1,5 @@
+<img src="docs/images/logo.webp" alt="Neo MCP Logo" width="128">
+
 # Neo MCP
 
 A thin MCP wrapper exposing image capabilities to LLM agents. Main functionality leans on SD WebUI Forge.
