@@ -196,7 +196,7 @@ func TestServesStoredFile(t *testing.T) {
 
 	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
 
-	url, err := srv.files.UploadFile(context.Background(), []byte("png-bytes"), "image/png", false)
+	url, err := srv.files.UploadFile(context.Background(), []byte("png-bytes"), "image/png")
 	if err != nil {
 		t.Fatalf("UploadFile() error: %v", err)
 	}

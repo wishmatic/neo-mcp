@@ -14,7 +14,6 @@ import (
 
 type capture struct {
 	contentType string
-	nsfw        bool
 }
 
 type fakeStore struct {
@@ -23,7 +22,7 @@ type fakeStore struct {
 	err     error
 }
 
-func (f *fakeStore) UploadFile(_ context.Context, _ []byte, contentType string, nsfw bool) (string, error) {
+func (f *fakeStore) UploadFile(_ context.Context, _ []byte, contentType string) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
@@ -31,7 +30,7 @@ func (f *fakeStore) UploadFile(_ context.Context, _ []byte, contentType string, 
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	f.capture = append(f.capture, capture{contentType: contentType, nsfw: nsfw})
+	f.capture = append(f.capture, capture{contentType: contentType})
 
 	return fmt.Sprintf("https://files.example/i/%d.png", len(f.capture)), nil
 }
@@ -50,7 +49,7 @@ func TestImagesKeepsOrderAndCount(t *testing.T) {
 	store := &fakeStore{}
 	p := New(store, zap.NewNop())
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a"), []byte("b"), []byte("c")}, "image/png", false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a"), []byte("b"), []byte("c")}, "image/png")
 	if err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
@@ -64,11 +63,11 @@ func TestImagesKeepsOrderAndCount(t *testing.T) {
 	}
 }
 
-func TestImagesPassesContentTypeAndNSFW(t *testing.T) {
+func TestImagesPassesContentType(t *testing.T) {
 	store := &fakeStore{}
 	p := New(store, zap.NewNop())
 
-	if _, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, "image/jpeg", true); err != nil {
+	if _, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, "image/jpeg"); err != nil {
 		t.Fatalf("Images() error: %v", err)
 	}
 
@@ -76,8 +75,8 @@ func TestImagesPassesContentTypeAndNSFW(t *testing.T) {
 		t.Fatalf("uploads = %d, want 1", len(store.capture))
 	}
 
-	if store.capture[0].contentType != "image/jpeg" || !store.capture[0].nsfw {
-		t.Errorf("upload = %+v, want image/jpeg and nsfw", store.capture[0])
+	if store.capture[0].contentType != "image/jpeg" {
+		t.Errorf("upload = %+v, want image/jpeg", store.capture[0])
 	}
 }
 
@@ -85,7 +84,7 @@ func TestImagesUploadFailure(t *testing.T) {
 	core, logs := observer.New(zapcore.ErrorLevel)
 	p := New(&fakeStore{err: errors.New("boom")}, zap.New(core))
 
-	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, "image/png", false)
+	urls, err := p.Images(context.Background(), "txt2img", [][]byte{[]byte("a")}, "image/png")
 	if err == nil {
 		t.Fatal("Images() error = nil, want the upload failure")
 	}

@@ -13,7 +13,6 @@ import (
 
 type uploadCapture struct {
 	contentType string
-	nsfw        bool
 }
 
 type fakeStore struct {
@@ -22,7 +21,7 @@ type fakeStore struct {
 	err     error
 }
 
-func (f *fakeStore) UploadFile(_ context.Context, _ []byte, contentType string, nsfw bool) (string, error) {
+func (f *fakeStore) UploadFile(_ context.Context, _ []byte, contentType string) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
@@ -30,7 +29,7 @@ func (f *fakeStore) UploadFile(_ context.Context, _ []byte, contentType string, 
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	f.uploads = append(f.uploads, uploadCapture{contentType: contentType, nsfw: nsfw})
+	f.uploads = append(f.uploads, uploadCapture{contentType: contentType})
 
 	return fmt.Sprintf("https://cdn.example.com/i/%d.%s", len(f.uploads), imgfmt.ExtensionForMediaType(contentType)), nil
 }

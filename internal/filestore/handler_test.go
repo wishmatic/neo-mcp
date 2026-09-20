@@ -35,7 +35,7 @@ func serve(t *testing.T, router http.Handler, method, target string) *httptest.R
 func storedURL(t *testing.T, client *Client) string {
 	t.Helper()
 
-	url, err := client.UploadFile(context.Background(), []byte("image-bytes"), "image/png", false)
+	url, err := client.UploadFile(context.Background(), []byte("image-bytes"), "image/png")
 	if err != nil {
 		t.Fatalf("UploadFile() error: %v", err)
 	}

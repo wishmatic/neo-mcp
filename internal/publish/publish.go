@@ -8,7 +8,7 @@ import (
 )
 
 type Store interface {
-	UploadFile(ctx context.Context, data []byte, contentType string, nsfw bool) (string, error)
+	UploadFile(ctx context.Context, data []byte, contentType string) (string, error)
 }
 
 type Publisher struct {
@@ -24,7 +24,7 @@ func (p *Publisher) Enabled() bool {
 	return p.store != nil
 }
 
-func (p *Publisher) Images(ctx context.Context, label string, images [][]byte, contentType string, nsfw bool) ([]string, error) {
+func (p *Publisher) Images(ctx context.Context, label string, images [][]byte, contentType string) ([]string, error) {
 	if p.store == nil {
 		return nil, errors.New("publish: image storage is not configured")
 	}
@@ -32,7 +32,7 @@ func (p *Publisher) Images(ctx context.Context, label string, images [][]byte, c
 	urls := make([]string, 0, len(images))
 
 	for _, data := range images {
-		url, err := p.store.UploadFile(ctx, data, contentType, nsfw)
+		url, err := p.store.UploadFile(ctx, data, contentType)
 		if err != nil {
 			p.log.Error(label+" upload failed", zap.Error(err))
 

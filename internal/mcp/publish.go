@@ -14,7 +14,6 @@ func (h *handlers) publishImages(
 	ctx context.Context,
 	tool string,
 	images [][]byte,
-	nsfw bool,
 	format imgfmt.Format,
 ) (*mcp.CallToolResult, generationOutput, error) {
 	converted, err := convertImages(images, format)
@@ -22,7 +21,7 @@ func (h *handlers) publishImages(
 		return nil, generationOutput{}, fmt.Errorf("%s: %w", tool, err)
 	}
 
-	urls, err := h.publisher.Images(ctx, tool, converted, format.MediaType(), nsfw)
+	urls, err := h.publisher.Images(ctx, tool, converted, format.MediaType())
 	if err != nil {
 		return nil, generationOutput{}, err
 	}

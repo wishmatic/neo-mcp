@@ -75,7 +75,7 @@ func (h *handlers) bgkill(
 		return nil, generationOutput{}, h.generationFailure(ctx, "bgkill", err)
 	}
 
-	return h.publishImages(ctx, "bgkill", [][]byte{out}, false, format)
+	return h.publishImages(ctx, "bgkill", [][]byte{out}, format)
 }
 
 func bgkillRequest(in bgkillInput, image []byte) bgkill.Request {

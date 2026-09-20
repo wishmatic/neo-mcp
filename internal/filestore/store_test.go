@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var keyPattern = regexp.MustCompile(`^i/(nsfw/)?\d{4}-\d{2}/[0-9a-f-]{36}\.(png|jpg|jxl|webp)$`)
+var keyPattern = regexp.MustCompile(`^i/\d{4}-\d{2}/[0-9a-f-]{36}\.(png|jpg|jxl|webp)$`)
 
 func newTestClient(t *testing.T) (*Client, string) {
 	t.Helper()
@@ -33,10 +33,10 @@ func newTestClient(t *testing.T) (*Client, string) {
 	return client, dir
 }
 
-func upload(t *testing.T, client *Client, contentType string, nsfw bool) (string, string) {
+func upload(t *testing.T, client *Client, contentType string) (string, string) {
 	t.Helper()
 
-	url, err := client.UploadFile(context.Background(), []byte("image-bytes"), contentType, nsfw)
+	url, err := client.UploadFile(context.Background(), []byte("image-bytes"), contentType)
 	if err != nil {
 		t.Fatalf("UploadFile() error: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestNewRejectsBadConfig(t *testing.T) {
 func TestUploadAndGetRoundTrip(t *testing.T) {
 	client, _ := newTestClient(t)
 
-	url, key := upload(t, client, "image/png", false)
+	url, key := upload(t, client, "image/png")
 
 	if !keyPattern.MatchString(key) {
 		t.Fatalf("key = %q, want a match for %s", key, keyPattern)
@@ -102,7 +102,6 @@ func TestUploadKeyShape(t *testing.T) {
 	tests := []struct {
 		name        string
 		contentType string
-		nsfw        bool
 		want        *regexp.Regexp
 	}{
 		{
@@ -126,12 +125,6 @@ func TestUploadKeyShape(t *testing.T) {
 			want:        regexp.MustCompile(`^i/\d{4}-\d{2}/[0-9a-f-]{36}\.webp$`),
 		},
 		{
-			name:        "nsfw",
-			contentType: "image/png",
-			nsfw:        true,
-			want:        regexp.MustCompile(`^i/nsfw/\d{4}-\d{2}/[0-9a-f-]{36}\.png$`),
-		},
-		{
 			name:        "unknown media type falls back to png",
 			contentType: "application/octet-stream",
 			want:        regexp.MustCompile(`^i/\d{4}-\d{2}/[0-9a-f-]{36}\.png$`),
@@ -142,7 +135,7 @@ func TestUploadKeyShape(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client, _ := newTestClient(t)
 
-			_, key := upload(t, client, tt.contentType, tt.nsfw)
+			_, key := upload(t, client, tt.contentType)
 
 			if !tt.want.MatchString(key) {
 				t.Errorf("key = %q, want a match for %s", key, tt.want)
@@ -154,8 +147,8 @@ func TestUploadKeyShape(t *testing.T) {
 func TestUploadKeysAreUnique(t *testing.T) {
 	client, _ := newTestClient(t)
 
-	_, first := upload(t, client, "image/png", false)
-	_, second := upload(t, client, "image/png", false)
+	_, first := upload(t, client, "image/png")
+	_, second := upload(t, client, "image/png")
 
 	if first == second {
 		t.Errorf("keys = %q and %q, want distinct keys", first, second)
@@ -170,7 +163,7 @@ func TestSafePath(t *testing.T) {
 		wantErr bool
 	}{
 		{key: "i/2026-09/x.png"},
-		{key: "i/nsfw/2026-09/x.png"},
+		{key: "i/sub/2026-09/x.png"},
 		{key: "../../etc/passwd", wantErr: true},
 		{key: "/etc/passwd", wantErr: true},
 		{key: "x/y", wantErr: true},
@@ -217,7 +210,7 @@ func TestUploadReportsWriteFailure(t *testing.T) {
 		t.Fatalf("write blocker: %v", err)
 	}
 
-	if _, err := client.UploadFile(context.Background(), []byte("bytes"), "image/png", false); err == nil {
+	if _, err := client.UploadFile(context.Background(), []byte("bytes"), "image/png"); err == nil {
 		t.Fatal("UploadFile() error = nil, want a write failure")
 	}
 }
@@ -228,7 +221,7 @@ func TestUploadHonoursCancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if _, err := client.UploadFile(ctx, []byte("bytes"), "image/png", false); !errors.Is(err, context.Canceled) {
+	if _, err := client.UploadFile(ctx, []byte("bytes"), "image/png"); !errors.Is(err, context.Canceled) {
 		t.Fatalf("UploadFile() error = %v, want context.Canceled", err)
 	}
 }

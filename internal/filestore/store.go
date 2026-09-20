@@ -15,10 +15,9 @@ import (
 )
 
 const (
-	namespace   = "i"
-	nsfwSegment = "nsfw"
-	dirMode     = 0o750
-	fileMode    = 0o640
+	namespace = "i"
+	dirMode   = 0o750
+	fileMode  = 0o640
 )
 
 type Config struct {
@@ -47,12 +46,12 @@ func New(cfg Config, log *zap.Logger) (*Client, error) {
 	return &Client{cfg: cfg, log: log}, nil
 }
 
-func (c *Client) UploadFile(ctx context.Context, data []byte, contentType string, nsfw bool) (string, error) {
+func (c *Client) UploadFile(ctx context.Context, data []byte, contentType string) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
 
-	key := objectKey(nsfw, imgfmt.ExtensionForMediaType(contentType))
+	key := objectKey(imgfmt.ExtensionForMediaType(contentType))
 
 	path, err := c.safePath(key)
 	if err != nil {
@@ -97,13 +96,8 @@ func (c *Client) url(key string) string {
 	return base.String()
 }
 
-func objectKey(nsfw bool, ext string) string {
-	parts := []string{namespace}
-	if nsfw {
-		parts = append(parts, nsfwSegment)
-	}
-
-	parts = append(parts, time.Now().UTC().Format("2006-01"), uuid.NewString()+"."+ext)
+func objectKey(ext string) string {
+	parts := []string{namespace, time.Now().UTC().Format("2006-01"), uuid.NewString() + "." + ext}
 
 	return strings.Join(parts, "/")
 }

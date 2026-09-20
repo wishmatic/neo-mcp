@@ -21,7 +21,7 @@ func TestPublishImagesReturnsURLAndImage(t *testing.T) {
 		t.Run(format.String(), func(t *testing.T) {
 			h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
 
-			result, out, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, false, format)
+			result, out, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, format)
 			if err != nil {
 				t.Fatalf("publishImages(format=%s) error: %v", format, err)
 			}
@@ -58,7 +58,7 @@ func TestPublishImagesReturnsURLAndImage(t *testing.T) {
 func TestImageContentWireShape(t *testing.T) {
 	h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
 
-	result, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, false, imgfmt.PNG)
+	result, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, imgfmt.PNG)
 	if err != nil {
 		t.Fatalf("publishImages() error: %v", err)
 	}
@@ -92,23 +92,10 @@ func TestImageContentWireShape(t *testing.T) {
 	}
 }
 
-func TestPublishImagesNSFW(t *testing.T) {
-	store := &fakeStore{}
-	h := &handlers{log: zapNop(), publisher: publish.New(store, zap.NewNop())}
-
-	if _, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, true, imgfmt.PNG); err != nil {
-		t.Fatalf("publishImages() error: %v", err)
-	}
-
-	if len(store.uploads) != 1 || !store.uploads[0].nsfw {
-		t.Fatalf("uploads = %+v, want one NSFW upload", store.uploads)
-	}
-}
-
 func TestPublishImagesUploadFailure(t *testing.T) {
 	h := &handlers{log: zapNop(), publisher: publish.New(&fakeStore{err: errors.New("boom")}, zap.NewNop())}
 
-	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, false, imgfmt.PNG)
+	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, imgfmt.PNG)
 	if err == nil {
 		t.Fatal("publishImages() error = nil, want the upload failure")
 	}
@@ -117,7 +104,7 @@ func TestPublishImagesUploadFailure(t *testing.T) {
 func TestPublishImagesConvertFailure(t *testing.T) {
 	h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
 
-	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{[]byte("not an image")}, false, imgfmt.WebP)
+	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{[]byte("not an image")}, imgfmt.WebP)
 	if err == nil || !strings.HasPrefix(err.Error(), "txt2img:") {
 		t.Fatalf("error = %v, want a txt2img: prefix", err)
 	}

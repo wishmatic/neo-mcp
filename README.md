@@ -11,8 +11,6 @@ Note that the only version of Forge we support is
     - They also route to NovelAI when `model` starts with `nai-diffusion-`. Set `NOVELAI_API_KEY` to enable it. Forge-only
       options such as hi-res fix, presets, and VAE/text encoders are ignored for NovelAI requests.
     - With NovelAI enabled, `anlas` reports the account's credit balance and the V5 usage meter.
-    - Both take an optional `nsfw` boolean to mark a generation as NSFW. It places the image under an `nsfw/`
-      subdirectory; it does not change generation.
 - Output images are WebP by default. `OUTPUT_FORMAT` sets the format for every tool (`png`, `jpeg`, `jxl`, or `webp`),
   and the `format` input overrides it for a single call. Transparency is kept for every format except JPEG, which
   composites onto white.

@@ -54,7 +54,6 @@ func TestSchemasIncludeSharedFields(t *testing.T) {
 		"hr_second_pass_steps",
 		"hr_cfg",
 		"format",
-		"nsfw",
 	}
 
 	for name, s := range schemas() {
@@ -145,27 +144,6 @@ func TestSamplerDefaultsAreEmpty(t *testing.T) {
 			if raw == nil || string(raw) != `""` {
 				t.Errorf("%s: %s default = %s, want an empty string", name, field, raw)
 			}
-		}
-	}
-}
-
-func TestNSFWFlagSchema(t *testing.T) {
-	for name, s := range schemas() {
-		prop := s.Properties["nsfw"]
-		if prop == nil {
-			t.Fatalf("%s: nsfw property is missing", name)
-		}
-
-		if prop.Type != "boolean" {
-			t.Errorf("%s: nsfw type = %q, want boolean", name, prop.Type)
-		}
-
-		if string(prop.Default) != "false" {
-			t.Errorf("%s: nsfw default = %s, want false", name, prop.Default)
-		}
-
-		if slices.Contains(s.Required, "nsfw") {
-			t.Errorf("%s: nsfw must not be required", name)
 		}
 	}
 }
