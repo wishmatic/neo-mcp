@@ -66,7 +66,6 @@ flowchart TD
     novelai["internal/novelai"]
     resolve["internal/resolve"]
     filestore["internal/filestore"]
-    store["internal/store"]
     config["internal/config"]
     auth["internal/auth"]
     utils["internal/utils"]
@@ -84,7 +83,6 @@ flowchart TD
     server --> novelai
     server --> resolve
     server --> filestore
-    server --> store
     server --> imgfmt
 
     mcp --> imagegen
@@ -94,7 +92,6 @@ flowchart TD
     mcp --> imgfmt
     mcp --> novelai
     mcp --> resolve
-    mcp --> store
     mcp --> utils
 
     imagegen --> sdwebui
@@ -102,7 +99,6 @@ flowchart TD
     bgkill --> sdwebui
     bgkill --> crop
     filestore --> imgfmt
-    present --> store
 
     sdwebui --> utils
     novelai --> utils

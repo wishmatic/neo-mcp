@@ -54,12 +54,6 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 - To look at an image the user links to, or one another tool points at, call `inline` with its URL to get it back as an
   image you can see.
 
-## Model memory
-
-- `examples` returns earlier queries and their image URLs for a model, two by default or as many as you ask for with
-  `n`; pass `nsfw` (`-1` non-NSFW only, `1` NSFW only, `0` or omitted for either) to filter. Look at them before
-  generating with a model you have not used. Mark a generation NSFW with the `nsfw` boolean the image tools take.
-
 ## Credits
 
 - Check `anlas` before anything outside the free band (more than one image, a base image, or a large size), and again

@@ -22,9 +22,8 @@ const (
 )
 
 type Config struct {
-	Dir           string
-	PublicBase    *url.URL
-	RetentionDays int
+	Dir        string
+	PublicBase *url.URL
 }
 
 type Client struct {

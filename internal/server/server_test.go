@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/wishmatic/neo-mcp/internal/config"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
@@ -24,7 +22,6 @@ func testConfig(t *testing.T) config.Config {
 	return config.Config{
 		APIKey:     "server-key",
 		SDURL:      "http://127.0.0.1:7860",
-		DBPath:     filepath.Join(t.TempDir(), "neo.db"),
 		PublicHost: "https://neo.example.com",
 		FilesDir:   filepath.Join(t.TempDir(), "files"),
 	}
@@ -67,60 +64,7 @@ func TestNewWithNovelAIKey(t *testing.T) {
 	}
 }
 
-func TestNewCreatesDatabase(t *testing.T) {
-	core, logs := observer.New(zapcore.DebugLevel)
-
-	cfg := testConfig(t)
-
-	srv, err := New(cfg, zap.New(core))
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
-
-	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
-
-	if _, err := os.Stat(cfg.DBPath); err != nil {
-		t.Fatalf("stat database: %v", err)
-	}
-
-	if srv.store == nil {
-		t.Fatal("srv.store = nil, want an open database")
-	}
-
-	opened := false
-
-	for _, entry := range logs.All() {
-		if entry.Message == "database opened" && entry.ContextMap()["path"] == cfg.DBPath {
-			opened = true
-		}
-	}
-
-	if !opened {
-		t.Error("no \"database opened\" log entry with the configured path")
-	}
-}
-
-func TestNewFailsOnUnopenableDatabase(t *testing.T) {
-	blocker := filepath.Join(t.TempDir(), "blocker")
-
-	if err := os.WriteFile(blocker, []byte("not a directory"), 0o600); err != nil {
-		t.Fatalf("write blocker: %v", err)
-	}
-
-	cfg := testConfig(t)
-	cfg.DBPath = filepath.Join(blocker, "neo.db")
-
-	_, err := New(cfg, zap.NewNop())
-	if err == nil {
-		t.Fatal("New() error = nil, want an error")
-	}
-
-	if !strings.Contains(err.Error(), "open database") {
-		t.Errorf("error = %q, want it to mention opening the database", err.Error())
-	}
-}
-
-func TestShutdownClosesStore(t *testing.T) {
+func TestShutdown(t *testing.T) {
 	cfg := testConfig(t)
 
 	srv, err := New(cfg, zap.NewNop())
@@ -130,10 +74,6 @@ func TestShutdownClosesStore(t *testing.T) {
 
 	if err := srv.Shutdown(context.Background()); err != nil {
 		t.Fatalf("Shutdown() error: %v", err)
-	}
-
-	if _, err := srv.store.RandomExamples(context.Background(), "m", 1); err == nil {
-		t.Error("RandomExamples() after Shutdown() error = nil, want a closed store error")
 	}
 }
 
@@ -195,10 +135,6 @@ func TestNewRejectsInvalidOutputFormat(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error %q does not name %q", err, want)
 		}
-	}
-
-	if _, statErr := os.Stat(cfg.DBPath); !os.IsNotExist(statErr) {
-		t.Errorf("database was created despite the invalid format: %v", statErr)
 	}
 }
 
@@ -282,32 +218,5 @@ func TestServesStoredFile(t *testing.T) {
 
 	if ct := rec.Header().Get("Content-Type"); ct != "image/png" {
 		t.Errorf("Content-Type = %q, want image/png", ct)
-	}
-}
-
-func TestRunMaintenanceReturnsOnCancel(t *testing.T) {
-	cfg := testConfig(t)
-
-	srv, err := New(cfg, zap.NewNop())
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
-
-	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
-
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-
-	go func() {
-		srv.RunMaintenance(ctx)
-		close(done)
-	}()
-
-	cancel()
-
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
-		t.Fatal("RunMaintenance did not return after its context was cancelled")
 	}
 }

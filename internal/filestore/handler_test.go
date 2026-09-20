@@ -15,7 +15,7 @@ import (
 func newTestRouter(t *testing.T) (*Client, chi.Router) {
 	t.Helper()
 
-	client, _ := newTestClient(t, 0)
+	client, _ := newTestClient(t)
 
 	router := chi.NewRouter()
 	client.Register(router)

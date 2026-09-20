@@ -11,8 +11,8 @@ Note that the only version of Forge we support is
     - They also route to NovelAI when `model` starts with `nai-diffusion-`. Set `NOVELAI_API_KEY` to enable it. Forge-only
       options such as hi-res fix, presets, and VAE/text encoders are ignored for NovelAI requests.
     - With NovelAI enabled, `anlas` reports the account's credit balance and the V5 usage meter.
-    - Both take an optional `nsfw` boolean to mark a generation as NSFW. It tags the saved example and places the image
-      under an `nsfw/` subdirectory; it does not change generation.
+    - Both take an optional `nsfw` boolean to mark a generation as NSFW. It places the image under an `nsfw/`
+      subdirectory; it does not change generation.
 - Output images are WebP by default. `OUTPUT_FORMAT` sets the format for every tool (`png`, `jpeg`, `jxl`, or `webp`),
   and the `format` input overrides it for a single call. Transparency is kept for every format except JPEG, which
   composites onto white.
@@ -29,12 +29,6 @@ Note that the only version of Forge we support is
     - Stored files are unguessable and anonymous: anyone holding a URL can open the image, and nobody else can. There
       is no other access control, and every tool call stores the image, returns its URL, and attaches the image block.
     - Mount `FILES_DIR` on a volume to keep files across container replacements.
-    - `FILES_RETENTION_DAYS` deletes files older than that many days; `0` keeps everything.
-- If you set `EXAMPLES_ENABLED=true`, every `txt2img`/`img2img` query and the URL of the image it produced are saved per
-  model, and the `examples` tool returns random ones: two by default, or as many as you ask for with `n`. A generation's
-  `nsfw` flag tags its example, and the call's `nsfw` filters them: `-1` non-NSFW only, `1` NSFW only, `0` or omitted for
-  either. Examples accumulate for as long as the setting stays on.
-    - The database is created automatically at `DB_PATH` (`neo-mcp.db`; `/data/neo-mcp.db` in Docker).
 
 ## Usage
 
@@ -52,8 +46,8 @@ docker run -d \
 
 The MCP endpoint is served at `/mcp`; stored images are served from `/i/`.
 
-`/data` holds the SQLite database and, by default, the image store, so bind-mount a host directory there to keep them
-across container replacements; the container runs as uid 65532, so that directory must be writable by it.
+`/data` holds the image store, so bind-mount a host directory there to keep files across container replacements; the
+container runs as uid 65532, so that directory must be writable by it.
 
 All other configuration is optional but strongly recommended; see [.env.example](.env.example).
 

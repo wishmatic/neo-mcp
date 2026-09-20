@@ -26,58 +26,6 @@ func unsetEnv(t *testing.T, key string) {
 	})
 }
 
-func TestLoadDBPathDefaults(t *testing.T) {
-	unsetEnv(t, "DB_PATH")
-
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	if cfg.DBPath != "neo-mcp.db" {
-		t.Errorf("DBPath = %q, want neo-mcp.db", cfg.DBPath)
-	}
-}
-
-func TestLoadDBPath(t *testing.T) {
-	t.Setenv("DB_PATH", filepath.Join("data", "neo.db"))
-
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	if cfg.DBPath != filepath.Join("data", "neo.db") {
-		t.Errorf("DBPath = %q, want the configured path", cfg.DBPath)
-	}
-}
-
-func TestLoadExamplesDefaults(t *testing.T) {
-	unsetEnv(t, "EXAMPLES_ENABLED")
-
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	if cfg.ExamplesEnabled {
-		t.Error("ExamplesEnabled = true, want false by default")
-	}
-}
-
-func TestLoadExamples(t *testing.T) {
-	t.Setenv("EXAMPLES_ENABLED", "true")
-
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	if !cfg.ExamplesEnabled {
-		t.Error("ExamplesEnabled = false, want true")
-	}
-}
-
 func TestLoadOutputFormatDefaults(t *testing.T) {
 	unsetEnv(t, "OUTPUT_FORMAT")
 
@@ -117,7 +65,6 @@ func TestLoadOutputFormat(t *testing.T) {
 func TestLoadFilesDefaults(t *testing.T) {
 	unsetEnv(t, "PUBLIC_HOST")
 	unsetEnv(t, "FILES_DIR")
-	unsetEnv(t, "FILES_RETENTION_DAYS")
 
 	cfg, err := Load()
 	if err != nil {
@@ -131,16 +78,11 @@ func TestLoadFilesDefaults(t *testing.T) {
 	if cfg.FilesDir != "files" {
 		t.Errorf("FilesDir = %q, want files by default", cfg.FilesDir)
 	}
-
-	if cfg.FilesRetentionDays != 0 {
-		t.Errorf("FilesRetentionDays = %d, want 0 by default", cfg.FilesRetentionDays)
-	}
 }
 
 func TestLoadFiles(t *testing.T) {
 	t.Setenv("PUBLIC_HOST", "https://neo.example.com")
 	t.Setenv("FILES_DIR", filepath.Join("data", "files"))
-	t.Setenv("FILES_RETENTION_DAYS", "30")
 
 	cfg, err := Load()
 	if err != nil {
@@ -153,10 +95,6 @@ func TestLoadFiles(t *testing.T) {
 
 	if cfg.FilesDir != filepath.Join("data", "files") {
 		t.Errorf("FilesDir = %q, want the configured path", cfg.FilesDir)
-	}
-
-	if cfg.FilesRetentionDays != 30 {
-		t.Errorf("FilesRetentionDays = %d, want 30", cfg.FilesRetentionDays)
 	}
 }
 

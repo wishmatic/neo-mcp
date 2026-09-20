@@ -17,7 +17,7 @@ type generationInput struct {
 	Prompt         string `json:"prompt" jsonschema:"the text prompt describing the image to generate"`
 	NegativePrompt string `json:"negative_prompt,omitempty" jsonschema:"things to avoid in the generated image"`
 
-	NSFW bool `json:"nsfw,omitempty" jsonschema:"set this true when the generation is NSFW; it tags the saved example and places the image under an nsfw subdirectory"`
+	NSFW bool `json:"nsfw,omitempty" jsonschema:"set this true when the generation is NSFW; it places the image under an nsfw subdirectory"`
 
 	SamplingMethod string `json:"sampler_name,omitempty" jsonschema:"the sampler to use; defaults to the backend's own sampler"`
 	ScheduleType   string `json:"scheduler,omitempty" jsonschema:"the scheduler to use; ignored by NovelAI"`

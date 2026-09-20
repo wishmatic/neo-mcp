@@ -99,8 +99,6 @@ func (h *handlers) img2img(
 		return nil, generationOutput{}, err
 	}
 
-	h.saveExamples(ctx, "img2img", in.Model, in.NSFW, in, out.URLs)
-
 	return result, out, nil
 }
 

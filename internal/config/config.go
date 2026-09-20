@@ -19,17 +19,12 @@ type Config struct {
 
 	APIKey string `env:"API_KEY"`
 
-	DBPath string `env:"DB_PATH" envDefault:"neo-mcp.db"`
-
 	SDURL string `env:"SD_URL" envDefault:"http://127.0.0.1:7860"`
 
 	NovelAIAPIKey string `env:"NOVELAI_API_KEY"`
 
-	PublicHost         string `env:"PUBLIC_HOST"`
-	FilesDir           string `env:"FILES_DIR" envDefault:"files"`
-	FilesRetentionDays int    `env:"FILES_RETENTION_DAYS" envDefault:"0"`
-
-	ExamplesEnabled bool `env:"EXAMPLES_ENABLED" envDefault:"false"`
+	PublicHost string `env:"PUBLIC_HOST"`
+	FilesDir   string `env:"FILES_DIR" envDefault:"files"`
 }
 
 func Load() (Config, error) {

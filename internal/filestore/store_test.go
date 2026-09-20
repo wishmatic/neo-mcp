@@ -15,7 +15,7 @@ import (
 
 var keyPattern = regexp.MustCompile(`^i/(nsfw/)?\d{4}-\d{2}/[0-9a-f-]{36}\.(png|jpg|jxl|webp)$`)
 
-func newTestClient(t *testing.T, retentionDays int) (*Client, string) {
+func newTestClient(t *testing.T) (*Client, string) {
 	t.Helper()
 
 	dir := filepath.Join(t.TempDir(), "files")
@@ -25,7 +25,7 @@ func newTestClient(t *testing.T, retentionDays int) (*Client, string) {
 		t.Fatalf("url.Parse() error: %v", err)
 	}
 
-	client, err := New(Config{Dir: dir, PublicBase: base, RetentionDays: retentionDays}, zap.NewNop())
+	client, err := New(Config{Dir: dir, PublicBase: base}, zap.NewNop())
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestNewRejectsBadConfig(t *testing.T) {
 }
 
 func TestUploadAndGetRoundTrip(t *testing.T) {
-	client, _ := newTestClient(t, 0)
+	client, _ := newTestClient(t)
 
 	url, key := upload(t, client, "image/png", false)
 
@@ -140,7 +140,7 @@ func TestUploadKeyShape(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, _ := newTestClient(t, 0)
+			client, _ := newTestClient(t)
 
 			_, key := upload(t, client, tt.contentType, tt.nsfw)
 
@@ -152,7 +152,7 @@ func TestUploadKeyShape(t *testing.T) {
 }
 
 func TestUploadKeysAreUnique(t *testing.T) {
-	client, _ := newTestClient(t, 0)
+	client, _ := newTestClient(t)
 
 	_, first := upload(t, client, "image/png", false)
 	_, second := upload(t, client, "image/png", false)
@@ -163,7 +163,7 @@ func TestUploadKeysAreUnique(t *testing.T) {
 }
 
 func TestSafePath(t *testing.T) {
-	client, _ := newTestClient(t, 0)
+	client, _ := newTestClient(t)
 
 	tests := []struct {
 		key     string
@@ -203,7 +203,7 @@ func TestSafePath(t *testing.T) {
 }
 
 func TestGetObjectRejectsTraversal(t *testing.T) {
-	client, _ := newTestClient(t, 0)
+	client, _ := newTestClient(t)
 
 	if _, err := client.GetObject(context.Background(), "../../etc/passwd"); err == nil {
 		t.Fatal("GetObject() error = nil, want a rejection")
@@ -211,7 +211,7 @@ func TestGetObjectRejectsTraversal(t *testing.T) {
 }
 
 func TestUploadReportsWriteFailure(t *testing.T) {
-	client, dir := newTestClient(t, 0)
+	client, dir := newTestClient(t)
 
 	if err := os.WriteFile(filepath.Join(dir, "i"), []byte("blocker"), 0o600); err != nil {
 		t.Fatalf("write blocker: %v", err)
@@ -223,7 +223,7 @@ func TestUploadReportsWriteFailure(t *testing.T) {
 }
 
 func TestUploadHonoursCancelledContext(t *testing.T) {
-	client, _ := newTestClient(t, 0)
+	client, _ := newTestClient(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

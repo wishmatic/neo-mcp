@@ -10,20 +10,17 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
-	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
 
 type handlers struct {
-	log            *zap.Logger
-	gen            *imagegen.Generator
-	bgkillSvc      *bgkill.Service
-	publisher      *publish.Publisher
-	novelai        *novelai.Client
-	resolver       *resolve.Resolver
-	store          *store.Client
-	examplesConfig ExamplesConfig
-	defaultFormat  imgfmt.Format
+	log           *zap.Logger
+	gen           *imagegen.Generator
+	bgkillSvc     *bgkill.Service
+	publisher     *publish.Publisher
+	novelai       *novelai.Client
+	resolver      *resolve.Resolver
+	defaultFormat imgfmt.Format
 }
 
 func (h *handlers) outputFormat(name string) (imgfmt.Format, error) {

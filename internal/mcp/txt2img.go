@@ -82,8 +82,6 @@ func (h *handlers) txt2img(
 		return nil, generationOutput{}, err
 	}
 
-	h.saveExamples(ctx, "txt2img", in.Model, in.NSFW, in, out.URLs)
-
 	return result, out, nil
 }
 
