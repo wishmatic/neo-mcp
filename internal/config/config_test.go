@@ -152,6 +152,34 @@ func TestPublicBase(t *testing.T) {
 	}
 }
 
+func TestLoadImageURLMap(t *testing.T) {
+	spec := "https://example.com=http://example:5080,https://chat.example.com/images/=/data/librechat-data"
+
+	t.Setenv("IMAGE_URL_MAP", spec)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	if cfg.ImageURLMap != spec {
+		t.Errorf("ImageURLMap = %q, want %q", cfg.ImageURLMap, spec)
+	}
+}
+
+func TestLoadImageURLMapDefaults(t *testing.T) {
+	unsetEnv(t, "IMAGE_URL_MAP")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	if cfg.ImageURLMap != "" {
+		t.Errorf("ImageURLMap = %q, want empty by default", cfg.ImageURLMap)
+	}
+}
+
 func TestLoadNovelAIAPIKey(t *testing.T) {
 	t.Setenv("NOVELAI_API_KEY", "sk-test")
 

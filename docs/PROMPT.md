@@ -50,6 +50,8 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 - When a call returns a URL, pass it straight to the image tools that take one instead of exporting and re-uploading
   anything.
+- Pass a URL you cannot open yourself: the server maps URLs it cannot reach to somewhere it can read them. When the user
+  pastes or attaches an image, ask for its URL and pass it as `init_image_url`.
 
 ## Credits
 

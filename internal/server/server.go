@@ -22,6 +22,7 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
+	"github.com/wishmatic/neo-mcp/internal/sourcemap"
 	"go.uber.org/zap"
 )
 
@@ -87,7 +88,12 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 
 	sdClient := sdwebui.New(cfg.SDURL, cfg.ErrorDetail == "verbose")
 
-	resolver, err := resolve.New(files, publicBase.String())
+	sources, err := sourcemap.Parse(cfg.ImageURLMap)
+	if err != nil {
+		return nil, fmt.Errorf("IMAGE_URL_MAP: %w", err)
+	}
+
+	resolver, err := resolve.New(files, publicBase.String(), sources)
 	if err != nil {
 		return nil, fmt.Errorf("build image resolver: %w", err)
 	}

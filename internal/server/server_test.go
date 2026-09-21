@@ -64,6 +64,40 @@ func TestNewWithNovelAIKey(t *testing.T) {
 	}
 }
 
+func TestNewRejectsInvalidImageURLMap(t *testing.T) {
+	cfg := testConfig(t)
+	cfg.ImageURLMap = "https://example.com"
+
+	_, err := New(cfg, zap.NewNop())
+	if err == nil {
+		t.Fatal("New() error = nil, want an error")
+	}
+
+	if !strings.Contains(err.Error(), "IMAGE_URL_MAP") {
+		t.Errorf("error = %q, want it to name IMAGE_URL_MAP", err.Error())
+	}
+}
+
+func TestNewDoesNotLogImageURLMap(t *testing.T) {
+	core, logs := observer.New(zapcore.DebugLevel)
+
+	cfg := testConfig(t)
+	cfg.ImageURLMap = "https://chat.example.com/images/=/data/librechat-data"
+
+	srv, err := New(cfg, zap.New(core))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
+
+	for _, entry := range logs.All() {
+		if strings.Contains(entry.Message, "librechat-data") || strings.Contains(fmt.Sprint(entry.ContextMap()), "librechat-data") {
+			t.Errorf("log entry %q leaks the private side of the map", entry.Message)
+		}
+	}
+}
+
 func TestShutdown(t *testing.T) {
 	cfg := testConfig(t)
 

@@ -23,7 +23,7 @@ func (f *fakeStore) GetObject(_ context.Context, key string) ([]byte, error) {
 func TestFetchStoredURLReadsFromStore(t *testing.T) {
 	store := &fakeStore{data: []byte("from-store")}
 
-	r, err := New(store, "https://cdn.example.com")
+	r, err := New(store, "https://cdn.example.com", nil)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestFetchStoredURLReadsFromStore(t *testing.T) {
 func TestFetchFollowsRedirectToStoredURL(t *testing.T) {
 	store := &fakeStore{data: []byte("from-store")}
 
-	r, err := New(store, "https://cdn.example.com")
+	r, err := New(store, "https://cdn.example.com", nil)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestFetchFollowsRedirectToStoredURL(t *testing.T) {
 }
 
 func TestFetchFollowsRedirectToPlainURL(t *testing.T) {
-	r, err := New(nil, "")
+	r, err := New(nil, "", nil)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestFetchSetsUserAgent(t *testing.T) {
 	}))
 	defer redirector.Close()
 
-	r, err := New(nil, "")
+	r, err := New(nil, "", nil)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestFetchSetsUserAgent(t *testing.T) {
 }
 
 func TestFetchStoredURLWithoutStore(t *testing.T) {
-	r, err := New(nil, "https://cdn.example.com")
+	r, err := New(nil, "https://cdn.example.com", nil)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -157,7 +157,7 @@ func TestFetchStoredURLWithoutStore(t *testing.T) {
 func TestFetchIgnoresOtherNamespaces(t *testing.T) {
 	store := &fakeStore{data: []byte("from-store")}
 
-	r, err := New(store, "https://cdn.example.com")
+	r, err := New(store, "https://cdn.example.com", nil)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestFetchNonOK(t *testing.T) {
 	}))
 	defer server.Close()
 
-	r, err := New(nil, "")
+	r, err := New(nil, "", nil)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -188,7 +188,7 @@ func TestFetchNonOK(t *testing.T) {
 }
 
 func TestNewInvalidPublicBase(t *testing.T) {
-	if _, err := New(nil, "cdn.example.com"); err == nil {
+	if _, err := New(nil, "cdn.example.com", nil); err == nil {
 		t.Fatal("New() expected error, got nil")
 	}
 }

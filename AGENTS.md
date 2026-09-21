@@ -67,8 +67,8 @@ lines of code, and even if it might influence readability, do so at unacceptably
 
 Arrows point from a package to the packages it imports. Only `internal/server` may import `internal/mcp`; the
 libraries below it must not import `internal/mcp` or the MCP SDK, except `internal/present`, which is the presentation
-layer for MCP content: it may import the SDK, but never `internal/mcp`. `internal/utils` is the shared leaf and must stay
-dependency-free.
+layer for MCP content: it may import the SDK, but never `internal/mcp`. `internal/utils` and `internal/sourcemap` are
+the shared leaves and must stay dependency-free.
 
 If you make changes to the architecture, update this diagram.
 
@@ -85,6 +85,7 @@ flowchart TD
     imgfmt["internal/imgfmt"]
     sdwebui["internal/sdwebui"]
     novelai["internal/novelai"]
+    sourcemap["internal/sourcemap"]
     resolve["internal/resolve"]
     filestore["internal/filestore"]
     config["internal/config"]
@@ -105,6 +106,7 @@ flowchart TD
     server --> resolve
     server --> filestore
     server --> imgfmt
+    server --> sourcemap
 
     mcp --> imagegen
     mcp --> bgkill
@@ -124,6 +126,7 @@ flowchart TD
 
     sdwebui --> utils
     novelai --> utils
+    resolve --> sourcemap
     resolve --> utils
 ```
 

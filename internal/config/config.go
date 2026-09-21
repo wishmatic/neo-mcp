@@ -19,6 +19,8 @@ type Config struct {
 
 	APIKey string `env:"API_KEY"`
 
+	ImageURLMap string `env:"IMAGE_URL_MAP"`
+
 	SDURL string `env:"SD_URL" envDefault:"http://127.0.0.1:7860"`
 
 	NovelAIAPIKey string `env:"NOVELAI_API_KEY"`

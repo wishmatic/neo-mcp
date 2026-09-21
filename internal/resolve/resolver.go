@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wishmatic/neo-mcp/internal/sourcemap"
 	"github.com/wishmatic/neo-mcp/internal/utils"
 )
 
@@ -28,13 +29,15 @@ type ObjectStore interface {
 
 type Resolver struct {
 	store      ObjectStore
+	sources    *sourcemap.Map
 	publicBase *url.URL
 	http       *http.Client
 }
 
-func New(store ObjectStore, publicBase string) (*Resolver, error) {
+func New(store ObjectStore, publicBase string, sources *sourcemap.Map) (*Resolver, error) {
 	r := &Resolver{
-		store: store,
+		store:   store,
+		sources: sources,
 		http: &http.Client{
 			Timeout: fetchTimeout,
 			CheckRedirect: func(*http.Request, []*http.Request) error {
@@ -72,6 +75,20 @@ func (r *Resolver) Fetch(ctx context.Context, rawURL string) ([]byte, error) {
 			}
 
 			return r.store.GetObject(ctx, key)
+		}
+
+		if source, rest, ok := r.sources.Lookup(u); ok {
+			switch source.Kind() {
+			case sourcemap.Directory:
+				return source.Read(rest)
+			case sourcemap.BaseURL:
+				rewritten, err := source.Target(u, rest)
+				if err != nil {
+					return nil, err
+				}
+
+				u = rewritten
+			}
 		}
 
 		resp, err := r.get(ctx, u)

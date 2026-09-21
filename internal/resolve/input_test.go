@@ -37,7 +37,7 @@ func insertWhitespace(s string) string {
 func newResolver(t *testing.T) *Resolver {
 	t.Helper()
 
-	r, err := New(nil, "")
+	r, err := New(nil, "", nil)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestResolveFollowsMultipleRedirects(t *testing.T) {
 func TestResolveRedirectToStoredURLReadsFromStore(t *testing.T) {
 	store := &fakeStore{data: pngBytes}
 
-	r, err := New(store, "https://cdn.example.com")
+	r, err := New(store, "https://cdn.example.com", nil)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -200,7 +200,7 @@ func TestResolveRedirectToStoredURLReadsFromStore(t *testing.T) {
 func TestResolveBase64DoesNotReadStore(t *testing.T) {
 	store := &fakeStore{data: pngBytes}
 
-	r, err := New(store, "https://cdn.example.com")
+	r, err := New(store, "https://cdn.example.com", nil)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}

@@ -133,7 +133,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 	}))
 	t.Cleanup(images.Close)
 
-	resolver, err := resolve.New(nil, "")
+	resolver, err := resolve.New(nil, "", nil)
 	if err != nil {
 		t.Fatalf("resolve.New() error: %v", err)
 	}

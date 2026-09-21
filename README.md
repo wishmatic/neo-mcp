@@ -21,6 +21,15 @@ Note that the only version of Forge we support is
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
   foreground, produce a padded square, or cut the result into a circle, which is handy for logos and avatars.
+- Input URLs are mapped before they are fetched. `IMAGE_URL_MAP` holds comma-separated `public=private` pairs, where
+  the private side is either an absolute `http(s)` base URL or a directory to read from, so an agent can pass a URL this
+  service cannot reach as it is.
+    - A URL under a public key is rewritten before the fetch: with `IMAGE_URL_MAP=https://example.com=http://example:5080`,
+      `https://example.com/i/x.png` is fetched from `http://example:5080/i/x.png`. URLs matching no key are fetched
+      exactly as written.
+    - A directory entry reads a file this service has mounted, which is how an image the user pasted into a chat becomes
+      usable as `init_image_url`. Its public key is the only access control for that directory, so make it long and
+      unguessable. The private side of an entry is never logged.
 - Generated images are written to local disk and returned as URLs served by this service. Set `PUBLIC_HOST` to the base
   URL clients use to reach it, and `FILES_DIR` for where files live (`/data/files` in Docker).
     - Stored files are unguessable and anonymous: anyone holding a URL can open the image, and nobody else can. There
