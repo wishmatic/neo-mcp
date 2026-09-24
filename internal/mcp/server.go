@@ -73,6 +73,8 @@ func registerTools(srv *mcp.Server, h *handlers) {
 		registerAnlas(srv, h)
 	}
 
+	registerCrop(srv, h)
+
 	if h.bgkillSvc.Enabled() {
 		registerBgkill(srv, h)
 	}

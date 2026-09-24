@@ -228,6 +228,59 @@ func TestToContentCircleWithPadding(t *testing.T) {
 	}
 }
 
+func TestApplyCropsToForeground(t *testing.T) {
+	src := newImage(10, 10)
+	fill(src, image.Rect(3, 4, 6, 8), 255)
+
+	out, err := Apply(src, Options{})
+	if err != nil {
+		t.Fatalf("Apply() error: %v", err)
+	}
+
+	if got, want := out.Bounds(), image.Rect(0, 0, 3, 4); got != want {
+		t.Fatalf("bounds = %v, want %v", got, want)
+	}
+}
+
+func TestApplyAcceptsAnyImageType(t *testing.T) {
+	palette := color.Palette{color.NRGBA{}, color.NRGBA{R: 200, G: 100, B: 50, A: 255}}
+	src := image.NewPaletted(image.Rect(0, 0, 6, 6), palette)
+
+	for y := 1; y < 3; y++ {
+		for x := 1; x < 5; x++ {
+			src.SetColorIndex(x, y, 1)
+		}
+	}
+
+	out, err := Apply(src, Options{IsSquare: true})
+	if err != nil {
+		t.Fatalf("Apply() error: %v", err)
+	}
+
+	if got, want := out.Bounds(), image.Rect(0, 0, 4, 4); got != want {
+		t.Fatalf("bounds = %v, want %v", got, want)
+	}
+}
+
+func TestApplyErrors(t *testing.T) {
+	tests := []struct {
+		name string
+		src  image.Image
+		opts Options
+	}{
+		{name: "no visible content", src: newImage(4, 4)},
+		{name: "negative padding", src: newImage(4, 4), opts: Options{Padding: -1}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := Apply(tt.src, tt.opts); err == nil {
+				t.Fatal("Apply() expected error, got nil")
+			}
+		})
+	}
+}
+
 func TestToContentErrors(t *testing.T) {
 	src := newImage(4, 4)
 

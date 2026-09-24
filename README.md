@@ -19,8 +19,11 @@ Note that the only version of Forge we support is
 - Every call to an image tool stores the image, returns its URL as text, and attaches the image as an MCP image block.
   Image blocks are in the user's and the assistant's audience, so a vision-capable model can see the result.
 - `bgkill` removes the background from an image via the
-  [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop to the
-  foreground, produce a padded square, or cut the result into a circle, which is handy for logos and avatars.
+  [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension. It can optionally crop, pad, or
+  circularise the foreground, the way `crop` does.
+- `crop` trims an image to the bounding box of its visible content, then can optionally pad it, centre it on a
+  transparent square, or cut it into a circle, which is handy for logos and avatars. It runs locally, so it needs
+  neither Forge nor NovelAI.
 - Input URLs are mapped before they are fetched. `IMAGE_URL_MAP` holds comma-separated `public=private` pairs, where
   the private side is either an absolute `http(s)` base URL or a directory to read from, so an agent can pass a URL this
   service cannot reach as it is.

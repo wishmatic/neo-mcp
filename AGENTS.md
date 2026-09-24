@@ -110,6 +110,7 @@ flowchart TD
 
     mcp --> imagegen
     mcp --> bgkill
+    mcp --> crop
     mcp --> present
     mcp --> publish
     mcp --> imgfmt

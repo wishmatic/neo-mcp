@@ -21,14 +21,10 @@ type Options struct {
 	Padding int
 }
 
-func ToContent(pngData []byte, opts Options) ([]byte, error) {
+// Apply trims src to the bounding box of its visible content and renders the requested padding, square, and circle.
+func Apply(src image.Image, opts Options) (*image.RGBA, error) {
 	if opts.Padding < 0 {
 		return nil, fmt.Errorf("crop: padding must not be negative, got %d", opts.Padding)
-	}
-
-	src, err := png.Decode(bytes.NewReader(pngData))
-	if err != nil {
-		return nil, fmt.Errorf("crop: decode image: %w", err)
 	}
 
 	content, err := contentBounds(src, opts.Threshold)
@@ -36,8 +32,22 @@ func ToContent(pngData []byte, opts Options) ([]byte, error) {
 		return nil, err
 	}
 
+	return render(src, content, opts), nil
+}
+
+func ToContent(pngData []byte, opts Options) ([]byte, error) {
+	src, err := png.Decode(bytes.NewReader(pngData))
+	if err != nil {
+		return nil, fmt.Errorf("crop: decode image: %w", err)
+	}
+
+	out, err := Apply(src, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	var buf bytes.Buffer
-	if err := png.Encode(&buf, render(src, content, opts)); err != nil {
+	if err := png.Encode(&buf, out); err != nil {
 		return nil, fmt.Errorf("crop: encode image: %w", err)
 	}
 

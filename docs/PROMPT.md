@@ -52,6 +52,8 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
   anything.
 - Pass a URL you cannot open yourself: the server maps URLs it cannot reach to somewhere it can read them. When the user
   pastes or attaches an image, ask for its URL and pass it as `init_image_url`.
+- Use `crop` to trim the transparent margins off an image or to make a square or circular version of it. It works on any
+  image, including one this or another tool just returned, and needs no Forge.
 
 ## Credits
 
