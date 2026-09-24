@@ -22,6 +22,7 @@ func registerAnlas(srv *mcp.Server, h *handlers) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "anlas",
 		Description: "Return the NovelAI Anlas (generation credit) balance for the configured account, including the V5 usage meter when the account reports one.",
+		Annotations: anlasAnnotations(),
 	}, h.anlas)
 }
 

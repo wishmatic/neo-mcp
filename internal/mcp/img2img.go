@@ -30,6 +30,7 @@ func registerImg2Img(srv *mcp.Server, h *handlers) {
 			"NovelAI ignores the hr_ fields and returns the requested size. When HR upscaling is enabled, denoising_strength " +
 			"is required.",
 		InputSchema: img2imgSchema(h.defaultFormat),
+		Annotations: imageGenerationAnnotations(),
 	}, h.img2img)
 }
 

@@ -34,6 +34,7 @@ func registerBgkill(srv *mcp.Server, h *handlers) {
 		Name:        "bgkill",
 		Description: "Remove the background from an image via the BiRefNet extension. Downloads the input image from a URL (following redirects), then returns the foreground with a transparent background.",
 		InputSchema: bgkillSchema(h.defaultFormat),
+		Annotations: imageGenerationAnnotations(),
 	}, h.bgkill)
 }
 

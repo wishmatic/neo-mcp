@@ -25,6 +25,7 @@ func registerTxt2Img(srv *mcp.Server, h *handlers) {
 			"Hi-res (HR) second-pass upscaling is Forge only: NovelAI ignores the hr_ fields and returns the requested size. " +
 			"When HR upscaling is enabled, denoising_strength is required.",
 		InputSchema: txt2imgSchema(h.defaultFormat),
+		Annotations: imageGenerationAnnotations(),
 	}, h.txt2img)
 }
 
