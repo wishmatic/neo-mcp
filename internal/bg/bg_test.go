@@ -1,4 +1,4 @@
-package background
+package bg
 
 import (
 	"bytes"

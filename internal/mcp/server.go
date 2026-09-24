@@ -74,7 +74,7 @@ func registerTools(srv *mcp.Server, h *handlers) {
 	}
 
 	registerCrop(srv, h)
-	registerBackground(srv, h)
+	registerBg(srv, h)
 
 	if h.bgkillSvc.Enabled() {
 		registerBgkill(srv, h)

@@ -54,7 +54,7 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
   pastes or attaches an image, ask for its URL and pass it as `init_image_url`.
 - Use `crop` to trim the transparent margins off an image or to make a square or circular version of it. It works on any
   image, including one this or another tool just returned, and needs no Forge.
-- Use `background` to give a cut-out a coloured backdrop from a single hex colour, for example after `bgkill`; it sizes
+- Use `bg` to give a cut-out a coloured backdrop from a single hex colour, for example after `bgkill`; it sizes
   the backdrop to the image and picks the gradient direction itself.
 
 ## Credits

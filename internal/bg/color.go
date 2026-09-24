@@ -1,4 +1,4 @@
-package background
+package bg
 
 import (
 	"fmt"
@@ -20,12 +20,12 @@ func ParseHex(value string) (color.NRGBA, error) {
 	}
 
 	if len(digits) != 6 {
-		return color.NRGBA{}, fmt.Errorf("background: colour %q is not a hex RGB value", value)
+		return color.NRGBA{}, fmt.Errorf("bg: colour %q is not a hex RGB value", value)
 	}
 
 	raw, err := strconv.ParseUint(digits, 16, 32)
 	if err != nil {
-		return color.NRGBA{}, fmt.Errorf("background: colour %q is not a hex RGB value: %w", value, err)
+		return color.NRGBA{}, fmt.Errorf("bg: colour %q is not a hex RGB value: %w", value, err)
 	}
 
 	return color.NRGBA{R: uint8(raw >> 16), G: uint8(raw >> 8), B: uint8(raw), A: 0xff}, nil

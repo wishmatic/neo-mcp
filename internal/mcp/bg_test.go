@@ -41,31 +41,31 @@ func checkerPNG(t *testing.T, size int) []byte {
 	return buf.Bytes()
 }
 
-func TestBackgroundSchema(t *testing.T) {
-	s := backgroundSchema(imgfmt.Default)
+func TestBgSchema(t *testing.T) {
+	s := bgSchema(imgfmt.Default)
 
 	for _, field := range []string{"hex", "image_url"} {
 		if !slices.Contains(s.Required, field) {
-			t.Errorf("background: %q is not required", field)
+			t.Errorf("bg: %q is not required", field)
 		}
 	}
 
 	format := s.Properties["format"]
 	if format == nil {
-		t.Fatal("background: format property is missing")
+		t.Fatal("bg: format property is missing")
 	}
 
 	if len(format.Enum) != len(imgfmt.Names()) {
-		t.Errorf("background: format has %d enum values, want %d", len(format.Enum), len(imgfmt.Names()))
+		t.Errorf("bg: format has %d enum values, want %d", len(format.Enum), len(imgfmt.Names()))
 	}
 }
 
-func TestBackgroundImageSizedToInput(t *testing.T) {
+func TestBgImageSizedToInput(t *testing.T) {
 	base := color.NRGBA{R: 0x4a, G: 0x6f, B: 0xa5, A: 0xff}
 
-	out, err := backgroundImage(checkerPNG(t, 12), base, imgfmt.PNG)
+	out, err := bgImage(checkerPNG(t, 12), base, imgfmt.PNG)
 	if err != nil {
-		t.Fatalf("backgroundImage() error: %v", err)
+		t.Fatalf("bgImage() error: %v", err)
 	}
 
 	img, err := imgfmt.Decode(out)
@@ -82,25 +82,25 @@ func TestBackgroundImageSizedToInput(t *testing.T) {
 	}
 }
 
-func TestBackgroundImageRejectsUndecodableInput(t *testing.T) {
-	if _, err := backgroundImage([]byte("not an image"), color.NRGBA{A: 0xff}, imgfmt.PNG); err == nil {
-		t.Error("backgroundImage() expected an error, got nil")
+func TestBgImageRejectsUndecodableInput(t *testing.T) {
+	if _, err := bgImage([]byte("not an image"), color.NRGBA{A: 0xff}, imgfmt.PNG); err == nil {
+		t.Error("bgImage() expected an error, got nil")
 	}
 }
 
-func TestBackgroundRejectsBadHex(t *testing.T) {
+func TestBgRejectsBadHex(t *testing.T) {
 	h := &handlers{log: zapNop()}
 
-	_, _, err := h.background(context.Background(), nil, backgroundInput{
+	_, _, err := h.bg(context.Background(), nil, bgInput{
 		Hex:      "not hex",
 		ImageURL: "https://example.com/x.png",
 	})
-	if err == nil || !strings.HasPrefix(err.Error(), "background:") {
-		t.Fatalf("error = %v, want a background: prefix", err)
+	if err == nil || !strings.HasPrefix(err.Error(), "bg:") {
+		t.Fatalf("error = %v, want a bg: prefix", err)
 	}
 }
 
-func TestBackgroundCallToolReturnsImage(t *testing.T) {
+func TestBgCallToolReturnsImage(t *testing.T) {
 	images := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(checkerPNG(t, 10))
 	}))
@@ -122,7 +122,7 @@ func TestBackgroundCallToolReturnsImage(t *testing.T) {
 	}
 
 	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
-		Name: "background",
+		Name: "bg",
 		Arguments: map[string]any{
 			"hex":       "#4a6fa5",
 			"image_url": images.URL + "/x.png",
@@ -151,7 +151,7 @@ func TestBackgroundCallToolReturnsImage(t *testing.T) {
 	}
 }
 
-func TestBackgroundCallToolFetchFailure(t *testing.T) {
+func TestBgCallToolFetchFailure(t *testing.T) {
 	resolver, err := resolve.New(nil, "", nil)
 	if err != nil {
 		t.Fatalf("resolve.New() error: %v", err)
@@ -159,11 +159,11 @@ func TestBackgroundCallToolFetchFailure(t *testing.T) {
 
 	h := &handlers{log: zapNop(), resolver: resolver, publisher: newTestPublisher(t)}
 
-	_, _, err = h.background(context.Background(), nil, backgroundInput{
+	_, _, err = h.bg(context.Background(), nil, bgInput{
 		Hex:      "#000000",
 		ImageURL: "http://127.0.0.1:1/x.png",
 	})
-	if err == nil || !strings.HasPrefix(err.Error(), "background:") {
-		t.Fatalf("error = %v, want a background: prefix", err)
+	if err == nil || !strings.HasPrefix(err.Error(), "bg:") {
+		t.Fatalf("error = %v, want a bg: prefix", err)
 	}
 }
