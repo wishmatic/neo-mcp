@@ -19,20 +19,12 @@ type bgkillInput struct {
 	ImageURL string `json:"image_url" jsonschema:"URL of the image to remove the background from; the service downloads it (following redirects)"`
 
 	IsFullMode bool `json:"full_mode,omitempty" jsonschema:"run the model in fp32 instead of fp16; slower and uses more VRAM"`
-
-	IsCrop bool `json:"crop,omitempty" jsonschema:"crop the output to the bounding box of the foreground"`
-
-	IsSquare bool `json:"square,omitempty" jsonschema:"make the cropped output square by centering the foreground on a transparent canvas; implies crop"`
-
-	IsCircle bool `json:"circle,omitempty" jsonschema:"cut the output into the circle inscribed in the square crop; implies square"`
-
-	Padding *int `json:"padding,omitempty" jsonschema:"transparent padding in pixels added around the cropped foreground; defaults to 32 for a square and to none for a circle"`
 }
 
 func registerBgkill(srv *mcp.Server, h *handlers) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "bgkill",
-		Description: "Remove the background from an image via the BiRefNet extension. Downloads the input image from a URL (following redirects), then returns the foreground with a transparent background.",
+		Description: "Remove the background from an image via the BiRefNet extension, returning the foreground with a transparent background. Downloads the input image from a URL (following redirects). Use the crop tool to trim or circularise the result.",
 		InputSchema: bgkillSchema(h.defaultFormat),
 		Annotations: imageGenerationAnnotations(),
 	}, h.bgkill)
@@ -54,9 +46,6 @@ func (h *handlers) bgkill(
 		zap.String("model_name", in.ModelName),
 		zap.String("image_url", in.ImageURL),
 		zap.Bool("full_mode", in.IsFullMode),
-		zap.Bool("crop", in.IsCrop),
-		zap.Bool("square", in.IsSquare),
-		zap.Bool("circle", in.IsCircle),
 	)
 
 	image, err := h.resolver.Fetch(ctx, in.ImageURL)
@@ -87,10 +76,6 @@ func bgkillRequest(in bgkillInput, image []byte) bgkill.Request {
 		ModelName:  in.ModelName,
 		ImageData:  image,
 		IsFullMode: in.IsFullMode,
-		IsCrop:     in.IsCrop,
-		IsSquare:   in.IsSquare,
-		IsCircle:   in.IsCircle,
-		Padding:    in.Padding,
 	}
 }
 
@@ -107,9 +92,6 @@ func bgkillSchema(def imgfmt.Format) *jsonschema.Schema {
 
 	s.Properties["model_name"].Enum = models
 	setDefault(s.Properties, "full_mode", false)
-	setDefault(s.Properties, "crop", false)
-	setDefault(s.Properties, "square", false)
-	setDefault(s.Properties, "circle", false)
 	setFormatSchema(s, def)
 
 	return s

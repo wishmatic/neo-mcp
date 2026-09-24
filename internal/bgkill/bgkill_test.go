@@ -12,7 +12,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/wishmatic/neo-mcp/internal/crop"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 )
 
@@ -56,36 +55,6 @@ func pngWithContent(t *testing.T, size, from, to int) []byte {
 	return buf.Bytes()
 }
 
-func decodeSize(t *testing.T, data []byte) image.Rectangle {
-	t.Helper()
-
-	img, err := png.Decode(bytes.NewReader(data))
-	if err != nil {
-		t.Fatalf("decode output: %v", err)
-	}
-
-	return img.Bounds()
-}
-
-func decodePixels(t *testing.T, data []byte) image.Image {
-	t.Helper()
-
-	img, err := png.Decode(bytes.NewReader(data))
-	if err != nil {
-		t.Fatalf("decode output: %v", err)
-	}
-
-	return img
-}
-
-func alphaAt(t *testing.T, img image.Image, x, y int) uint32 {
-	t.Helper()
-
-	_, _, _, alpha := img.At(x, y).RGBA()
-
-	return alpha
-}
-
 func TestEnabled(t *testing.T) {
 	if New(nil).Enabled() {
 		t.Error("Enabled() = true without a Forge client, want false")
@@ -112,7 +81,7 @@ func TestRemoveReturnsForeground(t *testing.T) {
 	}
 
 	if !bytes.Equal(got, foreground) {
-		t.Error("Remove() did not return the foreground unchanged without a crop")
+		t.Error("Remove() did not return the foreground unchanged")
 	}
 
 	if (*captured)["model_name"] != "Portrait" {
@@ -121,56 +90,5 @@ func TestRemoveReturnsForeground(t *testing.T) {
 
 	if (*captured)["use_fp16"] != false {
 		t.Errorf("use_fp16 = %v, want false in full mode", (*captured)["use_fp16"])
-	}
-}
-
-func TestRemoveCropsToContent(t *testing.T) {
-	forge, _ := newForge(t, pngWithContent(t, 10, 2, 4))
-
-	got, err := New(forge).Remove(context.Background(), Request{ModelName: "General", IsCrop: true})
-	if err != nil {
-		t.Fatalf("Remove() error: %v", err)
-	}
-
-	if bounds := decodeSize(t, got); bounds.Dx() != 2 || bounds.Dy() != 2 {
-		t.Errorf("bounds = %v, want a 2x2 crop", bounds)
-	}
-}
-
-func TestRemoveCircles(t *testing.T) {
-	forge, _ := newForge(t, pngWithContent(t, 10, 2, 8))
-
-	got, err := New(forge).Remove(context.Background(), Request{ModelName: "General", IsCircle: true})
-	if err != nil {
-		t.Fatalf("Remove() error: %v", err)
-	}
-
-	out := decodePixels(t, got)
-
-	if bounds := out.Bounds(); bounds.Dx() != 6 || bounds.Dy() != 6 {
-		t.Errorf("bounds = %v, want a 6x6 circle", bounds)
-	}
-
-	if alpha := alphaAt(t, out, 0, 0); alpha != 0 {
-		t.Errorf("corner alpha = %d, want 0 outside the circle", alpha)
-	}
-
-	if alpha := alphaAt(t, out, 3, 3); alpha != 0xffff {
-		t.Errorf("centre alpha = %d, want opaque inside the circle", alpha)
-	}
-}
-
-func TestRemoveSquaresWithDefaultPadding(t *testing.T) {
-	forge, _ := newForge(t, pngWithContent(t, 10, 2, 4))
-
-	got, err := New(forge).Remove(context.Background(), Request{ModelName: "General", IsSquare: true})
-	if err != nil {
-		t.Fatalf("Remove() error: %v", err)
-	}
-
-	want := 2 + 2*crop.DefaultSquarePadding
-
-	if bounds := decodeSize(t, got); bounds.Dx() != want || bounds.Dy() != want {
-		t.Errorf("bounds = %v, want %dx%d", bounds, want, want)
 	}
 }

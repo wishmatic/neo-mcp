@@ -3,7 +3,6 @@ package bgkill
 import (
 	"context"
 
-	"github.com/wishmatic/neo-mcp/internal/crop"
 	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 )
 
@@ -28,10 +27,6 @@ type Request struct {
 	ModelName  string
 	ImageData  []byte
 	IsFullMode bool
-	IsCrop     bool
-	IsSquare   bool
-	IsCircle   bool
-	Padding    *int
 }
 
 type Service struct {
@@ -47,24 +42,9 @@ func (s *Service) Enabled() bool {
 }
 
 func (s *Service) Remove(ctx context.Context, req Request) ([]byte, error) {
-	foreground, err := s.forge.Bgkill(ctx, sdwebui.BgkillRequest{
+	return s.forge.Bgkill(ctx, sdwebui.BgkillRequest{
 		ModelName:  req.ModelName,
 		ImageData:  req.ImageData,
 		IsFullMode: req.IsFullMode,
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	opts, ok := crop.OptionsFor(crop.Request{
-		IsCrop:   req.IsCrop,
-		IsSquare: req.IsSquare,
-		IsCircle: req.IsCircle,
-		Padding:  req.Padding,
-	})
-	if !ok {
-		return foreground, nil
-	}
-
-	return crop.ToContent(foreground, opts)
 }

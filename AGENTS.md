@@ -121,7 +121,6 @@ flowchart TD
     imagegen --> sdwebui
     imagegen --> novelai
     bgkill --> sdwebui
-    bgkill --> crop
     filestore --> imgfmt
     present --> imgfmt
 
