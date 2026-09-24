@@ -24,6 +24,9 @@ Note that the only version of Forge we support is
 - `crop` trims an image to the bounding box of its visible content, then can optionally pad it, centre it on a
   transparent square, or cut it into a circle, which is handy for logos and avatars. It runs locally, so it needs
   neither Forge nor NovelAI.
+- `background` puts an image on a subtle gradient built from a single hex colour and inherits its size from that image,
+  so a cut-out from `bgkill` or `crop` gets a backdrop behind it. The gradient direction is random on each call. It also
+  runs locally.
 - Input URLs are mapped before they are fetched. `IMAGE_URL_MAP` holds comma-separated `public=private` pairs, where
   the private side is either an absolute `http(s)` base URL or a directory to read from, so an agent can pass a URL this
   service cannot reach as it is.

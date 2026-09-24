@@ -33,16 +33,16 @@ func TestToolRegistration(t *testing.T) {
 		{
 			name:    "novelai only",
 			novelai: novelai.New("http://example.com", "sk", false),
-			want:    []string{"txt2img", "img2img", "anlas", "crop"},
+			want:    []string{"txt2img", "img2img", "anlas", "crop", "background"},
 		},
 		{
 			name:  "forge only",
 			forge: sdwebui.New("http://example.com", false),
-			want:  []string{"txt2img", "img2img", "bgkill", "crop"},
+			want:  []string{"txt2img", "img2img", "bgkill", "crop", "background"},
 		},
 		{
 			name: "none",
-			want: []string{"crop"},
+			want: []string{"crop", "background"},
 		},
 	}
 

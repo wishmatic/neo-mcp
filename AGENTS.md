@@ -82,6 +82,7 @@ flowchart TD
     present["internal/present"]
     publish["internal/publish"]
     crop["internal/crop"]
+    background["internal/background"]
     imgfmt["internal/imgfmt"]
     sdwebui["internal/sdwebui"]
     novelai["internal/novelai"]
@@ -111,6 +112,7 @@ flowchart TD
     mcp --> imagegen
     mcp --> bgkill
     mcp --> crop
+    mcp --> background
     mcp --> present
     mcp --> publish
     mcp --> imgfmt
