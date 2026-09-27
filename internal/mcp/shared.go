@@ -58,7 +58,10 @@ func setDefault(props map[string]*jsonschema.Schema, name string, value any) {
 
 func setFormatSchema(s *jsonschema.Schema, def imgfmt.Format) {
 	setDefault(s.Properties, "format", def.String())
+	setFormatEnum(s)
+}
 
+func setFormatEnum(s *jsonschema.Schema) {
 	names := make([]any, 0, len(imgfmt.Names()))
 	for _, name := range imgfmt.Names() {
 		names = append(names, name)

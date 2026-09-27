@@ -52,6 +52,21 @@ func Convert(data []byte, format Format) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Reformat re-encodes image data to the requested format and fails when the data is already in that format, so a caller
+// that asked for a conversion either gets new bytes or an error, never its input back.
+func Reformat(data []byte, format Format) ([]byte, error) {
+	_, source, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("imgfmt: decode source image: %w", err)
+	}
+
+	if source == format.String() {
+		return nil, fmt.Errorf("imgfmt: source image is already %s", format)
+	}
+
+	return Convert(data, format)
+}
+
 func encode(w io.Writer, img image.Image, format Format) error {
 	var err error
 

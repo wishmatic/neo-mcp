@@ -56,6 +56,8 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
   image, including one this or another tool just returned, and needs no Forge.
 - Use `bg` to give a cut-out a coloured backdrop from a single hex colour, for example after `bgkill`; it sizes
   the backdrop to the image and picks the gradient direction itself.
+- Use `convert` to change an image's file type, for example a `webp` to a `png`. Ask for a format the image is not
+  already in: asking for the one it has is an error rather than a no-op.
 
 ## Credits
 

@@ -27,6 +27,9 @@ Note that the only version of Forge we support is
 - `bg` puts an image on a subtle gradient built from a single hex colour and inherits its size from that image,
   so a cut-out from `bgkill` or `crop` gets a backdrop behind it. The gradient direction is random on each call. It also
   runs locally.
+- `convert` re-encodes an image as `png`, `jpeg`, `jxl`, or `webp` and changes nothing else about it, using the same
+  quality settings as the other tools. Asking for the format the image is already in is an error rather than a no-op, so
+  the tool never hands back the file it was given. It also runs locally.
 - Input URLs are mapped before they are fetched. `IMAGE_URL_MAP` holds comma-separated `public=private` pairs, where
   the private side is either an absolute `http(s)` base URL or a directory to read from, so an agent can pass a URL this
   service cannot reach as it is.

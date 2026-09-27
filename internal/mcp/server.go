@@ -75,6 +75,7 @@ func registerTools(srv *mcp.Server, h *handlers) {
 
 	registerCrop(srv, h)
 	registerBg(srv, h)
+	registerConvert(srv, h)
 
 	if h.bgkillSvc.Enabled() {
 		registerBgkill(srv, h)
