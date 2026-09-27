@@ -19,6 +19,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/vmihailenco/msgpack/v5"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/present"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
@@ -101,8 +102,19 @@ func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {
 func newInitImageURL(t *testing.T) string {
 	t.Helper()
 
+	return newSizedInitImageURL(t, testImageSize, testImageSize)
+}
+
+func newSizedInitImageURL(t *testing.T, width, height int) string {
+	t.Helper()
+
+	data, err := imgfmt.Encode(image.NewNRGBA(image.Rect(0, 0, width, height)), imgfmt.PNG)
+	if err != nil {
+		t.Fatalf("encode init image: %v", err)
+	}
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(testImagePNG(t))
+		_, _ = w.Write(data)
 	}))
 
 	t.Cleanup(server.Close)

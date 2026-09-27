@@ -33,6 +33,34 @@ func TestDecodeRejectsNonImage(t *testing.T) {
 	}
 }
 
+func TestDimensionsReportsEveryFormat(t *testing.T) {
+	source := solidPNG(t, 12, 7)
+
+	for _, format := range []Format{PNG, JPEG, JXL, WebP} {
+		t.Run(format.String(), func(t *testing.T) {
+			encoded, err := Convert(source, format)
+			if err != nil {
+				t.Fatalf("Convert() error: %v", err)
+			}
+
+			width, height, err := Dimensions(encoded)
+			if err != nil {
+				t.Fatalf("Dimensions() error: %v", err)
+			}
+
+			if width != 12 || height != 7 {
+				t.Errorf("Dimensions() = %dx%d, want 12x7", width, height)
+			}
+		})
+	}
+}
+
+func TestDimensionsRejectsNonImage(t *testing.T) {
+	if _, _, err := Dimensions([]byte("not an image")); err == nil || !strings.HasPrefix(err.Error(), "imgfmt:") {
+		t.Fatalf("error = %v, want an imgfmt: prefix", err)
+	}
+}
+
 func TestEncodeProducesTargetFormat(t *testing.T) {
 	img, err := Decode(transparentPNG(t))
 	if err != nil {

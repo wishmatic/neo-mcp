@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -26,7 +27,9 @@ func registerImg2Img(srv *mcp.Server, h *handlers) {
 		Name: "img2img",
 		Description: "Transform an existing image, via the local Stable Diffusion WebUI (Forge Neo) instance or " +
 			"via NovelAI when the model is a NovelAI model id. Downloads the input image from a URL (following redirects), " +
-			"then blocks until generation completes and returns the image. Hi-res (HR) second-pass upscaling is Forge only: " +
+			"then blocks until generation completes and returns the image. Width and height default to the init image's " +
+			"own size, rounded to the model's pixel grid; when only one of them is given, the other keeps the init image's " +
+			"aspect ratio. Hi-res (HR) second-pass upscaling is Forge only: " +
 			"NovelAI ignores the hr_ fields and returns the requested size. When HR upscaling is enabled, denoising_strength " +
 			"is required.",
 		InputSchema: img2imgSchema(h.defaultFormat),
@@ -80,6 +83,16 @@ func (h *handlers) img2img(
 		return nil, generationOutput{}, fmt.Errorf("img2img: fetch init image: %w", err)
 	}
 
+	in.Width, in.Height, err = initImageSize(in.generationInput, initImage)
+	if err != nil {
+		h.log.Error("img2img failed to read the init image size",
+			zap.String("init_image_url", in.InitImageURL),
+			zap.Error(err),
+		)
+
+		return nil, generationOutput{}, fmt.Errorf("img2img: read init image size: %w", err)
+	}
+
 	h.log.Info("img2img generating synchronously",
 		zap.String("provider", provider),
 		zap.String("model", in.Model),
@@ -111,8 +124,6 @@ func img2imgSchema(def imgfmt.Format) *jsonschema.Schema {
 
 	setDefault(s.Properties, "negative_prompt", "")
 	setDefault(s.Properties, "steps", 20)
-	setDefault(s.Properties, "width", 512)
-	setDefault(s.Properties, "height", 512)
 	setDefault(s.Properties, "seed", -1)
 	setDefault(s.Properties, "cfg_scale", 7.0)
 	setDefault(s.Properties, "denoising_strength", 0.75)
@@ -121,5 +132,47 @@ func img2imgSchema(def imgfmt.Format) *jsonschema.Schema {
 	setDefault(s.Properties, "scheduler", "")
 	setFormatSchema(s, def)
 
+	s.Properties["width"].Description = "output width in pixels; defaults to the init image's width, or to the width " +
+		"that keeps the init image's aspect ratio when only height is set"
+	s.Properties["height"].Description = "output height in pixels; defaults to the init image's height, or to the " +
+		"height that keeps the init image's aspect ratio when only width is set"
+
 	return s
+}
+
+// initImageSize fills in whichever of width and height the caller left out from the init image: both of them when
+// neither is set, and the missing one from the init image's aspect ratio when only one is set. Derived sizes land on
+// the sampling grid, so the image that comes back is the size the caller was told rather than the backends' silently
+// floored version of it.
+func initImageSize(in generationInput, initImage []byte) (int, int, error) {
+	if in.Width != 0 && in.Height != 0 {
+		return in.Width, in.Height, nil
+	}
+
+	width, height, err := imgfmt.Dimensions(initImage)
+	if err != nil {
+		return 0, 0, fmt.Errorf("%w (pass width and height to override)", err)
+	}
+
+	switch {
+	case in.Width == 0 && in.Height == 0:
+		return samplingGridSize(width), samplingGridSize(height), nil
+	case in.Width == 0:
+		return samplingGridSize(aspectDimension(in.Height, width, height)), in.Height, nil
+	default:
+		return in.Width, samplingGridSize(aspectDimension(in.Width, height, width)), nil
+	}
+}
+
+func aspectDimension(known, otherSource, knownSource int) int {
+	return int(math.Round(float64(known) * float64(otherSource) / float64(knownSource)))
+}
+
+// samplingGridSize rounds down to the eight pixel grid the diffusion backends encode and decode on, so a size taken
+// from an image is one the backend can reproduce exactly. A grid step at the low end keeps a tiny image from rounding
+// away to nothing.
+func samplingGridSize(value int) int {
+	const gridStep = 8
+
+	return max(gridStep, value/gridStep*gridStep)
 }
