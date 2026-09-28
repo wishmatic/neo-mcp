@@ -24,9 +24,6 @@ Note that the only version of Forge we support is
 - `crop` trims an image to the bounding box of its visible content, then can optionally pad it, centre it on a
   transparent square, or cut it into a circle, which is handy for logos and avatars. It runs locally, so it needs
   neither Forge nor NovelAI.
-- `bg` puts an image on a subtle gradient built from a single hex colour and inherits its size from that image,
-  so a cut-out from `bgkill` or `crop` gets a backdrop behind it. The gradient direction is random on each call. It also
-  runs locally.
 - `convert` re-encodes an image as `png`, `jpeg`, `jxl`, or `webp` and changes nothing else about it, using the same
   quality settings as the other tools. Asking for the format the image is already in is an error rather than a no-op, so
   the tool never hands back the file it was given. It also runs locally.
