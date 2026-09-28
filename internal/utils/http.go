@@ -12,7 +12,7 @@ func IsHTTP(s string) bool {
 	return err == nil && (u.Scheme == "http" || u.Scheme == "https")
 }
 
-func HTTPError(method, path string, resp *http.Response) error {
+func FmtHTTPErr(method, path string, resp *http.Response) error {
 	body := ReadLimited(resp.Body)
 
 	if body != "" {

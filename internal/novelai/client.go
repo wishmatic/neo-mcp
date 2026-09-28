@@ -55,7 +55,7 @@ func (c *Client) generate(ctx context.Context, label string, payload map[string]
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, utils.HTTPError(http.MethodPost, generatePath, resp)
+		return nil, utils.FmtHTTPErr(http.MethodPost, generatePath, resp)
 	}
 
 	image, err := decodeFinalImage(resp.Body)
@@ -82,7 +82,7 @@ func (c *Client) get(ctx context.Context, label, path string, out any) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return utils.HTTPError(http.MethodGet, path, resp)
+		return utils.FmtHTTPErr(http.MethodGet, path, resp)
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {

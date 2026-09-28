@@ -50,7 +50,7 @@ func (c *Client) postJSON[T any](ctx context.Context, label, path string, payloa
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return out, utils.HTTPError(http.MethodPost, path, resp)
+		return out, utils.FmtHTTPErr(http.MethodPost, path, resp)
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {

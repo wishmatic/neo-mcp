@@ -47,7 +47,7 @@ func TestHTTPError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			resp := &http.Response{StatusCode: tt.status, Body: io.NopCloser(strings.NewReader(tt.body))}
 
-			if got := HTTPError(http.MethodPost, "/sdapi/v1/txt2img", resp).Error(); got != tt.want {
+			if got := FmtHTTPErr(http.MethodPost, "/sdapi/v1/txt2img", resp).Error(); got != tt.want {
 				t.Errorf("HTTPError() = %q, want %q", got, tt.want)
 			}
 		})
