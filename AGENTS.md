@@ -153,8 +153,8 @@ Comments (not docstrings) should have a newline between it and the code it is co
 
 Do not use em-dashes. Use a semicolon, colon, or hyphen instead.
 
-Line length limit is not 80 characters for code and comments/docstrings; use 120 characters. If
-lines cannot be shorter than 120 characters without making them harder to read, don't shorten them.
+Line length limit is not 80 characters for code and comments/docstrings; use 100 characters. If
+lines cannot be shorter than 100 characters without making them harder to read, don't shorten them.
 
 ## README.md
 
