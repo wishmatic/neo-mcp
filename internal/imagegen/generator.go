@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 )
 
 const (
@@ -17,11 +17,11 @@ const (
 var ErrForgeNotConfigured = errors.New("the Forge backend is not configured")
 
 type Generator struct {
-	forge   *sdwebui.Client
+	forge   *forge.Client
 	novelai *novelai.Client
 }
 
-func New(forge *sdwebui.Client, novelai *novelai.Client) *Generator {
+func New(forge *forge.Client, novelai *novelai.Client) *Generator {
 	return &Generator{forge: forge, novelai: novelai}
 }
 

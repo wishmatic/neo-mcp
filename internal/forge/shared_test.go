@@ -1,4 +1,4 @@
-package sdwebui
+package forge
 
 import "testing"
 

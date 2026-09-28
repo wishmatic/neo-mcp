@@ -3,7 +3,7 @@ package bgkill
 import (
 	"context"
 
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 )
 
 var Models = []string{
@@ -30,10 +30,10 @@ type Request struct {
 }
 
 type Service struct {
-	forge *sdwebui.Client
+	forge *forge.Client
 }
 
-func New(forge *sdwebui.Client) *Service {
+func New(forge *forge.Client) *Service {
 	return &Service{forge: forge}
 }
 
@@ -42,7 +42,7 @@ func (s *Service) Enabled() bool {
 }
 
 func (s *Service) Remove(ctx context.Context, req Request) ([]byte, error) {
-	return s.forge.Bgkill(ctx, sdwebui.BgkillRequest{
+	return s.forge.Bgkill(ctx, forge.BgkillRequest{
 		ModelName:  req.ModelName,
 		ImageData:  req.ImageData,
 		IsFullMode: req.IsFullMode,

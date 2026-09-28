@@ -15,13 +15,13 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/config"
 	"github.com/wishmatic/neo-mcp/internal/filestore"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"github.com/wishmatic/neo-mcp/internal/sourcemap"
 	"go.uber.org/zap"
 )
@@ -86,7 +86,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	log.Info("local files enabled", zap.String("dir", cfg.FilesDir))
 	log.Warn("stored files are readable by anyone with the URL")
 
-	sdClient := sdwebui.New(cfg.SDURL, cfg.ErrorDetail == "verbose")
+	forgeClient := forge.New(cfg.SDURL, cfg.ErrorDetail == "verbose")
 
 	sources, err := sourcemap.Parse(cfg.ImageURLMap)
 	if err != nil {
@@ -107,8 +107,8 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 
 	mcpSrv, err := mcpServer.New(mcpServer.Deps{
 		Log:          log,
-		Generator:    imagegen.New(sdClient, novelaiClient),
-		Bgkill:       bgkill.New(sdClient),
+		Generator:    imagegen.New(forgeClient, novelaiClient),
+		Bgkill:       bgkill.New(forgeClient),
 		Publisher:    publish.New(files, log),
 		NovelAI:      novelaiClient,
 		Resolver:     resolver,

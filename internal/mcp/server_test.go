@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"go.uber.org/zap"
 )
 
@@ -26,7 +26,7 @@ func TestNewRegistersTools(t *testing.T) {
 func TestToolRegistration(t *testing.T) {
 	tests := []struct {
 		name    string
-		forge   *sdwebui.Client
+		forge   *forge.Client
 		novelai *novelai.Client
 		want    []string
 	}{
@@ -37,7 +37,7 @@ func TestToolRegistration(t *testing.T) {
 		},
 		{
 			name:  "forge only",
-			forge: sdwebui.New("http://example.com", false),
+			forge: forge.New("http://example.com", false),
 			want:  []string{"txt2img", "img2img", "bgkill", "crop", "convert"},
 		},
 		{
@@ -78,7 +78,7 @@ func zapNop() *zap.Logger {
 func TestGenerationDescriptionsRequireDenoisingStrengthForUpscaling(t *testing.T) {
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: imagegen.New(sdwebui.New("http://example.com", false), nil),
+		Generator: imagegen.New(forge.New("http://example.com", false), nil),
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)

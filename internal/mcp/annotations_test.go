@@ -6,18 +6,18 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 )
 
 func TestToolAnnotations(t *testing.T) {
-	forge := sdwebui.New("http://example.com", false)
+	forgeClient := forge.New("http://example.com", false)
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: imagegen.New(forge, novelai.New("http://example.com", "sk", false)),
-		Bgkill:    bgkill.New(forge),
+		Generator: imagegen.New(forgeClient, novelai.New("http://example.com", "sk", false)),
+		Bgkill:    bgkill.New(forgeClient),
 		NovelAI:   novelai.New("http://example.com", "sk", false),
 	})
 	if err != nil {

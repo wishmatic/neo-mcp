@@ -18,12 +18,12 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/vmihailenco/msgpack/v5"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/present"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -67,7 +67,7 @@ func novelaiFrame(t *testing.T, image []byte) []byte {
 	return frame
 }
 
-func newForgeBackend(t *testing.T, log *requestLog) *sdwebui.Client {
+func newForgeBackend(t *testing.T, log *requestLog) *forge.Client {
 	t.Helper()
 
 	image := base64.StdEncoding.EncodeToString(testImagePNG(t))
@@ -81,7 +81,7 @@ func newForgeBackend(t *testing.T, log *requestLog) *sdwebui.Client {
 
 	t.Cleanup(server.Close)
 
-	return sdwebui.New(server.URL, false)
+	return forge.New(server.URL, false)
 }
 
 func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {

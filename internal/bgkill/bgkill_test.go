@@ -12,10 +12,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 )
 
-func newForge(t *testing.T, foreground []byte) (*sdwebui.Client, *map[string]any) {
+func newForge(t *testing.T, foreground []byte) (*forge.Client, *map[string]any) {
 	t.Helper()
 
 	captured := &map[string]any{}
@@ -33,7 +33,7 @@ func newForge(t *testing.T, foreground []byte) (*sdwebui.Client, *map[string]any
 
 	t.Cleanup(server.Close)
 
-	return sdwebui.New(server.URL, false), captured
+	return forge.New(server.URL, false), captured
 }
 
 func pngWithContent(t *testing.T, size, from, to int) []byte {

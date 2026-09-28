@@ -1,12 +1,12 @@
 package imagegen
 
 import (
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 )
 
-func forgeTxt2ImgRequest(req Txt2ImgRequest) sdwebui.Txt2ImgRequest {
-	return sdwebui.Txt2ImgRequest{
+func forgeTxt2ImgRequest(req Txt2ImgRequest) forge.Txt2ImgRequest {
+	return forge.Txt2ImgRequest{
 		Checkpoint:             req.Model,
 		ForgePreset:            req.ForgePreset,
 		ForgeAdditionalModules: req.VAEAndTextModels,
@@ -30,8 +30,8 @@ func forgeTxt2ImgRequest(req Txt2ImgRequest) sdwebui.Txt2ImgRequest {
 	}
 }
 
-func forgeImg2ImgRequest(req Img2ImgRequest) sdwebui.Img2ImgRequest {
-	return sdwebui.Img2ImgRequest{
+func forgeImg2ImgRequest(req Img2ImgRequest) forge.Img2ImgRequest {
+	return forge.Img2ImgRequest{
 		Checkpoint:             req.Model,
 		ForgePreset:            req.ForgePreset,
 		ForgeAdditionalModules: req.VAEAndTextModels,

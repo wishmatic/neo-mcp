@@ -83,7 +83,7 @@ flowchart TD
     publish["internal/publish"]
     crop["internal/crop"]
     imgfmt["internal/imgfmt"]
-    sdwebui["internal/sdwebui"]
+    forge["internal/forge"]
     novelai["internal/novelai"]
     sourcemap["internal/sourcemap"]
     resolve["internal/resolve"]
@@ -101,7 +101,7 @@ flowchart TD
     server --> publish
     server --> auth
     server --> config
-    server --> sdwebui
+    server --> forge
     server --> novelai
     server --> resolve
     server --> filestore
@@ -118,13 +118,13 @@ flowchart TD
     mcp --> resolve
     mcp --> utils
 
-    imagegen --> sdwebui
+    imagegen --> forge
     imagegen --> novelai
-    bgkill --> sdwebui
+    bgkill --> forge
     filestore --> imgfmt
     present --> imgfmt
 
-    sdwebui --> utils
+    forge --> utils
     novelai --> utils
     resolve --> sourcemap
     resolve --> utils

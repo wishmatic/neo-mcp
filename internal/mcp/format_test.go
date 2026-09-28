@@ -16,9 +16,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/bgkill"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
-	"github.com/wishmatic/neo-mcp/internal/sdwebui"
 )
 
 const testImageSize = 4
@@ -120,13 +120,13 @@ func TestTxt2ImgRejectsInvalidFormatBeforeGenerating(t *testing.T) {
 }
 
 func TestBgkillCallToolFormatsOutput(t *testing.T) {
-	forge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	forgeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"output_image": base64.StdEncoding.EncodeToString(testImagePNG(t)),
 		})
 	}))
-	t.Cleanup(forge.Close)
+	t.Cleanup(forgeServer.Close)
 
 	images := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(testImagePNG(t))
@@ -140,7 +140,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:          zapNop(),
-		Bgkill:       bgkill.New(sdwebui.New(forge.URL, false)),
+		Bgkill:       bgkill.New(forge.New(forgeServer.URL, false)),
 		Publisher:    newTestPublisher(t),
 		Resolver:     resolver,
 		OutputFormat: imgfmt.Default,
