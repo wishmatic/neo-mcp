@@ -55,7 +55,7 @@ func (c *Client) generate(ctx context.Context, label string, payload map[string]
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s", c.httpError(http.MethodPost, generatePath, resp))
+		return nil, utils.HTTPError(http.MethodPost, generatePath, resp)
 	}
 
 	image, err := decodeFinalImage(resp.Body)
@@ -82,7 +82,7 @@ func (c *Client) get(ctx context.Context, label, path string, out any) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s", c.httpError(http.MethodGet, path, resp))
+		return utils.HTTPError(http.MethodGet, path, resp)
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
@@ -98,15 +98,4 @@ func (c *Client) resolveSeed(requested int) uint32 {
 	}
 
 	return uint32(requested)
-}
-
-// httpError builds a human-readable error for a non-2xx HTTP response.
-func (c *Client) httpError(method, path string, resp *http.Response) string {
-	body := utils.ReadLimited(resp.Body)
-
-	if body != "" {
-		return fmt.Sprintf("%s %s returned HTTP %d: %s", method, path, resp.StatusCode, body)
-	}
-
-	return fmt.Sprintf("%s %s returned HTTP %d", method, path, resp.StatusCode)
 }

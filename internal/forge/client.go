@@ -50,7 +50,7 @@ func (c *Client) postJSON[T any](ctx context.Context, label, path string, payloa
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return out, fmt.Errorf("%s", c.httpError(http.MethodPost, path, resp))
+		return out, utils.HTTPError(http.MethodPost, path, resp)
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
@@ -58,15 +58,4 @@ func (c *Client) postJSON[T any](ctx context.Context, label, path string, payloa
 	}
 
 	return out, nil
-}
-
-// httpError builds a human-readable error for a non-2xx HTTP response.
-func (c *Client) httpError(method, path string, resp *http.Response) string {
-	body := utils.ReadLimited(resp.Body)
-
-	if body != "" {
-		return fmt.Sprintf("%s %s returned HTTP %d: %s", method, path, resp.StatusCode, body)
-	}
-
-	return fmt.Sprintf("%s %s returned HTTP %d", method, path, resp.StatusCode)
 }
