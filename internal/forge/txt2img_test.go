@@ -110,7 +110,9 @@ func TestTxt2ImgWarnsAboutExtraImages(t *testing.T) {
 
 	core, logs := observer.New(zapcore.DebugLevel)
 
-	images, err := New(server.URL, zap.New(core)).Txt2Img(context.Background(), Txt2ImgRequest{Prompt: "test"})
+	images, err := New(
+		server.URL, zap.New(core),
+	).Txt2Img(context.Background(), Txt2ImgRequest{Prompt: "test"})
 	if err != nil {
 		t.Fatalf("Txt2Img() error: %v", err)
 	}

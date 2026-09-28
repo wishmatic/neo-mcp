@@ -81,10 +81,12 @@ func TestBgkillPayload(t *testing.T) {
 }
 
 func TestBgkillMissingForeground(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, reader *http.Request) {
-		writer.Header().Set("Content-Type", "application/json")
-		_, _ = writer.Write([]byte(`{"output_image": ""}`))
-	}))
+	server := httptest.NewServer(
+		http.HandlerFunc(func(writer http.ResponseWriter, reader *http.Request) {
+			writer.Header().Set("Content-Type", "application/json")
+			_, _ = writer.Write([]byte(`{"output_image": ""}`))
+		}),
+	)
 	defer server.Close()
 
 	client := New(server.URL, zap.NewNop())

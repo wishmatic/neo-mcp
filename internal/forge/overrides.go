@@ -18,10 +18,11 @@ type overrideSettings struct {
 
 // applyOverrideSettings adds override settings to the payload.
 //
-// Forge doesn't provide a direct way to provide checkpoint and additional modules, etc. so they've designed the API to
-// accept a single override_settings object. Callers should be careful about what a call actually needs to override,
-// as a call is potentially stateful; e.g., defaults missing overrides can use what was last set in the UI. This can
-// make generations non-determnistic, which is not likely what anybody wants.
+// Forge doesn't provide a direct way to provide checkpoint and additional modules, etc. so they've
+// designed the API to accept a single override_settings object. Callers should be careful about
+// what a call actually needs to override, as a call is potentially stateful; e.g., defaults
+// missing overrides can use what was last set in the UI. This can make generations
+// non-deterministic.
 func applyOverrideSettings(payload map[string]any, checkpoint, preset string, modules []string) {
 	if checkpoint == "" && preset == "" && len(modules) == 0 {
 		return

@@ -28,8 +28,8 @@ func New(baseURL string, log *zap.Logger) *Client {
 
 // postJSON sends a POST request directly to the Forge API.
 //
-// It is the responsibility of the calling client method to ensure that the payload is valid for the given endpoint,
-// especially given that extensions may add more valid fields to the payload.
+// It is the responsibility of the calling client method to ensure that the payload is valid for
+// the given endpoint, especially given that extensions may add more valid fields to the payload.
 func (c *Client) postJSON[T any](ctx context.Context, label, path string, payload any) (T, error) {
 	var out T
 
