@@ -1,6 +1,7 @@
-Human authorship: 40%
+Human coverage: 40%
 
 ## What's left?
 
-I need to rethink how the convert.go structure stands. I haven't looked into format, inline, and the test helpers
-either; those test helpers might be best in their own package, but I need to check.
+I need to rethink how the convert.go structure stands. I haven't looked into format, inline, and
+the test helpers either; those test helpers might be best in their own package, but I need to
+check.
