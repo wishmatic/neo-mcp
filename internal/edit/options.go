@@ -1,4 +1,4 @@
-package crop
+package edit
 
 const DefaultSquarePadding = 32
 

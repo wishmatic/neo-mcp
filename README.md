@@ -20,9 +20,9 @@ Note that the only version of Forge we support is
   - This also means that this isn't just an MCP; it also is a simple image hosting service!
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension for Forge.
-- `crop` trims an image to the bounding box of its visible content, optionally padding, centering
-  or even circularising it! Great for logos and avatars. This runs locally and does not require
-  Forge nor NovelAI.
+- `edit` trims an image to the bounding box of its visible content, optionally padding, centering or
+  even circularising it! Great for logos and avatars. This runs locally and does not require Forge
+  nor NovelAI.
 - `convert` re-encodes an image as `png`, `jpeg`, `jxl`, or `webp`. Also runs locally!
 - Private networking support; input URLs can be mapped before they are fetched, even to a local
   directory seen by the container.

@@ -55,7 +55,7 @@ func registerTools(srv *mcp.Server, h *handlers) {
 		registerImg2Img(srv, h)
 	}
 
-	registerCrop(srv, h)
+	registerEdit(srv, h)
 	registerConvert(srv, h)
 
 	if h.gen.ForgeEnabled() {

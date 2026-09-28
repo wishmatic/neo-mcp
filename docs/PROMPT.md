@@ -54,7 +54,7 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
   and re-uploading anything.
 - Pass a URL you cannot open yourself: the server maps URLs it cannot reach to somewhere it can read
   them. When the user pastes or attaches an image, ask for its URL and pass it as `init_image_url`.
-- Use `crop` to trim the transparent margins off an image or to make a square or circular version of
+- Use `edit` to trim the transparent margins off an image or to make a square or circular version of
   it. It works on any image, including one this or another tool just returned, and needs no Forge.
 - Use `convert` to change an image's file type, for example a `webp` to a `png`. Ask for a format
   the image is not already in: asking for the one it has is an error rather than a no-op.

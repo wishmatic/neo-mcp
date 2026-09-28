@@ -1,4 +1,4 @@
-package crop
+package edit
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ type Options struct {
 // Apply trims src to the bounding box of its visible content and renders the requested padding, square, and circle.
 func Apply(src image.Image, opts Options) (*image.RGBA, error) {
 	if opts.Padding < 0 {
-		return nil, fmt.Errorf("crop: padding must not be negative, got %d", opts.Padding)
+		return nil, fmt.Errorf("edit: padding must not be negative, got %d", opts.Padding)
 	}
 
 	content, err := contentBounds(src, opts.Threshold)
@@ -38,7 +38,7 @@ func Apply(src image.Image, opts Options) (*image.RGBA, error) {
 func ToContent(pngData []byte, opts Options) ([]byte, error) {
 	src, err := png.Decode(bytes.NewReader(pngData))
 	if err != nil {
-		return nil, fmt.Errorf("crop: decode image: %w", err)
+		return nil, fmt.Errorf("edit: decode image: %w", err)
 	}
 
 	out, err := Apply(src, opts)
@@ -48,7 +48,7 @@ func ToContent(pngData []byte, opts Options) ([]byte, error) {
 
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, out); err != nil {
-		return nil, fmt.Errorf("crop: encode image: %w", err)
+		return nil, fmt.Errorf("edit: encode image: %w", err)
 	}
 
 	return buf.Bytes(), nil
@@ -74,7 +74,7 @@ func contentBounds(src image.Image, threshold uint8) (image.Rectangle, error) {
 	}
 
 	if maxX < minX || maxY < minY {
-		return image.Rectangle{}, fmt.Errorf("crop: image has no visible content")
+		return image.Rectangle{}, fmt.Errorf("edit: image has no visible content")
 	}
 
 	return image.Rect(minX, minY, maxX+1, maxY+1), nil

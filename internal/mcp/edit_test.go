@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/crop"
+	"github.com/wishmatic/neo-mcp/internal/edit"
 	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 )
@@ -37,49 +37,49 @@ func marginPNG(t *testing.T, size, margin int) []byte {
 	return buf.Bytes()
 }
 
-func TestCropOptionsAlwaysCrops(t *testing.T) {
+func TestEditOptionsAlwaysCrops(t *testing.T) {
 	tests := []struct {
 		name string
-		in   cropInput
-		want crop.Options
+		in   editInput
+		want edit.Options
 	}{
-		{name: "bare crop", in: cropInput{}, want: crop.Options{}},
+		{name: "bare crop", in: editInput{}, want: edit.Options{}},
 		{
 			name: "square defaults the padding",
-			in:   cropInput{IsSquare: true},
-			want: crop.Options{IsSquare: true, Padding: crop.DefaultSquarePadding},
+			in:   editInput{IsSquare: true},
+			want: edit.Options{IsSquare: true, Padding: edit.DefaultSquarePadding},
 		},
 		{
 			name: "circle implies square with no padding",
-			in:   cropInput{IsCircle: true},
-			want: crop.Options{IsSquare: true, IsCircle: true},
+			in:   editInput{IsCircle: true},
+			want: edit.Options{IsSquare: true, IsCircle: true},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := cropOptions(tt.in); got != tt.want {
-				t.Errorf("cropOptions() = %+v, want %+v", got, tt.want)
+			if got := editOptions(tt.in); got != tt.want {
+				t.Errorf("editOptions() = %+v, want %+v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestCropOptionsMapsExplicitPadding(t *testing.T) {
+func TestEditOptionsMapsExplicitPadding(t *testing.T) {
 	five := 5
 
-	got := cropOptions(cropInput{IsSquare: true, IsCircle: true, Padding: &five})
-	want := crop.Options{IsSquare: true, IsCircle: true, Padding: 5}
+	got := editOptions(editInput{IsSquare: true, IsCircle: true, Padding: &five})
+	want := edit.Options{IsSquare: true, IsCircle: true, Padding: 5}
 
 	if got != want {
-		t.Errorf("cropOptions() = %+v, want %+v", got, want)
+		t.Errorf("editOptions() = %+v, want %+v", got, want)
 	}
 }
 
-func TestCropImageTrimsToContent(t *testing.T) {
-	out, err := cropImage(marginPNG(t, 20, 5), crop.Options{}, format.PNG)
+func TestEditImageTrimsToContent(t *testing.T) {
+	out, err := editImage(marginPNG(t, 20, 5), edit.Options{}, format.PNG)
 	if err != nil {
-		t.Fatalf("cropImage() error: %v", err)
+		t.Fatalf("editImage() error: %v", err)
 	}
 
 	img, err := format.Decode(out)
@@ -92,10 +92,10 @@ func TestCropImageTrimsToContent(t *testing.T) {
 	}
 }
 
-func TestCropImageCircleCutsCorners(t *testing.T) {
-	out, err := cropImage(marginPNG(t, 20, 2), crop.Options{IsSquare: true, IsCircle: true}, format.PNG)
+func TestEditImageCircleCutsCorners(t *testing.T) {
+	out, err := editImage(marginPNG(t, 20, 2), edit.Options{IsSquare: true, IsCircle: true}, format.PNG)
 	if err != nil {
-		t.Fatalf("cropImage() error: %v", err)
+		t.Fatalf("editImage() error: %v", err)
 	}
 
 	img, err := format.Decode(out)
@@ -114,64 +114,64 @@ func TestCropImageCircleCutsCorners(t *testing.T) {
 	}
 }
 
-func TestCropImageErrors(t *testing.T) {
+func TestEditImageErrors(t *testing.T) {
 	tests := []struct {
 		name string
 		data []byte
-		opts crop.Options
+		opts edit.Options
 	}{
 		{name: "not an image", data: []byte("not an image")},
 		{name: "no visible content", data: marginPNG(t, 8, 4)},
-		{name: "negative padding", data: marginPNG(t, 8, 2), opts: crop.Options{Padding: -1}},
+		{name: "negative padding", data: marginPNG(t, 8, 2), opts: edit.Options{Padding: -1}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := cropImage(tt.data, tt.opts, format.PNG); err == nil {
-				t.Fatal("cropImage() expected error, got nil")
+			if _, err := editImage(tt.data, tt.opts, format.PNG); err == nil {
+				t.Fatal("editImage() expected error, got nil")
 			}
 		})
 	}
 }
 
-func TestCropSchema(t *testing.T) {
-	s := cropSchema(format.Default)
+func TestEditSchema(t *testing.T) {
+	s := editSchema(format.Default)
 
 	if !slices.Contains(s.Required, "image_url") {
-		t.Error("crop: image_url is not required")
+		t.Error("edit: image_url is not required")
 	}
 
 	for _, field := range []string{"square", "circle"} {
 		prop := s.Properties[field]
 		if prop == nil {
-			t.Fatalf("crop: %q property is missing", field)
+			t.Fatalf("edit: %q property is missing", field)
 		}
 
 		if string(prop.Default) != "false" {
-			t.Errorf("crop: %q default = %s, want false", field, prop.Default)
+			t.Errorf("edit: %q default = %s, want false", field, prop.Default)
 		}
 	}
 
 	padding := s.Properties["padding"]
 	if padding == nil {
-		t.Fatal("crop: padding property is missing")
+		t.Fatal("edit: padding property is missing")
 	}
 
 	if padding.Default != nil {
-		t.Errorf("crop: padding default = %s, want none", padding.Default)
+		t.Errorf("edit: padding default = %s, want none", padding.Default)
 	}
 
 	property := s.Properties["format"]
 	if property == nil {
-		t.Fatal("crop: format property is missing")
+		t.Fatal("edit: format property is missing")
 	}
 
 	if len(property.Enum) != len(format.Names()) {
-		t.Errorf("crop: format has %d enum values, want %d", len(property.Enum), len(format.Names()))
+		t.Errorf("edit: format has %d enum values, want %d", len(property.Enum), len(format.Names()))
 	}
 }
 
-func TestCropCallToolReturnsImage(t *testing.T) {
+func TestEditCallToolReturnsImage(t *testing.T) {
 	images := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(marginPNG(t, 16, 4))
 	}))
@@ -193,7 +193,7 @@ func TestCropCallToolReturnsImage(t *testing.T) {
 	}
 
 	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
-		Name: "crop",
+		Name: "edit",
 		Arguments: map[string]any{
 			"image_url": images.URL + "/x.png",
 			"circle":    true,
@@ -222,7 +222,7 @@ func TestCropCallToolReturnsImage(t *testing.T) {
 	}
 }
 
-func TestCropCallToolFetchFailure(t *testing.T) {
+func TestEditCallToolFetchFailure(t *testing.T) {
 	resolver, err := resolve.New(nil, "", nil)
 	if err != nil {
 		t.Fatalf("resolve.New() error: %v", err)
@@ -230,8 +230,8 @@ func TestCropCallToolFetchFailure(t *testing.T) {
 
 	h := &handlers{log: zapNop(), resolver: resolver, store: newTestStore(t)}
 
-	_, _, err = h.crop(context.Background(), nil, cropInput{ImageURL: "http://127.0.0.1:1/x.png"})
-	if err == nil || !strings.HasPrefix(err.Error(), "crop:") {
-		t.Fatalf("error = %v, want a crop: prefix", err)
+	_, _, err = h.edit(context.Background(), nil, editInput{ImageURL: "http://127.0.0.1:1/x.png"})
+	if err == nil || !strings.HasPrefix(err.Error(), "edit:") {
+		t.Fatalf("error = %v, want an edit: prefix", err)
 	}
 }

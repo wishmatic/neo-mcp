@@ -85,7 +85,7 @@ flowchart TD
     mcp["internal/mcp"]
     diffusion["internal/diffusion"]
     present["internal/present"]
-    crop["internal/crop"]
+    edit["internal/edit"]
     format["internal/format"]
     forge["internal/forge"]
     novelai["internal/novelai"]
@@ -95,7 +95,7 @@ flowchart TD
     utils["internal/utils"]
 
     mcp --> diffusion
-    mcp --> crop
+    mcp --> edit
     mcp --> present
     mcp --> format
     mcp --> resolve

@@ -24,7 +24,7 @@ type bgkillInput struct {
 func registerBgkill(srv *mcp.Server, h *handlers) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "bgkill",
-		Description: "Remove the background from an image via the BiRefNet extension, returning the foreground with a transparent background. Downloads the input image from a URL (following redirects). Use the crop tool to trim or circularise the result.",
+		Description: "Remove the background from an image via the BiRefNet extension, returning the foreground with a transparent background. Downloads the input image from a URL (following redirects). Use the edit tool to trim or circularise the result.",
 		InputSchema: bgkillSchema(h.defaultFormat),
 		Annotations: imageGenerationAnnotations(),
 	}, h.bgkill)
