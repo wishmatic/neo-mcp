@@ -8,8 +8,8 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/generation"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
+	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
 
@@ -17,7 +17,7 @@ type handlers struct {
 	log           *zap.Logger
 	gen           *generation.Generator
 	forge         *forge.Client
-	publisher     *publish.Publisher
+	store         *store.Client
 	novelai       *novelai.Client
 	resolver      *resolve.Resolver
 	defaultFormat format.Format

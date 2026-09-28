@@ -21,7 +21,11 @@ func (h *handlers) publishImages(
 		return nil, generationOutput{}, fmt.Errorf("%s: %w", tool, err)
 	}
 
-	urls, err := h.publisher.Images(ctx, tool, converted, format.MediaType())
+	if h.store == nil {
+		return nil, generationOutput{}, fmt.Errorf("%s: image storage is not configured", tool)
+	}
+
+	urls, err := h.store.Publish(ctx, tool, converted, format.MediaType())
 	if err != nil {
 		return nil, generationOutput{}, err
 	}

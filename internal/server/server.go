@@ -18,7 +18,6 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/generation"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/sourcemap"
 	"github.com/wishmatic/neo-mcp/internal/store"
@@ -108,7 +107,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		Log:          log,
 		Generator:    generation.New(forgeClient, novelaiClient),
 		Forge:        forgeClient,
-		Publisher:    publish.New(files, log),
+		Store:        files,
 		NovelAI:      novelaiClient,
 		Resolver:     resolver,
 		OutputFormat: outputFormat,

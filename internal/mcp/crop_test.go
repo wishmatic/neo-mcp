@@ -184,7 +184,7 @@ func TestCropCallToolReturnsImage(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:          zapNop(),
-		Publisher:    newTestPublisher(t),
+		Store:        newTestStore(t),
 		Resolver:     resolver,
 		OutputFormat: format.Default,
 	})
@@ -228,7 +228,7 @@ func TestCropCallToolFetchFailure(t *testing.T) {
 		t.Fatalf("resolve.New() error: %v", err)
 	}
 
-	h := &handlers{log: zapNop(), resolver: resolver, publisher: newTestPublisher(t)}
+	h := &handlers{log: zapNop(), resolver: resolver, store: newTestStore(t)}
 
 	_, _, err = h.crop(context.Background(), nil, cropInput{ImageURL: "http://127.0.0.1:1/x.png"})
 	if err == nil || !strings.HasPrefix(err.Error(), "crop:") {

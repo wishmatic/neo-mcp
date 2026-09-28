@@ -190,7 +190,7 @@ func TestTxt2ImgCallToolImageAudience(t *testing.T) {
 	srv, err := New(Deps{
 		Log:       zapNop(),
 		Generator: generation.New(nil, backend),
-		Publisher: newTestPublisher(t),
+		Store:     newTestStore(t),
 		NovelAI:   backend,
 	})
 	if err != nil {
@@ -246,7 +246,7 @@ func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 	srv, err := New(Deps{
 		Log:       zapNop(),
 		Generator: generation.New(nil, backend),
-		Publisher: newTestPublisher(t),
+		Store:     newTestStore(t),
 		NovelAI:   backend,
 	})
 	if err != nil {
@@ -297,10 +297,10 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 	log, logs := observedLogger()
 
 	h := &handlers{
-		log:       log,
-		gen:       generation.New(nil, newNovelAIBackend(t, novelaiLog)),
-		publisher: newTestPublisher(t),
-		resolver:  newResolver(t),
+		log:      log,
+		gen:      generation.New(nil, newNovelAIBackend(t, novelaiLog)),
+		store:    newTestStore(t),
+		resolver: newResolver(t),
 	}
 
 	in := img2imgInput{
@@ -314,9 +314,9 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 	}
 
 	failing := &handlers{
-		log:       log,
-		gen:       generation.New(nil, novelai.New("http://127.0.0.1:1", "sk-test")),
-		publisher: newTestPublisher(t),
+		log:   log,
+		gen:   generation.New(nil, novelai.New("http://127.0.0.1:1", "sk-test")),
+		store: newTestStore(t),
 	}
 
 	if _, _, err := failing.txt2img(context.Background(), nil, txt2imgInput{

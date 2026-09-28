@@ -124,7 +124,7 @@ func TestImg2ImgForgeCallToolTakesSizeFromInitImage(t *testing.T) {
 	srv, err := New(Deps{
 		Log:       zapNop(),
 		Generator: generation.New(backend, nil),
-		Publisher: newTestPublisher(t),
+		Store:     newTestStore(t),
 		Resolver:  newResolver(t),
 	})
 	if err != nil {
@@ -155,7 +155,7 @@ func newImg2ImgServer(t *testing.T, log *requestLog) *mcp.Server {
 	srv, err := New(Deps{
 		Log:       zapNop(),
 		Generator: generation.New(nil, backend),
-		Publisher: newTestPublisher(t),
+		Store:     newTestStore(t),
 		Resolver:  newResolver(t),
 		NovelAI:   backend,
 	})

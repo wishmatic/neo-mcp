@@ -11,11 +11,19 @@ import (
 	"testing"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 var keyPattern = regexp.MustCompile(`^i/\d{4}-\d{2}/[0-9a-f-]{36}\.(png|jpg|jxl|webp)$`)
 
 func newTestClient(t *testing.T) (*Client, string) {
+	t.Helper()
+
+	return newClient(t, zap.NewNop())
+}
+
+func newClient(t *testing.T, log *zap.Logger) (*Client, string) {
 	t.Helper()
 
 	dir := filepath.Join(t.TempDir(), "files")
@@ -25,7 +33,7 @@ func newTestClient(t *testing.T) (*Client, string) {
 		t.Fatalf("url.Parse() error: %v", err)
 	}
 
-	client, err := New(Config{Dir: dir, PublicBase: base}, zap.NewNop())
+	client, err := New(Config{Dir: dir, PublicBase: base}, log)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -152,6 +160,69 @@ func TestUploadKeysAreUnique(t *testing.T) {
 
 	if first == second {
 		t.Errorf("keys = %q and %q, want distinct keys", first, second)
+	}
+}
+
+func TestPublishStoresEveryImage(t *testing.T) {
+	client, _ := newTestClient(t)
+
+	urls, err := client.Publish(context.Background(), "txt2img", [][]byte{[]byte("a"), []byte("b"), []byte("c")}, "image/png")
+	if err != nil {
+		t.Fatalf("Publish() error: %v", err)
+	}
+
+	if len(urls) != 3 {
+		t.Fatalf("urls = %v, want three", urls)
+	}
+
+	seen := map[string]bool{}
+	for _, url := range urls {
+		if seen[url] {
+			t.Errorf("urls = %v, want distinct entries", urls)
+		}
+
+		seen[url] = true
+
+		key := strings.TrimPrefix(url, "https://neo.example.com/")
+		if !keyPattern.MatchString(key) {
+			t.Errorf("key = %q, want the i/<month>/<uuid>.png shape", key)
+		}
+	}
+}
+
+func TestPublishPassesContentTypeThrough(t *testing.T) {
+	client, _ := newTestClient(t)
+
+	urls, err := client.Publish(context.Background(), "convert", [][]byte{[]byte("a")}, "image/jpeg")
+	if err != nil {
+		t.Fatalf("Publish() error: %v", err)
+	}
+
+	if !strings.HasSuffix(urls[0], ".jpg") {
+		t.Errorf("url = %q, want a .jpg key for image/jpeg", urls[0])
+	}
+}
+
+func TestPublishReportsUploadFailure(t *testing.T) {
+	core, logs := observer.New(zapcore.ErrorLevel)
+
+	client, dir := newClient(t, zap.New(core))
+
+	if err := os.WriteFile(filepath.Join(dir, "i"), []byte("blocker"), 0o600); err != nil {
+		t.Fatalf("write blocker: %v", err)
+	}
+
+	urls, err := client.Publish(context.Background(), "txt2img", [][]byte{[]byte("a")}, "image/png")
+	if err == nil {
+		t.Fatal("Publish() error = nil, want the upload failure")
+	}
+
+	if urls != nil {
+		t.Errorf("urls = %v, want none on failure", urls)
+	}
+
+	if count := logs.FilterMessageSnippet("upload failed").Len(); count != 1 {
+		t.Errorf("errors = %d, want one txt2img upload failure", count)
 	}
 }
 

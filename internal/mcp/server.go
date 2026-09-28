@@ -6,8 +6,8 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/generation"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
+	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
 
@@ -15,7 +15,7 @@ type Deps struct {
 	Log       *zap.Logger
 	Generator *generation.Generator
 	Forge     *forge.Client
-	Publisher *publish.Publisher
+	Store     *store.Client
 	NovelAI   *novelai.Client
 	Resolver  *resolve.Resolver
 
@@ -38,7 +38,7 @@ func buildHandlers(deps Deps) *handlers {
 		log:           deps.Log,
 		gen:           deps.Generator,
 		forge:         deps.Forge,
-		publisher:     deps.Publisher,
+		store:         deps.Store,
 		novelai:       deps.NovelAI,
 		resolver:      deps.Resolver,
 		defaultFormat: deps.OutputFormat,
@@ -46,10 +46,6 @@ func buildHandlers(deps Deps) *handlers {
 
 	if h.gen == nil {
 		h.gen = generation.New(nil, nil)
-	}
-
-	if h.publisher == nil {
-		h.publisher = publish.New(nil, deps.Log)
 	}
 
 	if h.defaultFormat == "" {

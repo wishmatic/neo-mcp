@@ -87,7 +87,6 @@ flowchart TD
     mcp["internal/mcp"]
     generation["internal/generation"]
     present["internal/present"]
-    publish["internal/publish"]
     crop["internal/crop"]
     format["internal/format"]
     forge["internal/forge"]
@@ -104,7 +103,6 @@ flowchart TD
 
     server --> mcp
     server --> generation
-    server --> publish
     server --> auth
     server --> config
     server --> forge
@@ -118,10 +116,10 @@ flowchart TD
     mcp --> forge
     mcp --> crop
     mcp --> present
-    mcp --> publish
     mcp --> format
     mcp --> novelai
     mcp --> resolve
+    mcp --> store
 
     generation --> forge
     generation --> novelai

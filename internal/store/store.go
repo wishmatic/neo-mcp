@@ -71,6 +71,25 @@ func (c *Client) UploadFile(ctx context.Context, data []byte, contentType string
 	return c.url(key), nil
 }
 
+// Publish stores every image in order and returns their URLs. label names the caller in the log line a failed upload
+// writes.
+func (c *Client) Publish(ctx context.Context, label string, images [][]byte, contentType string) ([]string, error) {
+	urls := make([]string, 0, len(images))
+
+	for _, data := range images {
+		url, err := c.UploadFile(ctx, data, contentType)
+		if err != nil {
+			c.log.Error(label+" upload failed", zap.Error(err))
+
+			return nil, err
+		}
+
+		urls = append(urls, url)
+	}
+
+	return urls, nil
+}
+
 func (c *Client) GetObject(ctx context.Context, key string) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err

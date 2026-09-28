@@ -2,15 +2,18 @@ package mcp
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/format"
-	"github.com/wishmatic/neo-mcp/internal/publish"
 )
 
 func TestConvertSchema(t *testing.T) {
@@ -43,9 +46,9 @@ func TestConvertCallToolReturnsImage(t *testing.T) {
 	t.Cleanup(images.Close)
 
 	srv, err := New(Deps{
-		Log:       zapNop(),
-		Publisher: newTestPublisher(t),
-		Resolver:  newResolver(t),
+		Log:      zapNop(),
+		Store:    newTestStore(t),
+		Resolver: newResolver(t),
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
@@ -90,9 +93,9 @@ func TestConvertCallToolRejectsSameFormat(t *testing.T) {
 	}))
 	t.Cleanup(images.Close)
 
-	store := &fakeStore{}
+	client, dir := newTestStoreAt(t)
 
-	srv, err := New(Deps{Log: zapNop(), Publisher: publish.New(store, zapNop()), Resolver: newResolver(t)})
+	srv, err := New(Deps{Log: zapNop(), Store: client, Resolver: newResolver(t)})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -114,8 +117,8 @@ func TestConvertCallToolRejectsSameFormat(t *testing.T) {
 		t.Fatalf("content[0] = %#v, want an error naming convert and png", result.Content[0])
 	}
 
-	if len(store.uploads) != 0 {
-		t.Errorf("uploads = %d, want a refused conversion to store nothing", len(store.uploads))
+	if _, err := os.Stat(filepath.Join(dir, "i")); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("stat stored images: %v, want a refused conversion to store nothing", err)
 	}
 }
 
@@ -134,7 +137,7 @@ func TestConvertCallToolErrors(t *testing.T) {
 		{name: "fetch failure", in: convertInput{ImageURL: "http://127.0.0.1:1/x.png", Format: "png"}},
 	}
 
-	h := &handlers{log: zapNop(), resolver: newResolver(t), publisher: newTestPublisher(t)}
+	h := &handlers{log: zapNop(), resolver: newResolver(t), store: newTestStore(t)}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"image"
 	"slices"
 	"strings"
@@ -12,14 +11,12 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/format"
-	"github.com/wishmatic/neo-mcp/internal/publish"
-	"go.uber.org/zap"
 )
 
 func TestPublishImagesReturnsURLAndImage(t *testing.T) {
 	for _, format := range []format.Format{format.PNG, format.JPEG, format.JXL, format.WebP} {
 		t.Run(format.String(), func(t *testing.T) {
-			h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
+			h := &handlers{log: zapNop(), store: newTestStore(t)}
 
 			result, out, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, format)
 			if err != nil {
@@ -56,7 +53,7 @@ func TestPublishImagesReturnsURLAndImage(t *testing.T) {
 }
 
 func TestImageContentWireShape(t *testing.T) {
-	h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
+	h := &handlers{log: zapNop(), store: newTestStore(t)}
 
 	result, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, format.PNG)
 	if err != nil {
@@ -93,16 +90,19 @@ func TestImageContentWireShape(t *testing.T) {
 }
 
 func TestPublishImagesUploadFailure(t *testing.T) {
-	h := &handlers{log: zapNop(), publisher: publish.New(&fakeStore{err: errors.New("boom")}, zap.NewNop())}
+	h := &handlers{log: zapNop(), store: newTestStore(t)}
 
-	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, format.PNG)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, _, err := h.publishImages(ctx, "txt2img", [][]byte{testImagePNG(t)}, format.PNG)
 	if err == nil {
 		t.Fatal("publishImages() error = nil, want the upload failure")
 	}
 }
 
 func TestPublishImagesConvertFailure(t *testing.T) {
-	h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
+	h := &handlers{log: zapNop(), store: newTestStore(t)}
 
 	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{[]byte("not an image")}, format.WebP)
 	if err == nil || !strings.HasPrefix(err.Error(), "txt2img:") {
