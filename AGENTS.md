@@ -78,7 +78,6 @@ flowchart TD
     server["internal/server"]
     mcp["internal/mcp"]
     imagegen["internal/imagegen"]
-    bgkill["internal/bgkill"]
     present["internal/present"]
     publish["internal/publish"]
     crop["internal/crop"]
@@ -97,7 +96,6 @@ flowchart TD
 
     server --> mcp
     server --> imagegen
-    server --> bgkill
     server --> publish
     server --> auth
     server --> config
@@ -109,7 +107,7 @@ flowchart TD
     server --> sourcemap
 
     mcp --> imagegen
-    mcp --> bgkill
+    mcp --> forge
     mcp --> crop
     mcp --> present
     mcp --> publish
@@ -120,7 +118,6 @@ flowchart TD
 
     imagegen --> forge
     imagegen --> novelai
-    bgkill --> forge
     filestore --> imgfmt
     present --> imgfmt
 

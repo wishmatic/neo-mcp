@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
@@ -140,7 +139,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:          zapNop(),
-		Bgkill:       bgkill.New(forge.New(forgeServer.URL, false)),
+		Forge:        forge.New(forgeServer.URL, false),
 		Publisher:    newTestPublisher(t),
 		Resolver:     resolver,
 		OutputFormat: imgfmt.Default,
@@ -152,7 +151,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "bgkill",
 		Arguments: map[string]any{
-			"model_name": bgkill.Models[0],
+			"model_name": forge.BgkillModels[0],
 			"image_url":  images.URL + "/x.png",
 			"format":     "jpeg",
 		},

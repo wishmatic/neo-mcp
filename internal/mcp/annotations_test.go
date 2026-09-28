@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
@@ -17,7 +16,7 @@ func TestToolAnnotations(t *testing.T) {
 	srv, err := New(Deps{
 		Log:       zapNop(),
 		Generator: imagegen.New(forgeClient, novelai.New("http://example.com", "sk", false)),
-		Bgkill:    bgkill.New(forgeClient),
+		Forge:     forgeClient,
 		NovelAI:   novelai.New("http://example.com", "sk", false),
 	})
 	if err != nil {

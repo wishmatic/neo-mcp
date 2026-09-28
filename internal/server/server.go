@@ -12,7 +12,6 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/auth"
-	"github.com/wishmatic/neo-mcp/internal/bgkill"
 	"github.com/wishmatic/neo-mcp/internal/config"
 	"github.com/wishmatic/neo-mcp/internal/filestore"
 	"github.com/wishmatic/neo-mcp/internal/forge"
@@ -108,7 +107,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	mcpSrv, err := mcpServer.New(mcpServer.Deps{
 		Log:          log,
 		Generator:    imagegen.New(forgeClient, novelaiClient),
-		Bgkill:       bgkill.New(forgeClient),
+		Forge:        forgeClient,
 		Publisher:    publish.New(files, log),
 		NovelAI:      novelaiClient,
 		Resolver:     resolver,

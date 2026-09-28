@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/wishmatic/neo-mcp/internal/bgkill"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
@@ -16,7 +16,7 @@ import (
 type handlers struct {
 	log           *zap.Logger
 	gen           *imagegen.Generator
-	bgkillSvc     *bgkill.Service
+	forge         *forge.Client
 	publisher     *publish.Publisher
 	novelai       *novelai.Client
 	resolver      *resolve.Resolver

@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/wishmatic/neo-mcp/internal/bgkill"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 )
 
@@ -44,8 +44,8 @@ func TestBgkillSchema(t *testing.T) {
 		t.Error("bgkill: model_name must not have a default")
 	}
 
-	if len(model.Enum) != len(bgkill.Models) {
-		t.Errorf("bgkill: model_name has %d enum values, want %d", len(model.Enum), len(bgkill.Models))
+	if len(model.Enum) != len(forge.BgkillModels) {
+		t.Errorf("bgkill: model_name has %d enum values, want %d", len(model.Enum), len(forge.BgkillModels))
 	}
 }
 

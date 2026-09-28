@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/bgkill"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"go.uber.org/zap"
 )
@@ -63,7 +63,7 @@ func (h *handlers) bgkill(
 		zap.Bool("full_mode", in.IsFullMode),
 	)
 
-	out, err := h.bgkillSvc.Remove(ctx, bgkillRequest(in, image))
+	out, err := h.forge.Bgkill(ctx, bgkillRequest(in, image))
 	if err != nil {
 		return nil, generationOutput{}, h.generationFailure(ctx, "bgkill", err)
 	}
@@ -71,8 +71,8 @@ func (h *handlers) bgkill(
 	return h.publishImages(ctx, "bgkill", [][]byte{out}, format)
 }
 
-func bgkillRequest(in bgkillInput, image []byte) bgkill.Request {
-	return bgkill.Request{
+func bgkillRequest(in bgkillInput, image []byte) forge.BgkillRequest {
+	return forge.BgkillRequest{
 		ModelName:  in.ModelName,
 		ImageData:  image,
 		IsFullMode: in.IsFullMode,
@@ -85,8 +85,8 @@ func bgkillSchema(def imgfmt.Format) *jsonschema.Schema {
 		panic(fmt.Sprintf("bgkill: infer input schema: %v", err))
 	}
 
-	models := make([]any, 0, len(bgkill.Models))
-	for _, model := range bgkill.Models {
+	models := make([]any, 0, len(forge.BgkillModels))
+	for _, model := range forge.BgkillModels {
 		models = append(models, model)
 	}
 

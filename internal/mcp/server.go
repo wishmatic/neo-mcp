@@ -2,7 +2,7 @@ package mcp
 
 import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/bgkill"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/imagegen"
 	"github.com/wishmatic/neo-mcp/internal/imgfmt"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
@@ -14,7 +14,7 @@ import (
 type Deps struct {
 	Log       *zap.Logger
 	Generator *imagegen.Generator
-	Bgkill    *bgkill.Service
+	Forge     *forge.Client
 	Publisher *publish.Publisher
 	NovelAI   *novelai.Client
 	Resolver  *resolve.Resolver
@@ -37,7 +37,7 @@ func buildHandlers(deps Deps) *handlers {
 	h := &handlers{
 		log:           deps.Log,
 		gen:           deps.Generator,
-		bgkillSvc:     deps.Bgkill,
+		forge:         deps.Forge,
 		publisher:     deps.Publisher,
 		novelai:       deps.NovelAI,
 		resolver:      deps.Resolver,
@@ -46,10 +46,6 @@ func buildHandlers(deps Deps) *handlers {
 
 	if h.gen == nil {
 		h.gen = imagegen.New(nil, nil)
-	}
-
-	if h.bgkillSvc == nil {
-		h.bgkillSvc = bgkill.New(nil)
 	}
 
 	if h.publisher == nil {
@@ -76,7 +72,7 @@ func registerTools(srv *mcp.Server, h *handlers) {
 	registerCrop(srv, h)
 	registerConvert(srv, h)
 
-	if h.bgkillSvc.Enabled() {
+	if h.forge != nil {
 		registerBgkill(srv, h)
 	}
 }
