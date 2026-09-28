@@ -23,29 +23,29 @@ type editInput struct {
 	Padding *int `json:"padding,omitempty" jsonschema:"transparent padding in pixels added around the trimmed content; defaults to 32 for a square and to none otherwise"`
 }
 
-func registerEdit(srv *mcp.Server, h *handlers) {
+func registerEdit(srv *mcp.Server, c *Clients) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "edit",
 		Description: "Edit an image locally: trim it to the bounding box of its visible content, then optionally pad it, " +
 			"center it on a transparent square, or cut it into a circle. Downloads the input image from a URL (following " +
 			"redirects). An opaque image has no transparent margins, so trimming leaves it unchanged while the square, " +
 			"circle, and padding options still apply.",
-		InputSchema: editSchema(h.defaultFormat),
+		InputSchema: editSchema(c.DefaultOutputFormat),
 		Annotations: imageGenerationAnnotations(),
-	}, h.edit)
+	}, c.edit)
 }
 
-func (h *handlers) edit(
+func (c *Clients) edit(
 	ctx context.Context,
 	_ *mcp.CallToolRequest,
 	in editInput,
 ) (*mcp.CallToolResult, generationOutput, error) {
-	format, err := h.outputFormat(in.Format)
+	format, err := c.outputFormat(in.Format)
 	if err != nil {
 		return nil, generationOutput{}, fmt.Errorf("edit: %w", err)
 	}
 
-	h.log.Debug("tool called",
+	c.Log.Debug("tool called",
 		zap.String("tool", "edit"),
 		zap.String("format", format.String()),
 		zap.String("image_url", in.ImageURL),
@@ -53,9 +53,9 @@ func (h *handlers) edit(
 		zap.Bool("circle", in.IsCircle),
 	)
 
-	source, err := h.resolver.Fetch(ctx, in.ImageURL)
+	source, err := c.Resolver.Fetch(ctx, in.ImageURL)
 	if err != nil {
-		h.log.Error("edit failed to fetch image",
+		c.Log.Error("edit failed to fetch image",
 			zap.String("image_url", in.ImageURL),
 			zap.Error(err),
 		)
@@ -68,7 +68,7 @@ func (h *handlers) edit(
 		return nil, generationOutput{}, fmt.Errorf("edit: %w", err)
 	}
 
-	return h.publishImages(ctx, "edit", [][]byte{out}, format)
+	return c.publishImages(ctx, "edit", [][]byte{out}, format)
 }
 
 func editOptions(in editInput) edit.Options {

@@ -294,11 +294,11 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 	novelaiLog := &requestLog{}
 	log, logs := observedLogger()
 
-	h := &handlers{
-		log:      log,
-		gen:      diffusion.New(nil, newNovelAIBackend(t, novelaiLog)),
-		store:    newTestStore(t),
-		resolver: newResolver(t),
+	h := &Clients{
+		Log:       log,
+		Generator: diffusion.New(nil, newNovelAIBackend(t, novelaiLog)),
+		Store:     newTestStore(t),
+		Resolver:  newResolver(t),
 	}
 
 	in := img2imgInput{
@@ -311,10 +311,10 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 		t.Fatalf("img2img() error: %v", err)
 	}
 
-	failing := &handlers{
-		log:   log,
-		gen:   diffusion.New(nil, novelai.New("http://127.0.0.1:1", "sk-test")),
-		store: newTestStore(t),
+	failing := &Clients{
+		Log:       log,
+		Generator: diffusion.New(nil, novelai.New("http://127.0.0.1:1", "sk-test")),
+		Store:     newTestStore(t),
 	}
 
 	if _, _, err := failing.txt2img(context.Background(), nil, txt2imgInput{

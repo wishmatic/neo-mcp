@@ -22,7 +22,7 @@ type img2imgInput struct {
 	Noise float64 `json:"noise,omitempty" jsonschema:"NovelAI only: extra image noise; ignored by Forge"`
 }
 
-func registerImg2Img(srv *mcp.Server, h *handlers) {
+func registerImg2Img(srv *mcp.Server, c *Clients) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "img2img",
 		Description: "Transform an existing image, via the local Stable Diffusion WebUI (Forge Neo) instance or " +
@@ -32,24 +32,24 @@ func registerImg2Img(srv *mcp.Server, h *handlers) {
 			"aspect ratio. Hi-res (HR) second-pass upscaling is Forge only: " +
 			"NovelAI ignores the hr_ fields and returns the requested size. When HR upscaling is enabled, denoising_strength " +
 			"is required.",
-		InputSchema: img2imgSchema(h.defaultFormat),
+		InputSchema: img2imgSchema(c.DefaultOutputFormat),
 		Annotations: imageGenerationAnnotations(),
-	}, h.img2img)
+	}, c.img2img)
 }
 
-func (h *handlers) img2img(
+func (c *Clients) img2img(
 	ctx context.Context,
 	_ *mcp.CallToolRequest,
 	in img2imgInput,
 ) (*mcp.CallToolResult, generationOutput, error) {
 	provider := diffusion.ProviderOf(in.Model)
 
-	format, err := h.outputFormat(in.Format)
+	format, err := c.outputFormat(in.Format)
 	if err != nil {
 		return nil, generationOutput{}, fmt.Errorf("img2img: %w", err)
 	}
 
-	h.log.Debug("tool called",
+	c.Log.Debug("tool called",
 		zap.String("tool", "img2img"),
 		zap.String("provider", provider),
 		zap.String("format", format.String()),
@@ -73,9 +73,9 @@ func (h *handlers) img2img(
 		zap.Float64("hr_cfg", in.HRCFGScale),
 	)
 
-	initImage, err := h.resolver.Fetch(ctx, in.InitImageURL)
+	initImage, err := c.Resolver.Fetch(ctx, in.InitImageURL)
 	if err != nil {
-		h.log.Error("img2img failed to fetch init image",
+		c.Log.Error("img2img failed to fetch init image",
 			zap.String("init_image_url", in.InitImageURL),
 			zap.Error(err),
 		)
@@ -85,7 +85,7 @@ func (h *handlers) img2img(
 
 	in.Width, in.Height, err = initImageSize(in.generationInput, initImage)
 	if err != nil {
-		h.log.Error("img2img failed to read the init image size",
+		c.Log.Error("img2img failed to read the init image size",
 			zap.String("init_image_url", in.InitImageURL),
 			zap.Error(err),
 		)
@@ -93,7 +93,7 @@ func (h *handlers) img2img(
 		return nil, generationOutput{}, fmt.Errorf("img2img: read init image size: %w", err)
 	}
 
-	h.log.Info("img2img generating synchronously",
+	c.Log.Info("img2img generating synchronously",
 		zap.String("provider", provider),
 		zap.String("model", in.Model),
 		zap.Int("steps", in.SamplingSteps),
@@ -101,14 +101,14 @@ func (h *handlers) img2img(
 		zap.Int("height", in.Height),
 	)
 
-	images, err := h.gen.Img2Img(ctx, generationImg2ImgRequest(in, initImage))
+	images, err := c.Generator.Img2Img(ctx, generationImg2ImgRequest(in, initImage))
 	if err != nil {
-		return nil, generationOutput{}, h.generationFailure(ctx, "img2img", err)
+		return nil, generationOutput{}, c.generationFailure(ctx, "img2img", err)
 	}
 
-	h.log.Info("img2img generation finished", zap.Int("images", len(images)))
+	c.Log.Info("img2img generation finished", zap.Int("images", len(images)))
 
-	result, out, err := h.publishImages(ctx, "img2img", images, format)
+	result, out, err := c.publishImages(ctx, "img2img", images, format)
 	if err != nil {
 		return nil, generationOutput{}, err
 	}

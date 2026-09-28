@@ -16,7 +16,7 @@ type convertInput struct {
 	Format string `json:"format" jsonschema:"format to convert to: png, jpeg, jxl (JPEG XL), or webp. Ask for a format the image is not already in: a call whose format matches the input's is an error rather than a no-op"`
 }
 
-func registerConvert(srv *mcp.Server, h *handlers) {
+func registerConvert(srv *mcp.Server, c *Clients) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "convert",
 		Description: "Re-encode an image as png, jpeg, jxl, or webp, changing nothing else about it. Transparency is kept " +
@@ -25,10 +25,10 @@ func registerConvert(srv *mcp.Server, h *handlers) {
 			"either re-encodes or fails. Runs locally, so it needs no generation backend.",
 		InputSchema: convertSchema(),
 		Annotations: imageGenerationAnnotations(),
-	}, h.convert)
+	}, c.convert)
 }
 
-func (h *handlers) convert(
+func (c *Clients) convert(
 	ctx context.Context,
 	_ *mcp.CallToolRequest,
 	in convertInput,
@@ -38,15 +38,15 @@ func (h *handlers) convert(
 		return nil, generationOutput{}, fmt.Errorf("convert: %w", err)
 	}
 
-	h.log.Debug("tool called",
+	c.Log.Debug("tool called",
 		zap.String("tool", "convert"),
 		zap.String("format", target.String()),
 		zap.String("image_url", in.ImageURL),
 	)
 
-	source, err := h.resolver.Fetch(ctx, in.ImageURL)
+	source, err := c.Resolver.Fetch(ctx, in.ImageURL)
 	if err != nil {
-		h.log.Error("convert failed to fetch image",
+		c.Log.Error("convert failed to fetch image",
 			zap.String("image_url", in.ImageURL),
 			zap.Error(err),
 		)
@@ -59,7 +59,7 @@ func (h *handlers) convert(
 		return nil, generationOutput{}, fmt.Errorf("convert: %w", err)
 	}
 
-	return h.publishImages(ctx, "convert", [][]byte{out}, target)
+	return c.publishImages(ctx, "convert", [][]byte{out}, target)
 }
 
 func convertSchema() *jsonschema.Schema {

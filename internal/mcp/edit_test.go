@@ -228,7 +228,7 @@ func TestEditCallToolFetchFailure(t *testing.T) {
 		t.Fatalf("resolve.New() error: %v", err)
 	}
 
-	h := &handlers{log: zapNop(), resolver: resolver, store: newTestStore(t)}
+	h := &Clients{Log: zapNop(), Resolver: resolver, Store: newTestStore(t)}
 
 	_, _, err = h.edit(context.Background(), nil, editInput{ImageURL: "http://127.0.0.1:1/x.png"})
 	if err == nil || !strings.HasPrefix(err.Error(), "edit:") {

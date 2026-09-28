@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (h *handlers) publishImages(
+func (c *Clients) publishImages(
 	ctx context.Context,
 	tool string,
 	images [][]byte,
@@ -21,18 +21,18 @@ func (h *handlers) publishImages(
 		return nil, generationOutput{}, fmt.Errorf("%s: %w", tool, err)
 	}
 
-	if h.store == nil {
+	if c.Store == nil {
 		return nil, generationOutput{}, fmt.Errorf("%s: image storage is not configured", tool)
 	}
 
-	urls, err := h.store.Publish(ctx, tool, converted, format.MediaType())
+	urls, err := c.Store.Publish(ctx, tool, converted, format.MediaType())
 	if err != nil {
 		return nil, generationOutput{}, err
 	}
 
 	content, failures := present.StoredImages(images, urls)
 	for _, failure := range failures {
-		h.log.Warn("inline image encoding failed", zap.Int("image", failure.Index), zap.Error(failure.Err))
+		c.Log.Warn("inline image encoding failed", zap.Int("image", failure.Index), zap.Error(failure.Err))
 	}
 
 	return &mcp.CallToolResult{Content: content}, generationOutput{Count: len(urls), URLs: urls}, nil

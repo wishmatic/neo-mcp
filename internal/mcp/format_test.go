@@ -62,17 +62,17 @@ func testImageJPEG(t *testing.T) []byte {
 }
 
 func TestOutputFormatResolver(t *testing.T) {
-	configured := &handlers{log: zapNop(), defaultFormat: format.JXL}
+	configured := &Clients{Log: zapNop(), DefaultOutputFormat: format.JXL}
 
 	tests := []struct {
 		name    string
-		h       *handlers
+		h       *Clients
 		flag    string
 		want    format.Format
 		wantErr bool
 	}{
 		{name: "configured default", h: configured, want: format.JXL},
-		{name: "unset default falls back to webp", h: &handlers{log: zapNop()}, want: format.Default},
+		{name: "unset default falls back to webp", h: &Clients{Log: zapNop()}, want: format.Default},
 		{name: "flag overrides the default", h: configured, flag: "png", want: format.PNG},
 		{name: "flag alias", h: configured, flag: "jpg", want: format.JPEG},
 		{name: "invalid flag", h: configured, flag: "gif", wantErr: true},
@@ -100,16 +100,8 @@ func TestOutputFormatResolver(t *testing.T) {
 	}
 }
 
-func TestBuildHandlersDefaultsFormat(t *testing.T) {
-	h := buildHandlers(Clients{Log: zapNop()})
-
-	if h.defaultFormat != format.Default {
-		t.Errorf("defaultFormat = %q, want %q", h.defaultFormat, format.Default)
-	}
-}
-
 func TestTxt2ImgRejectsInvalidFormatBeforeGenerating(t *testing.T) {
-	h := &handlers{log: zapNop()}
+	h := &Clients{Log: zapNop()}
 
 	_, _, err := h.txt2img(context.Background(), nil, txt2imgInput{
 		generationInput: generationInput{Model: "m.safetensors", Format: "gif"},

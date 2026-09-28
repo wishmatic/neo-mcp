@@ -17,31 +17,31 @@ type txt2imgInput struct {
 	DenoisingStrength float64 `json:"denoising_strength,omitempty" jsonschema:"Forge only: if HR is enabled, the denoising strength for the hi-res second pass; ignored by NovelAI"`
 }
 
-func registerTxt2Img(srv *mcp.Server, h *handlers) {
+func registerTxt2Img(srv *mcp.Server, c *Clients) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "txt2img",
 		Description: "Generate images synchronously via the local Stable Diffusion WebUI (Forge Neo) instance, " +
 			"or via NovelAI when the model is a NovelAI model id. Blocks until generation completes and returns the image(s). " +
 			"Hi-res (HR) second-pass upscaling is Forge only: NovelAI ignores the hr_ fields and returns the requested size. " +
 			"When HR upscaling is enabled, denoising_strength is required.",
-		InputSchema: txt2imgSchema(h.defaultFormat),
+		InputSchema: txt2imgSchema(c.DefaultOutputFormat),
 		Annotations: imageGenerationAnnotations(),
-	}, h.txt2img)
+	}, c.txt2img)
 }
 
-func (h *handlers) txt2img(
+func (c *Clients) txt2img(
 	ctx context.Context,
 	_ *mcp.CallToolRequest,
 	in txt2imgInput,
 ) (*mcp.CallToolResult, generationOutput, error) {
 	provider := diffusion.ProviderOf(in.Model)
 
-	format, err := h.outputFormat(in.Format)
+	format, err := c.outputFormat(in.Format)
 	if err != nil {
 		return nil, generationOutput{}, fmt.Errorf("txt2img: %w", err)
 	}
 
-	h.log.Debug("tool called",
+	c.Log.Debug("tool called",
 		zap.String("tool", "txt2img"),
 		zap.String("provider", provider),
 		zap.String("format", format.String()),
@@ -63,7 +63,7 @@ func (h *handlers) txt2img(
 		zap.Float64("hr_cfg", in.HRCFGScale),
 	)
 
-	h.log.Info("txt2img generating synchronously",
+	c.Log.Info("txt2img generating synchronously",
 		zap.String("provider", provider),
 		zap.String("model", in.Model),
 		zap.Int("steps", in.SamplingSteps),
@@ -71,14 +71,14 @@ func (h *handlers) txt2img(
 		zap.Int("height", in.Height),
 	)
 
-	images, err := h.gen.Txt2Img(ctx, generationTxt2ImgRequest(in))
+	images, err := c.Generator.Txt2Img(ctx, generationTxt2ImgRequest(in))
 	if err != nil {
-		return nil, generationOutput{}, h.generationFailure(ctx, "txt2img", err)
+		return nil, generationOutput{}, c.generationFailure(ctx, "txt2img", err)
 	}
 
-	h.log.Info("txt2img generation finished", zap.Int("images", len(images)))
+	c.Log.Info("txt2img generation finished", zap.Int("images", len(images)))
 
-	result, out, err := h.publishImages(ctx, "txt2img", images, format)
+	result, out, err := c.publishImages(ctx, "txt2img", images, format)
 	if err != nil {
 		return nil, generationOutput{}, err
 	}

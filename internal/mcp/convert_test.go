@@ -137,7 +137,7 @@ func TestConvertCallToolErrors(t *testing.T) {
 		{name: "fetch failure", in: convertInput{ImageURL: "http://127.0.0.1:1/x.png", Format: "png"}},
 	}
 
-	h := &handlers{log: zapNop(), resolver: newResolver(t), store: newTestStore(t)}
+	h := &Clients{Log: zapNop(), Resolver: newResolver(t), Store: newTestStore(t)}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

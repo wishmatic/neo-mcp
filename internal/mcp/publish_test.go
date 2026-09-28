@@ -16,7 +16,7 @@ import (
 func TestPublishImagesReturnsURLAndImage(t *testing.T) {
 	for _, format := range []format.Format{format.PNG, format.JPEG, format.JXL, format.WebP} {
 		t.Run(format.String(), func(t *testing.T) {
-			h := &handlers{log: zapNop(), store: newTestStore(t)}
+			h := &Clients{Log: zapNop(), Store: newTestStore(t)}
 
 			result, out, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, format)
 			if err != nil {
@@ -53,7 +53,7 @@ func TestPublishImagesReturnsURLAndImage(t *testing.T) {
 }
 
 func TestImageContentWireShape(t *testing.T) {
-	h := &handlers{log: zapNop(), store: newTestStore(t)}
+	h := &Clients{Log: zapNop(), Store: newTestStore(t)}
 
 	result, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, format.PNG)
 	if err != nil {
@@ -90,7 +90,7 @@ func TestImageContentWireShape(t *testing.T) {
 }
 
 func TestPublishImagesUploadFailure(t *testing.T) {
-	h := &handlers{log: zapNop(), store: newTestStore(t)}
+	h := &Clients{Log: zapNop(), Store: newTestStore(t)}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -102,7 +102,7 @@ func TestPublishImagesUploadFailure(t *testing.T) {
 }
 
 func TestPublishImagesConvertFailure(t *testing.T) {
-	h := &handlers{log: zapNop(), store: newTestStore(t)}
+	h := &Clients{Log: zapNop(), Store: newTestStore(t)}
 
 	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{[]byte("not an image")}, format.WebP)
 	if err == nil || !strings.HasPrefix(err.Error(), "txt2img:") {
