@@ -46,7 +46,7 @@ func New(cfg Config, log *zap.Logger) (*Client, error) {
 	return &Client{cfg: cfg, log: log}, nil
 }
 
-func (c *Client) UploadFile(ctx context.Context, data []byte, contentType string) (string, error) {
+func (c *Client) uploadFile(ctx context.Context, data []byte, contentType string) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
@@ -73,11 +73,13 @@ func (c *Client) UploadFile(ctx context.Context, data []byte, contentType string
 
 // Publish stores every image in order and returns their URLs. label names the caller in the log line a failed upload
 // writes.
-func (c *Client) Publish(ctx context.Context, label string, images [][]byte, contentType string) ([]string, error) {
+func (c *Client) Publish(
+	ctx context.Context, label string, images [][]byte, contentType string,
+) ([]string, error) {
 	urls := make([]string, 0, len(images))
 
 	for _, data := range images {
-		url, err := c.UploadFile(ctx, data, contentType)
+		url, err := c.uploadFile(ctx, data, contentType)
 		if err != nil {
 			c.log.Error(label+" upload failed", zap.Error(err))
 

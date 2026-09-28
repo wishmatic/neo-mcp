@@ -54,6 +54,31 @@ func TestStoredImagesAudience(t *testing.T) {
 	}
 }
 
+func TestStoredImagesShrinksToTheBudget(t *testing.T) {
+	content, failures := StoredImages([][]byte{sizedPNG(t, 2048, 1024)}, []string{"https://cdn.example.com/i/1.png"})
+	if len(failures) != 0 {
+		t.Fatalf("failures = %v, want none", failures)
+	}
+
+	img, ok := content[1].(*mcp.ImageContent)
+	if !ok {
+		t.Fatalf("content[1] = %#v, want an image block", content[1])
+	}
+
+	if len(img.Data) > inlineMaxBytes {
+		t.Errorf("attached size = %d bytes, want at most %d", len(img.Data), inlineMaxBytes)
+	}
+
+	decoded, _, err := image.Decode(bytes.NewReader(img.Data))
+	if err != nil {
+		t.Fatalf("decode attached image: %v", err)
+	}
+
+	if bounds := decoded.Bounds(); bounds.Dx() > inlineMaxEdge || bounds.Dy() > inlineMaxEdge {
+		t.Errorf("attached dimensions = %v, want at most %d on the longest edge", bounds, inlineMaxEdge)
+	}
+}
+
 func TestStoredImagesFailsSoft(t *testing.T) {
 	content, failures := StoredImages(
 		[][]byte{[]byte("not an image"), testPNG(t)},
@@ -88,10 +113,16 @@ func TestStoredImagesWithoutImageData(t *testing.T) {
 func testPNG(t *testing.T) []byte {
 	t.Helper()
 
-	img := image.NewNRGBA(image.Rect(0, 0, 64, 64))
+	return sizedPNG(t, 64, 64)
+}
 
-	for y := 0; y < 64; y++ {
-		for x := 0; x < 64; x++ {
+func sizedPNG(t *testing.T, width, height int) []byte {
+	t.Helper()
+
+	img := image.NewNRGBA(image.Rect(0, 0, width, height))
+
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
 			img.SetNRGBA(x, y, color.NRGBA{R: 180, G: 40, B: 10, A: 255})
 		}
 	}

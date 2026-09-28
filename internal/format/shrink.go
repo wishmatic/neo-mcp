@@ -10,24 +10,16 @@ import (
 	"github.com/gen2brain/vpx/webp"
 )
 
-type InlineImage struct {
-	Data      []byte
-	MediaType string
-}
+var shrinkQualities = []int{encodeQuality, 75, 60, 45, 30}
 
-const (
-	InlineMaxEdge  = 1024
-	InlineMaxBytes = 1 << 20
-)
-
-var inlineQualities = []int{encodeQuality, 75, 60, 45, 30}
-
-// Inline prepares image data for an MCP image content block: it downscales to maxEdge and re-encodes to WebP until the
-// result fits maxBytes. WebP keeps transparency and is always in the media types the protocol allows.
-func Inline(data []byte, maxEdge, maxBytes int) (InlineImage, error) {
+// Shrink re-encodes image data as WebP that fits within maxBytes.
+//
+// WebP is a relatively small format, so shrinking is used primarily so vision models can process
+// images that are too large to fit in memory. Also note that shrinking is lossy.
+func Shrink(data []byte, maxEdge, maxBytes int) ([]byte, error) {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return InlineImage{}, fmt.Errorf("format: decode inline image: %w", err)
+		return nil, fmt.Errorf("format: decode image to shrink: %w", err)
 	}
 
 	img = downscaleToEdge(img, maxEdge)
@@ -35,15 +27,15 @@ func Inline(data []byte, maxEdge, maxBytes int) (InlineImage, error) {
 	for {
 		encoded, err := encodeUnder(img, maxBytes)
 		if err != nil {
-			return InlineImage{}, err
+			return nil, err
 		}
 
 		if encoded != nil {
-			return InlineImage{Data: encoded, MediaType: WebP.MediaType()}, nil
+			return encoded, nil
 		}
 
 		if bounds := img.Bounds(); bounds.Dx() <= 1 && bounds.Dy() <= 1 {
-			return InlineImage{}, fmt.Errorf("format: image cannot be encoded within %d bytes", maxBytes)
+			return nil, fmt.Errorf("format: image cannot be encoded within %d bytes", maxBytes)
 		}
 
 		img = halve(img)
@@ -51,10 +43,10 @@ func Inline(data []byte, maxEdge, maxBytes int) (InlineImage, error) {
 }
 
 func encodeUnder(img image.Image, maxBytes int) ([]byte, error) {
-	for _, quality := range inlineQualities {
+	for _, quality := range shrinkQualities {
 		var buf bytes.Buffer
 		if err := webp.Encode(&buf, img, webp.EncodeOptions{Quality: quality, Method: -1}); err != nil {
-			return nil, fmt.Errorf("format: encode inline webp: %w", err)
+			return nil, fmt.Errorf("format: encode shrunk webp: %w", err)
 		}
 
 		if buf.Len() <= maxBytes {

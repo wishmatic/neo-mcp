@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -230,14 +231,17 @@ func TestServesStoredFile(t *testing.T) {
 
 	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
 
-	url, err := srv.files.UploadFile(context.Background(), []byte("png-bytes"), "image/png")
-	if err != nil {
-		t.Fatalf("UploadFile() error: %v", err)
+	stored := filepath.Join(cfg.FilesDir, "i", "2026-09", "x.png")
+
+	if err := os.MkdirAll(filepath.Dir(stored), 0o750); err != nil {
+		t.Fatalf("create %s: %v", filepath.Dir(stored), err)
 	}
 
-	if !strings.HasPrefix(url, cfg.PublicHost+"/i/") {
-		t.Fatalf("url = %q, want a %s/i/ prefix", url, cfg.PublicHost)
+	if err := os.WriteFile(stored, []byte("png-bytes"), 0o640); err != nil {
+		t.Fatalf("write %s: %v", stored, err)
 	}
+
+	url := cfg.PublicHost + "/i/2026-09/x.png"
 
 	rec := httptest.NewRecorder()
 	srv.router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))

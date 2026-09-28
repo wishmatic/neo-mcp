@@ -44,9 +44,9 @@ func newClient(t *testing.T, log *zap.Logger) (*Client, string) {
 func upload(t *testing.T, client *Client, contentType string) (string, string) {
 	t.Helper()
 
-	url, err := client.UploadFile(context.Background(), []byte("image-bytes"), contentType)
+	url, err := client.uploadFile(context.Background(), []byte("image-bytes"), contentType)
 	if err != nil {
-		t.Fatalf("UploadFile() error: %v", err)
+		t.Fatalf("uploadFile() error: %v", err)
 	}
 
 	return url, strings.TrimPrefix(url, "https://neo.example.com/")
@@ -281,8 +281,8 @@ func TestUploadReportsWriteFailure(t *testing.T) {
 		t.Fatalf("write blocker: %v", err)
 	}
 
-	if _, err := client.UploadFile(context.Background(), []byte("bytes"), "image/png"); err == nil {
-		t.Fatal("UploadFile() error = nil, want a write failure")
+	if _, err := client.uploadFile(context.Background(), []byte("bytes"), "image/png"); err == nil {
+		t.Fatal("uploadFile() error = nil, want a write failure")
 	}
 }
 
@@ -292,7 +292,7 @@ func TestUploadHonoursCancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if _, err := client.UploadFile(ctx, []byte("bytes"), "image/png"); !errors.Is(err, context.Canceled) {
-		t.Fatalf("UploadFile() error = %v, want context.Canceled", err)
+	if _, err := client.uploadFile(ctx, []byte("bytes"), "image/png"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("uploadFile() error = %v, want context.Canceled", err)
 	}
 }
