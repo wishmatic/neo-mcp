@@ -20,16 +20,30 @@ func TestBearerAuth(t *testing.T) {
 		{name: "missing header", authHeader: "", wantCode: http.StatusUnauthorized},
 		{name: "wrong token", authHeader: "Bearer wrong-key", wantCode: http.StatusUnauthorized},
 		{name: "empty token", authHeader: "Bearer ", wantCode: http.StatusUnauthorized},
-		{name: "basic scheme rejected", authHeader: "Basic " + testKey, wantCode: http.StatusUnauthorized},
-		{name: "no space after bearer", authHeader: "Bearer" + testKey, wantCode: http.StatusUnauthorized},
-		{name: "token with trailing space", authHeader: "Bearer " + testKey + " ", wantCode: http.StatusOK},
+		{
+			name:       "basic scheme rejected",
+			authHeader: "Basic " + testKey,
+			wantCode:   http.StatusUnauthorized,
+		},
+		{
+			name:       "no space after bearer",
+			authHeader: "Bearer" + testKey,
+			wantCode:   http.StatusUnauthorized,
+		},
+		{
+			name:       "token with trailing space",
+			authHeader: "Bearer " + testKey + " ",
+			wantCode:   http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := do(t, guarded(), tt.authHeader)
 			if rec.Code != tt.wantCode {
-				t.Errorf("status = %d, want %d (body: %q)", rec.Code, tt.wantCode, rec.Body.String())
+				t.Errorf(
+					"status = %d, want %d (body: %q)", rec.Code, tt.wantCode, rec.Body.String(),
+				)
 			}
 		})
 	}
@@ -42,7 +56,11 @@ func TestSessionIDDoesNotBypassAuth(t *testing.T) {
 	guarded().ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusUnauthorized {
-		t.Errorf("status = %d, want %d (body: %q)", rec.Code, http.StatusUnauthorized, rec.Body.String())
+		t.Errorf(
+			"status = %d, want %d (body: %q)",
+			rec.Code, http.StatusUnauthorized,
+			rec.Body.String(),
+		)
 	}
 }
 
