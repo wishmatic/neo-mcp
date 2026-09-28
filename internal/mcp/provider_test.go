@@ -122,7 +122,7 @@ func newSizedInitImageURL(t *testing.T, width, height int) string {
 	return server.URL + "/init.png"
 }
 
-func newResolver(t *testing.T) *resolve.Resolver {
+func newResolver(t *testing.T) *resolve.Client {
 	t.Helper()
 
 	resolver, err := resolve.New(nil, "", nil)
@@ -187,7 +187,7 @@ func numberField(t *testing.T, params map[string]any, key string) float64 {
 func TestTxt2ImgCallToolImageAudience(t *testing.T) {
 	backend := newNovelAIBackend(t, &requestLog{})
 
-	srv, err := New(Deps{
+	srv, err := New(Clients{
 		Log:       zapNop(),
 		Generator: diffusion.New(nil, backend),
 		Store:     newTestStore(t),
@@ -242,7 +242,7 @@ func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 	novelaiLog := &requestLog{}
 	backend := newNovelAIBackend(t, novelaiLog)
 
-	srv, err := New(Deps{
+	srv, err := New(Clients{
 		Log:       zapNop(),
 		Generator: diffusion.New(nil, backend),
 		Store:     newTestStore(t),

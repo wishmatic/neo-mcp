@@ -103,12 +103,12 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		log.Info("novelai enabled", zap.String("base_url", novelai.DefaultBaseURL))
 	}
 
-	mcpSrv, err := mcpServer.New(mcpServer.Deps{
-		Log:          log,
-		Generator:    diffusion.New(forgeClient, novelaiClient),
-		Store:        files,
-		Resolver:     resolver,
-		OutputFormat: outputFormat,
+	mcpSrv, err := mcpServer.New(mcpServer.Clients{
+		Log:                 log,
+		Generator:           diffusion.New(forgeClient, novelaiClient),
+		Store:               files,
+		Resolver:            resolver,
+		DefaultOutputFormat: outputFormat,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("build mcp server: %w", err)

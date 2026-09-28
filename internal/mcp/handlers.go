@@ -13,9 +13,9 @@ import (
 
 type handlers struct {
 	log           *zap.Logger
-	gen           *diffusion.Generator
+	gen           *diffusion.Client
 	store         *store.Client
-	resolver      *resolve.Resolver
+	resolver      *resolve.Client
 	defaultFormat format.Format
 }
 

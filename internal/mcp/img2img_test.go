@@ -121,7 +121,7 @@ func TestImg2ImgForgeCallToolTakesSizeFromInitImage(t *testing.T) {
 	log := &requestLog{}
 	backend := newForgeBackend(t, log)
 
-	srv, err := New(Deps{
+	srv, err := New(Clients{
 		Log:       zapNop(),
 		Generator: diffusion.New(backend, nil),
 		Store:     newTestStore(t),
@@ -152,7 +152,7 @@ func newImg2ImgServer(t *testing.T, log *requestLog) *mcp.Server {
 
 	backend := newNovelAIBackend(t, log)
 
-	srv, err := New(Deps{
+	srv, err := New(Clients{
 		Log:       zapNop(),
 		Generator: diffusion.New(nil, backend),
 		Store:     newTestStore(t),

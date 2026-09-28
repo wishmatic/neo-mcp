@@ -45,7 +45,7 @@ func TestConvertCallToolReturnsImage(t *testing.T) {
 	}))
 	t.Cleanup(images.Close)
 
-	srv, err := New(Deps{
+	srv, err := New(Clients{
 		Log:      zapNop(),
 		Store:    newTestStore(t),
 		Resolver: newResolver(t),
@@ -95,7 +95,7 @@ func TestConvertCallToolRejectsSameFormat(t *testing.T) {
 
 	client, dir := newTestStoreAt(t)
 
-	srv, err := New(Deps{Log: zapNop(), Store: client, Resolver: newResolver(t)})
+	srv, err := New(Clients{Log: zapNop(), Store: client, Resolver: newResolver(t)})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}

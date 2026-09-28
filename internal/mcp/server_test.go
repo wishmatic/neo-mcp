@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewRegistersTools(t *testing.T) {
-	srv, err := New(Deps{Log: zapNop()})
+	srv, err := New(Clients{Log: zapNop()})
 	if err != nil {
 		t.Fatalf("New() unexpected error: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestToolRegistration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			srv, err := New(Deps{
+			srv, err := New(Clients{
 				Log:       zapNop(),
 				Generator: diffusion.New(tt.forge, tt.novelai),
 			})
@@ -73,7 +73,7 @@ func zapNop() *zap.Logger {
 }
 
 func TestGenerationDescriptionsRequireDenoisingStrengthForUpscaling(t *testing.T) {
-	srv, err := New(Deps{
+	srv, err := New(Clients{
 		Log:       zapNop(),
 		Generator: diffusion.New(forge.New("http://example.com", zapNop()), nil),
 	})

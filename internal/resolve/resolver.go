@@ -27,15 +27,15 @@ type ObjectStore interface {
 	GetObject(ctx context.Context, key string) ([]byte, error)
 }
 
-type Resolver struct {
+type Client struct {
 	store      ObjectStore
 	sources    *sourcemap.Map
 	publicBase *url.URL
 	http       *http.Client
 }
 
-func New(store ObjectStore, publicBase string, sources *sourcemap.Map) (*Resolver, error) {
-	r := &Resolver{
+func New(store ObjectStore, publicBase string, sources *sourcemap.Map) (*Client, error) {
+	r := &Client{
 		store:   store,
 		sources: sources,
 		http: &http.Client{
@@ -62,7 +62,7 @@ func New(store ObjectStore, publicBase string, sources *sourcemap.Map) (*Resolve
 //
 // URLs on this service's own public base are read straight from the file store by object key, so a link the
 // service returns can be fed back in without a network round trip.
-func (r *Resolver) Fetch(ctx context.Context, rawURL string) ([]byte, error) {
+func (r *Client) Fetch(ctx context.Context, rawURL string) ([]byte, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("resolve: parse URL %q: %w", rawURL, err)
@@ -120,7 +120,7 @@ func (r *Resolver) Fetch(ctx context.Context, rawURL string) ([]byte, error) {
 	}
 }
 
-func (r *Resolver) get(ctx context.Context, u *url.URL) (*http.Response, error) {
+func (r *Client) get(ctx context.Context, u *url.URL) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("resolve: build request for %s: %w", u, err)
@@ -138,7 +138,7 @@ func (r *Resolver) get(ctx context.Context, u *url.URL) (*http.Response, error) 
 
 // objectKey maps a URL on the public base to a store key: the path sans leading slash, and only the "i"
 // namespace is servable.
-func (r *Resolver) objectKey(u *url.URL) (string, bool) {
+func (r *Client) objectKey(u *url.URL) (string, bool) {
 	if r.publicBase == nil || !strings.EqualFold(u.Host, r.publicBase.Host) {
 		return "", false
 	}

@@ -23,13 +23,13 @@ var (
 	BgkillModels = forge.BgkillModels
 )
 
-type Generator struct {
+type Client struct {
 	forge   *forge.Client
 	novelai *novelai.Client
 }
 
-func New(forge *forge.Client, novelai *novelai.Client) *Generator {
-	return &Generator{forge: forge, novelai: novelai}
+func New(forge *forge.Client, novelai *novelai.Client) *Client {
+	return &Client{forge: forge, novelai: novelai}
 }
 
 func ProviderOf(model string) string {
@@ -40,15 +40,15 @@ func ProviderOf(model string) string {
 	return ProviderForge
 }
 
-func (g *Generator) ForgeEnabled() bool {
+func (g *Client) ForgeEnabled() bool {
 	return g.forge != nil
 }
 
-func (g *Generator) NovelAIEnabled() bool {
+func (g *Client) NovelAIEnabled() bool {
 	return g.novelai != nil
 }
 
-func (g *Generator) Txt2Img(ctx context.Context, req Txt2ImgRequest) ([][]byte, error) {
+func (g *Client) Txt2Img(ctx context.Context, req Txt2ImgRequest) ([][]byte, error) {
 	if novelai.IsModel(req.Model) {
 		if g.novelai == nil {
 			return nil, noNovelAIClientError(req.Model)
@@ -64,7 +64,7 @@ func (g *Generator) Txt2Img(ctx context.Context, req Txt2ImgRequest) ([][]byte, 
 	return g.forge.Txt2Img(ctx, forgeTxt2ImgRequest(req))
 }
 
-func (g *Generator) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, error) {
+func (g *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, error) {
 	if novelai.IsModel(req.Model) {
 		if g.novelai == nil {
 			return nil, noNovelAIClientError(req.Model)
@@ -80,7 +80,7 @@ func (g *Generator) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, 
 	return g.forge.Img2Img(ctx, forgeImg2ImgRequest(req))
 }
 
-func (g *Generator) Bgkill(ctx context.Context, req BgkillRequest) ([]byte, error) {
+func (g *Client) Bgkill(ctx context.Context, req BgkillRequest) ([]byte, error) {
 	if g.forge == nil {
 		return nil, ErrForgeNotConfigured
 	}

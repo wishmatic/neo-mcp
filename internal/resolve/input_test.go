@@ -34,7 +34,7 @@ func insertWhitespace(s string) string {
 	return b.String()
 }
 
-func newResolver(t *testing.T) *Resolver {
+func newResolver(t *testing.T) *Client {
 	t.Helper()
 
 	r, err := New(nil, "", nil)

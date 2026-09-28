@@ -182,11 +182,11 @@ func TestEditCallToolReturnsImage(t *testing.T) {
 		t.Fatalf("resolve.New() error: %v", err)
 	}
 
-	srv, err := New(Deps{
-		Log:          zapNop(),
-		Store:        newTestStore(t),
-		Resolver:     resolver,
-		OutputFormat: format.Default,
+	srv, err := New(Clients{
+		Log:                 zapNop(),
+		Store:               newTestStore(t),
+		Resolver:            resolver,
+		DefaultOutputFormat: format.Default,
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)

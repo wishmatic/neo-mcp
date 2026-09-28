@@ -12,7 +12,7 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/sourcemap"
 )
 
-func newMappedResolver(t *testing.T, spec string) *Resolver {
+func newMappedResolver(t *testing.T, spec string) *Client {
 	t.Helper()
 
 	sources, err := sourcemap.Parse(spec)

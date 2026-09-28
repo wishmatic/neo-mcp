@@ -13,7 +13,7 @@ import (
 func TestToolAnnotations(t *testing.T) {
 	forgeClient := forge.New("http://example.com", zapNop())
 
-	srv, err := New(Deps{
+	srv, err := New(Clients{
 		Log:       zapNop(),
 		Generator: diffusion.New(forgeClient, novelai.New("http://example.com", "sk")),
 	})

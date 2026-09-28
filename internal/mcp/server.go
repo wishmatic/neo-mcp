@@ -9,33 +9,34 @@ import (
 	"go.uber.org/zap"
 )
 
-type Deps struct {
-	Log       *zap.Logger
-	Generator *diffusion.Generator
-	Store     *store.Client
-	Resolver  *resolve.Resolver
+type Clients struct {
+	Log *zap.Logger
 
-	OutputFormat format.Format
+	Generator *diffusion.Client
+	Store     *store.Client
+	Resolver  *resolve.Client
+
+	DefaultOutputFormat format.Format
 }
 
-func New(deps Deps) (*mcp.Server, error) {
+func New(clients Clients) (*mcp.Server, error) {
 	srv := mcp.NewServer(&mcp.Implementation{
 		Name:    "neo-mcp",
 		Version: "0.1.0",
 	}, nil)
 
-	registerTools(srv, buildHandlers(deps))
+	registerTools(srv, buildHandlers(clients))
 
 	return srv, nil
 }
 
-func buildHandlers(deps Deps) *handlers {
+func buildHandlers(clients Clients) *handlers {
 	h := &handlers{
-		log:           deps.Log,
-		gen:           deps.Generator,
-		store:         deps.Store,
-		resolver:      deps.Resolver,
-		defaultFormat: deps.OutputFormat,
+		log:           clients.Log,
+		gen:           clients.Generator,
+		store:         clients.Store,
+		resolver:      clients.Resolver,
+		defaultFormat: clients.DefaultOutputFormat,
 	}
 
 	if h.gen == nil {

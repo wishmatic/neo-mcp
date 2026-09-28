@@ -101,7 +101,7 @@ func TestOutputFormatResolver(t *testing.T) {
 }
 
 func TestBuildHandlersDefaultsFormat(t *testing.T) {
-	h := buildHandlers(Deps{Log: zapNop()})
+	h := buildHandlers(Clients{Log: zapNop()})
 
 	if h.defaultFormat != format.Default {
 		t.Errorf("defaultFormat = %q, want %q", h.defaultFormat, format.Default)
@@ -138,12 +138,12 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 		t.Fatalf("resolve.New() error: %v", err)
 	}
 
-	srv, err := New(Deps{
-		Log:          zapNop(),
-		Generator:    diffusion.New(forge.New(forgeServer.URL, zapNop()), nil),
-		Store:        newTestStore(t),
-		Resolver:     resolver,
-		OutputFormat: format.Default,
+	srv, err := New(Clients{
+		Log:                 zapNop(),
+		Generator:           diffusion.New(forge.New(forgeServer.URL, zapNop()), nil),
+		Store:               newTestStore(t),
+		Resolver:            resolver,
+		DefaultOutputFormat: format.Default,
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
