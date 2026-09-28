@@ -71,5 +71,10 @@ func (c *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, err
 		payload["hr_additional_modules"] = []string{"Use same choices"}
 	}
 
-	return c.postImages(ctx, "img2img", "/sdapi/v1/img2img", payload)
+	out, err := c.postJSON[imagesResponse](ctx, "img2img", "/sdapi/v1/img2img", payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return decodeImages(out)
 }

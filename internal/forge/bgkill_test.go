@@ -5,22 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
-
-type bgkillPayload struct {
-	ModelName        string `json:"model_name"`
-	Image            string `json:"image"`
-	Resolution       string `json:"resolution"`
-	ReturnForeground bool   `json:"return_foreground"`
-	ReturnMask       bool   `json:"return_mask"`
-	ReturnEdgeMask   bool   `json:"return_edge_mask"`
-	SendOutput       bool   `json:"send_output"`
-	UseFP16          bool   `json:"use_fp16"`
-}
 
 func TestBgkillPayload(t *testing.T) {
 	tests := []struct {
@@ -66,56 +55,41 @@ func TestBgkillPayload(t *testing.T) {
 				t.Errorf("path = %q, want /birefnet/single", gotPath)
 			}
 
-			var payload bgkillPayload
-			if err := json.Unmarshal(gotBody, &payload); err != nil {
+			want := map[string]any{
+				"model_name":        "General",
+				"image":             "data:image/png;base64," + base64.StdEncoding.EncodeToString([]byte("png")),
+				"resolution":        "",
+				"return_foreground": true,
+				"return_mask":       false,
+				"return_edge_mask":  false,
+				"send_output":       true,
+				"use_fp16":          tt.wantUseFP16,
+			}
+
+			var got map[string]any
+			if err := json.Unmarshal(gotBody, &got); err != nil {
 				t.Fatalf("decode payload: %v", err)
 			}
 
-			if payload.ModelName != "General" {
-				t.Errorf("model_name = %q, want General", payload.ModelName)
-			}
-
-			if !strings.HasPrefix(payload.Image, "data:image/png;base64,") {
-				t.Errorf("image = %q, want a base64 data URI", payload.Image)
-			}
-
-			if payload.Resolution != "" {
-				t.Errorf("resolution = %q, want empty for source size", payload.Resolution)
-			}
-
-			if !payload.ReturnForeground {
-				t.Error("return_foreground = false, want true")
-			}
-
-			if payload.ReturnMask {
-				t.Error("return_mask = true, want false")
-			}
-
-			if payload.ReturnEdgeMask {
-				t.Error("return_edge_mask = true, want false")
-			}
-
-			if !payload.SendOutput {
-				t.Error("send_output = false, want true")
-			}
-
-			if payload.UseFP16 != tt.wantUseFP16 {
-				t.Errorf("use_fp16 = %v, want %v", payload.UseFP16, tt.wantUseFP16)
+			if !maps.Equal(got, want) {
+				t.Errorf("payload = %v, want %v", got, want)
 			}
 		})
 	}
 }
 
 func TestBgkillMissingForeground(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"output_image": ""}`))
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, reader *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"output_image": ""}`))
 	}))
 	defer server.Close()
 
-	c := New(server.URL, false)
+	client := New(server.URL, false)
 
-	if _, err := c.Bgkill(context.Background(), BgkillRequest{ModelName: "General", ImageData: []byte("png")}); err == nil {
+	if _, err := client.Bgkill(
+		context.Background(), BgkillRequest{ModelName: "General", ImageData: []byte("png")},
+	); err == nil {
 		t.Fatal("Bgkill() expected error, got nil")
 	}
 }

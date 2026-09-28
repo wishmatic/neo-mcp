@@ -69,5 +69,10 @@ func (c *Client) Txt2Img(ctx context.Context, req Txt2ImgRequest) ([][]byte, err
 
 	applyOverrideSettings(payload, req.Checkpoint, req.ForgePreset, req.ForgeAdditionalModules)
 
-	return c.postImages(ctx, "txt2img", "/sdapi/v1/txt2img", payload)
+	out, err := c.postJSON[imagesResponse](ctx, "txt2img", "/sdapi/v1/txt2img", payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return decodeImages(out)
 }

@@ -12,8 +12,9 @@ import (
 )
 
 type Client struct {
-	baseURL         string
-	http            *http.Client
+	baseURL string
+	http    *http.Client
+
 	isVerboseErrors bool
 }
 
@@ -25,7 +26,11 @@ func New(baseURL string, isVerboseErrors bool) *Client {
 	}
 }
 
-func postJSON[T any](ctx context.Context, c *Client, label, path string, payload any) (T, error) {
+// postJSON sends a POST request directly to the Forge API.
+//
+// It is the responsibility of the calling client method to ensure that the payload is valid for the given endpoint,
+// especially given that extensions may add more valid fields to the payload.
+func (c *Client) postJSON[T any](ctx context.Context, label, path string, payload any) (T, error) {
 	var out T
 
 	body, err := json.Marshal(payload)
@@ -56,15 +61,6 @@ func postJSON[T any](ctx context.Context, c *Client, label, path string, payload
 	}
 
 	return out, nil
-}
-
-func (c *Client) postImages(ctx context.Context, label, path string, payload any) ([][]byte, error) {
-	out, err := postJSON[imagesResponse](ctx, c, label, path, payload)
-	if err != nil {
-		return nil, err
-	}
-
-	return decodeImages(out)
 }
 
 // httpError builds a human-readable error for a non-2xx HTTP response.

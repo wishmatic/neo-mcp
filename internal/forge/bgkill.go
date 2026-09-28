@@ -29,23 +29,34 @@ type BgkillRequest struct {
 	IsFullMode bool
 }
 
+type birefnetRequest struct {
+	ModelName        string `json:"model_name"`
+	Image            string `json:"image"`
+	Resolution       string `json:"resolution"`
+	ReturnForeground bool   `json:"return_foreground"`
+	ReturnMask       bool   `json:"return_mask"`
+	ReturnEdgeMask   bool   `json:"return_edge_mask"`
+	SendOutput       bool   `json:"send_output"`
+	UseFP16          bool   `json:"use_fp16"`
+}
+
 type birefnetResponse struct {
 	OutputImage string `json:"output_image"`
 }
 
 func (c *Client) Bgkill(ctx context.Context, req BgkillRequest) ([]byte, error) {
-	payload := map[string]any{
-		"model_name":        req.ModelName,
-		"image":             base64DataURI(req.ImageData),
-		"resolution":        "",
-		"return_foreground": true,
-		"return_mask":       false,
-		"return_edge_mask":  false,
-		"send_output":       true,
-		"use_fp16":          !req.IsFullMode,
-	}
-
-	out, err := postJSON[birefnetResponse](ctx, c, "bgkill", "/birefnet/single", payload)
+	out, err := c.postJSON[birefnetResponse](
+		ctx,
+		"bgkill",
+		"/birefnet/single",
+		birefnetRequest{
+			ModelName:        req.ModelName,
+			Image:            base64DataURI(req.ImageData),
+			ReturnForeground: true,
+			SendOutput:       true,
+			UseFP16:          !req.IsFullMode,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +67,7 @@ func (c *Client) Bgkill(ctx context.Context, req BgkillRequest) ([]byte, error) 
 
 	data, err := base64.StdEncoding.DecodeString(out.OutputImage)
 	if err != nil {
-		return nil, fmt.Errorf("bgkill: decode foreground image: %w", err)
+		return nil, fmt.Errorf("bgkill: failed to decode foreground image: %w", err)
 	}
 
 	return data, nil
