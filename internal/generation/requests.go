@@ -1,4 +1,4 @@
-package imagegen
+package generation
 
 type Params struct {
 	Model             string

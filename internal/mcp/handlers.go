@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/wishmatic/neo-mcp/internal/forge"
-	"github.com/wishmatic/neo-mcp/internal/imagegen"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
+	"github.com/wishmatic/neo-mcp/internal/generation"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
@@ -15,24 +15,24 @@ import (
 
 type handlers struct {
 	log           *zap.Logger
-	gen           *imagegen.Generator
+	gen           *generation.Generator
 	forge         *forge.Client
 	publisher     *publish.Publisher
 	novelai       *novelai.Client
 	resolver      *resolve.Resolver
-	defaultFormat imgfmt.Format
+	defaultFormat format.Format
 }
 
-func (h *handlers) outputFormat(name string) (imgfmt.Format, error) {
+func (h *handlers) outputFormat(name string) (format.Format, error) {
 	if name == "" {
 		if h.defaultFormat != "" {
 			return h.defaultFormat, nil
 		}
 
-		return imgfmt.Default, nil
+		return format.Default, nil
 	}
 
-	return imgfmt.Parse(name)
+	return format.Parse(name)
 }
 
 func (h *handlers) generationFailure(ctx context.Context, tool string, err error) error {

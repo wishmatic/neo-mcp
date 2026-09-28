@@ -1,4 +1,4 @@
-package imgfmt
+package format
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ var inlineQualities = []int{encodeQuality, 75, 60, 45, 30}
 func Inline(data []byte, maxEdge, maxBytes int) (InlineImage, error) {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return InlineImage{}, fmt.Errorf("imgfmt: decode inline image: %w", err)
+		return InlineImage{}, fmt.Errorf("format: decode inline image: %w", err)
 	}
 
 	img = downscaleToEdge(img, maxEdge)
@@ -43,7 +43,7 @@ func Inline(data []byte, maxEdge, maxBytes int) (InlineImage, error) {
 		}
 
 		if bounds := img.Bounds(); bounds.Dx() <= 1 && bounds.Dy() <= 1 {
-			return InlineImage{}, fmt.Errorf("imgfmt: image cannot be encoded within %d bytes", maxBytes)
+			return InlineImage{}, fmt.Errorf("format: image cannot be encoded within %d bytes", maxBytes)
 		}
 
 		img = halve(img)
@@ -54,7 +54,7 @@ func encodeUnder(img image.Image, maxBytes int) ([]byte, error) {
 	for _, quality := range inlineQualities {
 		var buf bytes.Buffer
 		if err := webp.Encode(&buf, img, webp.EncodeOptions{Quality: quality, Method: -1}); err != nil {
-			return nil, fmt.Errorf("imgfmt: encode inline webp: %w", err)
+			return nil, fmt.Errorf("format: encode inline webp: %w", err)
 		}
 
 		if buf.Len() <= maxBytes {

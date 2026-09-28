@@ -6,7 +6,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/forge"
-	"github.com/wishmatic/neo-mcp/internal/imagegen"
+	"github.com/wishmatic/neo-mcp/internal/generation"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 )
 
@@ -15,7 +15,7 @@ func TestToolAnnotations(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: imagegen.New(forgeClient, novelai.New("http://example.com", "sk")),
+		Generator: generation.New(forgeClient, novelai.New("http://example.com", "sk")),
 		Forge:     forgeClient,
 		NovelAI:   novelai.New("http://example.com", "sk"),
 	})

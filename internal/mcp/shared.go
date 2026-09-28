@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/jsonschema-go/jsonschema"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 )
 
 type generationInput struct {
@@ -56,14 +56,14 @@ func setDefault(props map[string]*jsonschema.Schema, name string, value any) {
 	props[name].Default = raw
 }
 
-func setFormatSchema(s *jsonschema.Schema, def imgfmt.Format) {
+func setFormatSchema(s *jsonschema.Schema, def format.Format) {
 	setDefault(s.Properties, "format", def.String())
 	setFormatEnum(s)
 }
 
 func setFormatEnum(s *jsonschema.Schema) {
-	names := make([]any, 0, len(imgfmt.Names()))
-	for _, name := range imgfmt.Names() {
+	names := make([]any, 0, len(format.Names()))
+	for _, name := range format.Names() {
 		names = append(names, name)
 	}
 

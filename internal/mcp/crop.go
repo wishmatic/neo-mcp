@@ -7,7 +7,7 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/crop"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"go.uber.org/zap"
 )
 
@@ -82,8 +82,8 @@ func cropOptions(in cropInput) crop.Options {
 	return opts
 }
 
-func cropImage(data []byte, opts crop.Options, format imgfmt.Format) ([]byte, error) {
-	src, err := imgfmt.Decode(data)
+func cropImage(data []byte, opts crop.Options, target format.Format) ([]byte, error) {
+	src, err := format.Decode(data)
 	if err != nil {
 		return nil, err
 	}
@@ -93,10 +93,10 @@ func cropImage(data []byte, opts crop.Options, format imgfmt.Format) ([]byte, er
 		return nil, err
 	}
 
-	return imgfmt.Encode(out, format)
+	return format.Encode(out, target)
 }
 
-func cropSchema(def imgfmt.Format) *jsonschema.Schema {
+func cropSchema(def format.Format) *jsonschema.Schema {
 	s, err := jsonschema.For[cropInput](nil)
 	if err != nil {
 		panic(fmt.Sprintf("crop: infer input schema: %v", err))

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 )
 
@@ -22,17 +22,17 @@ func TestConvertSchema(t *testing.T) {
 		}
 	}
 
-	format := s.Properties["format"]
-	if format == nil {
+	property := s.Properties["format"]
+	if property == nil {
 		t.Fatal("convert: format property is missing")
 	}
 
-	if format.Default != nil {
-		t.Errorf("convert: format default = %s, want none", format.Default)
+	if property.Default != nil {
+		t.Errorf("convert: format default = %s, want none", property.Default)
 	}
 
-	if len(format.Enum) != len(imgfmt.Names()) {
-		t.Errorf("convert: format has %d enum values, want %d", len(format.Enum), len(imgfmt.Names()))
+	if len(property.Enum) != len(format.Names()) {
+		t.Errorf("convert: format has %d enum values, want %d", len(property.Enum), len(format.Names()))
 	}
 }
 
@@ -51,7 +51,7 @@ func TestConvertCallToolReturnsImage(t *testing.T) {
 		t.Fatalf("New() error: %v", err)
 	}
 
-	for _, format := range []imgfmt.Format{imgfmt.JPEG, imgfmt.JXL, imgfmt.WebP} {
+	for _, format := range []format.Format{format.JPEG, format.JXL, format.WebP} {
 		t.Run(format.String(), func(t *testing.T) {
 			result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
 				Name: "convert",

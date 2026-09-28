@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"go.uber.org/zap"
 )
 
@@ -33,14 +33,14 @@ func (h *handlers) convert(
 	_ *mcp.CallToolRequest,
 	in convertInput,
 ) (*mcp.CallToolResult, generationOutput, error) {
-	format, err := imgfmt.Parse(in.Format)
+	target, err := format.Parse(in.Format)
 	if err != nil {
 		return nil, generationOutput{}, fmt.Errorf("convert: %w", err)
 	}
 
 	h.log.Debug("tool called",
 		zap.String("tool", "convert"),
-		zap.String("format", format.String()),
+		zap.String("format", target.String()),
 		zap.String("image_url", in.ImageURL),
 	)
 
@@ -54,12 +54,12 @@ func (h *handlers) convert(
 		return nil, generationOutput{}, fmt.Errorf("convert: fetch image: %w", err)
 	}
 
-	out, err := imgfmt.Reformat(source, format)
+	out, err := format.Reformat(source, target)
 	if err != nil {
 		return nil, generationOutput{}, fmt.Errorf("convert: %w", err)
 	}
 
-	return h.publishImages(ctx, "convert", [][]byte{out}, format)
+	return h.publishImages(ctx, "convert", [][]byte{out}, target)
 }
 
 func convertSchema() *jsonschema.Schema {

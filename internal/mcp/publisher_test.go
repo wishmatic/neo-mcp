@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 )
 
@@ -31,7 +31,7 @@ func (f *fakeStore) UploadFile(_ context.Context, _ []byte, contentType string) 
 
 	f.uploads = append(f.uploads, uploadCapture{contentType: contentType})
 
-	return fmt.Sprintf("https://cdn.example.com/i/%d.%s", len(f.uploads), imgfmt.ExtensionForMediaType(contentType)), nil
+	return fmt.Sprintf("https://cdn.example.com/i/%d.%s", len(f.uploads), format.ExtensionForMediaType(contentType)), nil
 }
 
 func newFakeStore(t *testing.T) publish.Store {

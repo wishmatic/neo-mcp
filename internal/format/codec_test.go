@@ -1,4 +1,4 @@
-package imgfmt
+package format
 
 import (
 	"strings"
@@ -28,8 +28,8 @@ func TestDecodeRoundTripsEveryFormat(t *testing.T) {
 }
 
 func TestDecodeRejectsNonImage(t *testing.T) {
-	if _, err := Decode([]byte("not an image")); err == nil || !strings.HasPrefix(err.Error(), "imgfmt:") {
-		t.Fatalf("error = %v, want an imgfmt: prefix", err)
+	if _, err := Decode([]byte("not an image")); err == nil || !strings.HasPrefix(err.Error(), "format:") {
+		t.Fatalf("error = %v, want an format: prefix", err)
 	}
 }
 
@@ -56,8 +56,8 @@ func TestDimensionsReportsEveryFormat(t *testing.T) {
 }
 
 func TestDimensionsRejectsNonImage(t *testing.T) {
-	if _, _, err := Dimensions([]byte("not an image")); err == nil || !strings.HasPrefix(err.Error(), "imgfmt:") {
-		t.Fatalf("error = %v, want an imgfmt: prefix", err)
+	if _, _, err := Dimensions([]byte("not an image")); err == nil || !strings.HasPrefix(err.Error(), "format:") {
+		t.Fatalf("error = %v, want an format: prefix", err)
 	}
 }
 
@@ -138,8 +138,8 @@ func TestEncodeUnknownFormatErrors(t *testing.T) {
 		t.Fatalf("Decode() error: %v", err)
 	}
 
-	if _, err := Encode(img, Format("gif")); err == nil || !strings.HasPrefix(err.Error(), "imgfmt:") {
-		t.Fatalf("error = %v, want an imgfmt: prefix", err)
+	if _, err := Encode(img, Format("gif")); err == nil || !strings.HasPrefix(err.Error(), "format:") {
+		t.Fatalf("error = %v, want an format: prefix", err)
 	}
 }
 
@@ -237,11 +237,11 @@ func TestConvertPassthrough(t *testing.T) {
 }
 
 func TestConvertErrors(t *testing.T) {
-	if _, err := Convert([]byte("not an image"), WebP); err == nil || !strings.HasPrefix(err.Error(), "imgfmt:") {
-		t.Errorf("error = %v, want an imgfmt: prefix", err)
+	if _, err := Convert([]byte("not an image"), WebP); err == nil || !strings.HasPrefix(err.Error(), "format:") {
+		t.Errorf("error = %v, want an format: prefix", err)
 	}
 
-	if _, err := Convert(transparentPNG(t), Format("gif")); err == nil || !strings.HasPrefix(err.Error(), "imgfmt:") {
-		t.Errorf("error = %v, want an imgfmt: prefix", err)
+	if _, err := Convert(transparentPNG(t), Format("gif")); err == nil || !strings.HasPrefix(err.Error(), "format:") {
+		t.Errorf("error = %v, want an format: prefix", err)
 	}
 }

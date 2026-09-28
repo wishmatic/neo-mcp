@@ -1,4 +1,4 @@
-package imgfmt
+package format
 
 import (
 	"bytes"
@@ -93,15 +93,15 @@ func TestInlineRespectsByteBudget(t *testing.T) {
 
 func TestInlineImpossibleBudgetErrors(t *testing.T) {
 	_, err := Inline(solidPNG(t, 16, 16), InlineMaxEdge, 1)
-	if err == nil || !strings.HasPrefix(err.Error(), "imgfmt:") {
-		t.Fatalf("error = %v, want an imgfmt: prefix", err)
+	if err == nil || !strings.HasPrefix(err.Error(), "format:") {
+		t.Fatalf("error = %v, want an format: prefix", err)
 	}
 }
 
 func TestInlineRejectsNonImage(t *testing.T) {
 	_, err := Inline([]byte("not an image"), InlineMaxEdge, InlineMaxBytes)
-	if err == nil || !strings.HasPrefix(err.Error(), "imgfmt:") {
-		t.Fatalf("error = %v, want an imgfmt: prefix", err)
+	if err == nil || !strings.HasPrefix(err.Error(), "format:") {
+		t.Fatalf("error = %v, want an format: prefix", err)
 	}
 }
 

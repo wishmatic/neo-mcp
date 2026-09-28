@@ -1,4 +1,4 @@
-package imagegen
+package generation
 
 import (
 	"github.com/wishmatic/neo-mcp/internal/forge"

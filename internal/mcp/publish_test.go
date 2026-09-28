@@ -11,13 +11,13 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"go.uber.org/zap"
 )
 
 func TestPublishImagesReturnsURLAndImage(t *testing.T) {
-	for _, format := range []imgfmt.Format{imgfmt.PNG, imgfmt.JPEG, imgfmt.JXL, imgfmt.WebP} {
+	for _, format := range []format.Format{format.PNG, format.JPEG, format.JXL, format.WebP} {
 		t.Run(format.String(), func(t *testing.T) {
 			h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
 
@@ -58,7 +58,7 @@ func TestPublishImagesReturnsURLAndImage(t *testing.T) {
 func TestImageContentWireShape(t *testing.T) {
 	h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
 
-	result, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, imgfmt.PNG)
+	result, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, format.PNG)
 	if err != nil {
 		t.Fatalf("publishImages() error: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestImageContentWireShape(t *testing.T) {
 func TestPublishImagesUploadFailure(t *testing.T) {
 	h := &handlers{log: zapNop(), publisher: publish.New(&fakeStore{err: errors.New("boom")}, zap.NewNop())}
 
-	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, imgfmt.PNG)
+	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{testImagePNG(t)}, format.PNG)
 	if err == nil {
 		t.Fatal("publishImages() error = nil, want the upload failure")
 	}
@@ -104,7 +104,7 @@ func TestPublishImagesUploadFailure(t *testing.T) {
 func TestPublishImagesConvertFailure(t *testing.T) {
 	h := &handlers{log: zapNop(), publisher: newTestPublisher(t)}
 
-	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{[]byte("not an image")}, imgfmt.WebP)
+	_, _, err := h.publishImages(context.Background(), "txt2img", [][]byte{[]byte("not an image")}, format.WebP)
 	if err == nil || !strings.HasPrefix(err.Error(), "txt2img:") {
 		t.Fatalf("error = %v, want a txt2img: prefix", err)
 	}

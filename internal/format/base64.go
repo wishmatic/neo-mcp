@@ -1,4 +1,4 @@
-package imgfmt
+package format
 
 import (
 	"encoding/base64"

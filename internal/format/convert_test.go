@@ -1,4 +1,4 @@
-package imgfmt
+package format
 
 import (
 	"strings"
@@ -50,8 +50,8 @@ func TestReformatRejectsSameFormat(t *testing.T) {
 				t.Fatalf("Reformat() error = nil, want a refusal to reconvert to %s", format)
 			}
 
-			if !strings.HasPrefix(err.Error(), "imgfmt:") || !strings.Contains(err.Error(), format.String()) {
-				t.Errorf("error = %v, want an imgfmt: prefix naming %s", err, format)
+			if !strings.HasPrefix(err.Error(), "format:") || !strings.Contains(err.Error(), format.String()) {
+				t.Errorf("error = %v, want an format: prefix naming %s", err, format)
 			}
 
 			if got != nil {
@@ -117,11 +117,11 @@ func TestReformatToJPEGFlattensOntoWhite(t *testing.T) {
 }
 
 func TestReformatErrors(t *testing.T) {
-	if _, err := Reformat([]byte("not an image"), WebP); err == nil || !strings.HasPrefix(err.Error(), "imgfmt:") {
-		t.Errorf("error = %v, want an imgfmt: prefix", err)
+	if _, err := Reformat([]byte("not an image"), WebP); err == nil || !strings.HasPrefix(err.Error(), "format:") {
+		t.Errorf("error = %v, want an format: prefix", err)
 	}
 
-	if _, err := Reformat(transparentPNG(t), Format("gif")); err == nil || !strings.HasPrefix(err.Error(), "imgfmt:") {
-		t.Errorf("error = %v, want an imgfmt: prefix", err)
+	if _, err := Reformat(transparentPNG(t), Format("gif")); err == nil || !strings.HasPrefix(err.Error(), "format:") {
+		t.Errorf("error = %v, want an format: prefix", err)
 	}
 }

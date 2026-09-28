@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"go.uber.org/zap"
 )
 
@@ -71,7 +71,7 @@ func (c *Client) Txt2Img(ctx context.Context, req Txt2ImgRequest) ([][]byte, err
 		)
 	}
 
-	image, err := imgfmt.DecodeRawBase64(out.Images[0])
+	image, err := format.DecodeRawBase64(out.Images[0])
 	if err != nil {
 		return nil, err
 	}

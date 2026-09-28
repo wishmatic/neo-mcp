@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/imagegen"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
+	"github.com/wishmatic/neo-mcp/internal/generation"
 	"go.uber.org/zap"
 )
 
@@ -42,7 +42,7 @@ func (h *handlers) img2img(
 	_ *mcp.CallToolRequest,
 	in img2imgInput,
 ) (*mcp.CallToolResult, generationOutput, error) {
-	provider := imagegen.ProviderOf(in.Model)
+	provider := generation.ProviderOf(in.Model)
 
 	format, err := h.outputFormat(in.Format)
 	if err != nil {
@@ -101,7 +101,7 @@ func (h *handlers) img2img(
 		zap.Int("height", in.Height),
 	)
 
-	images, err := h.gen.Img2Img(ctx, imagegenImg2ImgRequest(in, initImage))
+	images, err := h.gen.Img2Img(ctx, generationImg2ImgRequest(in, initImage))
 	if err != nil {
 		return nil, generationOutput{}, h.generationFailure(ctx, "img2img", err)
 	}
@@ -116,7 +116,7 @@ func (h *handlers) img2img(
 	return result, out, nil
 }
 
-func img2imgSchema(def imgfmt.Format) *jsonschema.Schema {
+func img2imgSchema(def format.Format) *jsonschema.Schema {
 	s, err := jsonschema.For[img2imgInput](nil)
 	if err != nil {
 		panic(fmt.Sprintf("img2img: infer input schema: %v", err))
@@ -149,7 +149,7 @@ func initImageSize(in generationInput, initImage []byte) (int, int, error) {
 		return in.Width, in.Height, nil
 	}
 
-	width, height, err := imgfmt.Dimensions(initImage)
+	width, height, err := format.Dimensions(initImage)
 	if err != nil {
 		return 0, 0, fmt.Errorf("%w (pass width and height to override)", err)
 	}

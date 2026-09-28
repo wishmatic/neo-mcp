@@ -3,8 +3,8 @@ package mcp
 import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/forge"
-	"github.com/wishmatic/neo-mcp/internal/imagegen"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
+	"github.com/wishmatic/neo-mcp/internal/generation"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
@@ -13,13 +13,13 @@ import (
 
 type Deps struct {
 	Log       *zap.Logger
-	Generator *imagegen.Generator
+	Generator *generation.Generator
 	Forge     *forge.Client
 	Publisher *publish.Publisher
 	NovelAI   *novelai.Client
 	Resolver  *resolve.Resolver
 
-	OutputFormat imgfmt.Format
+	OutputFormat format.Format
 }
 
 func New(deps Deps) (*mcp.Server, error) {
@@ -45,7 +45,7 @@ func buildHandlers(deps Deps) *handlers {
 	}
 
 	if h.gen == nil {
-		h.gen = imagegen.New(nil, nil)
+		h.gen = generation.New(nil, nil)
 	}
 
 	if h.publisher == nil {
@@ -53,7 +53,7 @@ func buildHandlers(deps Deps) *handlers {
 	}
 
 	if h.defaultFormat == "" {
-		h.defaultFormat = imgfmt.Default
+		h.defaultFormat = format.Default
 	}
 
 	return h

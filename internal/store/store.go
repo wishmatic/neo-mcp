@@ -1,4 +1,4 @@
-package filestore
+package store
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"go.uber.org/zap"
 )
 
@@ -32,15 +32,15 @@ type Client struct {
 
 func New(cfg Config, log *zap.Logger) (*Client, error) {
 	if cfg.Dir == "" {
-		return nil, fmt.Errorf("filestore: a storage directory is required")
+		return nil, fmt.Errorf("store: a storage directory is required")
 	}
 
 	if cfg.PublicBase == nil || cfg.PublicBase.Host == "" {
-		return nil, fmt.Errorf("filestore: a public base URL is required")
+		return nil, fmt.Errorf("store: a public base URL is required")
 	}
 
 	if err := os.MkdirAll(cfg.Dir, dirMode); err != nil {
-		return nil, fmt.Errorf("filestore: create %s: %w", cfg.Dir, err)
+		return nil, fmt.Errorf("store: create %s: %w", cfg.Dir, err)
 	}
 
 	return &Client{cfg: cfg, log: log}, nil
@@ -51,7 +51,7 @@ func (c *Client) UploadFile(ctx context.Context, data []byte, contentType string
 		return "", err
 	}
 
-	key := objectKey(imgfmt.ExtensionForMediaType(contentType))
+	key := objectKey(format.ExtensionForMediaType(contentType))
 
 	path, err := c.safePath(key)
 	if err != nil {
@@ -59,7 +59,7 @@ func (c *Client) UploadFile(ctx context.Context, data []byte, contentType string
 	}
 
 	if err := writeFileAtomic(path, data); err != nil {
-		return "", fmt.Errorf("filestore: store %s: %w", key, err)
+		return "", fmt.Errorf("store: store %s: %w", key, err)
 	}
 
 	c.log.Info("stored image",
@@ -83,7 +83,7 @@ func (c *Client) GetObject(ctx context.Context, key string) ([]byte, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("filestore: read %s: %w", key, err)
+		return nil, fmt.Errorf("store: read %s: %w", key, err)
 	}
 
 	return data, nil
@@ -104,21 +104,21 @@ func objectKey(ext string) string {
 
 func (c *Client) safePath(key string) (string, error) {
 	if key == "" {
-		return "", fmt.Errorf("filestore: empty key")
+		return "", fmt.Errorf("store: empty key")
 	}
 
 	if strings.HasPrefix(key, "/") || filepath.IsAbs(key) {
-		return "", fmt.Errorf("filestore: key %q is absolute", key)
+		return "", fmt.Errorf("store: key %q is absolute", key)
 	}
 
 	segments := strings.Split(key, "/")
 	if segments[0] != namespace {
-		return "", fmt.Errorf("filestore: key %q is outside the %s namespace", key, namespace)
+		return "", fmt.Errorf("store: key %q is outside the %s namespace", key, namespace)
 	}
 
 	for _, segment := range segments {
 		if segment == "" || segment == "." || segment == ".." {
-			return "", fmt.Errorf("filestore: key %q has an invalid segment", key)
+			return "", fmt.Errorf("store: key %q has an invalid segment", key)
 		}
 	}
 
@@ -126,7 +126,7 @@ func (c *Client) safePath(key string) (string, error) {
 
 	rel, err := filepath.Rel(c.cfg.Dir, full)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("filestore: key %q escapes the storage directory", key)
+		return "", fmt.Errorf("store: key %q escapes the storage directory", key)
 	}
 
 	return full, nil

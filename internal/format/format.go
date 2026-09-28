@@ -1,4 +1,4 @@
-package imgfmt
+package format
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ func Parse(value string) (Format, error) {
 	case string(WebP):
 		return WebP, nil
 	default:
-		return "", fmt.Errorf("imgfmt: unknown format %q, want one of %s", value, strings.Join(Names(), ", "))
+		return "", fmt.Errorf("format: unknown format %q, want one of %s", value, strings.Join(Names(), ", "))
 	}
 }
 

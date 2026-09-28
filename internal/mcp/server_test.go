@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/wishmatic/neo-mcp/internal/forge"
-	"github.com/wishmatic/neo-mcp/internal/imagegen"
+	"github.com/wishmatic/neo-mcp/internal/generation"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"go.uber.org/zap"
 )
@@ -49,7 +49,7 @@ func TestToolRegistration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			srv, err := New(Deps{
 				Log:       zapNop(),
-				Generator: imagegen.New(tt.forge, tt.novelai),
+				Generator: generation.New(tt.forge, tt.novelai),
 				Forge:     tt.forge,
 				NovelAI:   tt.novelai,
 			})
@@ -77,7 +77,7 @@ func zapNop() *zap.Logger {
 func TestGenerationDescriptionsRequireDenoisingStrengthForUpscaling(t *testing.T) {
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: imagegen.New(forge.New("http://example.com", zapNop()), nil),
+		Generator: generation.New(forge.New("http://example.com", zapNop()), nil),
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)

@@ -19,8 +19,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/vmihailenco/msgpack/v5"
 	"github.com/wishmatic/neo-mcp/internal/forge"
-	"github.com/wishmatic/neo-mcp/internal/imagegen"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
+	"github.com/wishmatic/neo-mcp/internal/generation"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/present"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
@@ -108,7 +108,7 @@ func newInitImageURL(t *testing.T) string {
 func newSizedInitImageURL(t *testing.T, width, height int) string {
 	t.Helper()
 
-	data, err := imgfmt.Encode(image.NewNRGBA(image.Rect(0, 0, width, height)), imgfmt.PNG)
+	data, err := format.Encode(image.NewNRGBA(image.Rect(0, 0, width, height)), format.PNG)
 	if err != nil {
 		t.Fatalf("encode init image: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestTxt2ImgCallToolImageAudience(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: imagegen.New(nil, backend),
+		Generator: generation.New(nil, backend),
 		Publisher: newTestPublisher(t),
 		NovelAI:   backend,
 	})
@@ -245,7 +245,7 @@ func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: imagegen.New(nil, backend),
+		Generator: generation.New(nil, backend),
 		Publisher: newTestPublisher(t),
 		NovelAI:   backend,
 	})
@@ -298,7 +298,7 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 
 	h := &handlers{
 		log:       log,
-		gen:       imagegen.New(nil, newNovelAIBackend(t, novelaiLog)),
+		gen:       generation.New(nil, newNovelAIBackend(t, novelaiLog)),
 		publisher: newTestPublisher(t),
 		resolver:  newResolver(t),
 	}
@@ -315,7 +315,7 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 
 	failing := &handlers{
 		log:       log,
-		gen:       imagegen.New(nil, novelai.New("http://127.0.0.1:1", "sk-test")),
+		gen:       generation.New(nil, novelai.New("http://127.0.0.1:1", "sk-test")),
 		publisher: newTestPublisher(t),
 	}
 

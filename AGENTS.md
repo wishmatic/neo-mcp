@@ -77,16 +77,16 @@ flowchart TD
     cmd["cmd/server"]
     server["internal/server"]
     mcp["internal/mcp"]
-    imagegen["internal/imagegen"]
+    generation["internal/generation"]
     present["internal/present"]
     publish["internal/publish"]
     crop["internal/crop"]
-    imgfmt["internal/imgfmt"]
+    format["internal/format"]
     forge["internal/forge"]
     novelai["internal/novelai"]
     sourcemap["internal/sourcemap"]
     resolve["internal/resolve"]
-    filestore["internal/filestore"]
+    store["internal/store"]
     config["internal/config"]
     auth["internal/auth"]
     utils["internal/utils"]
@@ -95,33 +95,32 @@ flowchart TD
     cmd --> config
 
     server --> mcp
-    server --> imagegen
+    server --> generation
     server --> publish
     server --> auth
     server --> config
     server --> forge
     server --> novelai
     server --> resolve
-    server --> filestore
-    server --> imgfmt
+    server --> store
+    server --> format
     server --> sourcemap
 
-    mcp --> imagegen
+    mcp --> generation
     mcp --> forge
     mcp --> crop
     mcp --> present
     mcp --> publish
-    mcp --> imgfmt
+    mcp --> format
     mcp --> novelai
     mcp --> resolve
-    mcp --> utils
 
-    imagegen --> forge
-    imagegen --> novelai
-    filestore --> imgfmt
-    present --> imgfmt
+    generation --> forge
+    generation --> novelai
+    store --> format
+    present --> format
 
-    forge --> imgfmt
+    forge --> format
     forge --> utils
     novelai --> utils
     resolve --> sourcemap

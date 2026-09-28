@@ -13,15 +13,15 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/auth"
 	"github.com/wishmatic/neo-mcp/internal/config"
-	"github.com/wishmatic/neo-mcp/internal/filestore"
 	"github.com/wishmatic/neo-mcp/internal/forge"
-	"github.com/wishmatic/neo-mcp/internal/imagegen"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
+	"github.com/wishmatic/neo-mcp/internal/generation"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/publish"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/sourcemap"
+	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
 )
 
@@ -30,7 +30,7 @@ const writeTimeout = 10 * time.Minute
 type Server struct {
 	cfg    config.Config
 	log    *zap.Logger
-	files  *filestore.Client
+	files  *store.Client
 	router *chi.Mux
 	http   *http.Server
 }
@@ -58,7 +58,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		return nil, err
 	}
 
-	files, err := filestore.New(filestore.Config{
+	files, err := store.New(store.Config{
 		Dir:        cfg.FilesDir,
 		PublicBase: publicBase,
 	}, log)
@@ -106,7 +106,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 
 	mcpSrv, err := mcpServer.New(mcpServer.Deps{
 		Log:          log,
-		Generator:    imagegen.New(forgeClient, novelaiClient),
+		Generator:    generation.New(forgeClient, novelaiClient),
 		Forge:        forgeClient,
 		Publisher:    publish.New(files, log),
 		NovelAI:      novelaiClient,
@@ -145,12 +145,12 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	}, nil
 }
 
-func outputFormatFrom(cfg config.Config) (imgfmt.Format, error) {
+func outputFormatFrom(cfg config.Config) (format.Format, error) {
 	if cfg.DefaultOutput == "" {
-		return imgfmt.Default, nil
+		return format.Default, nil
 	}
 
-	format, err := imgfmt.Parse(cfg.DefaultOutput)
+	format, err := format.Parse(cfg.DefaultOutput)
 	if err != nil {
 		return "", fmt.Errorf("OUTPUT_FORMAT: %w", err)
 	}

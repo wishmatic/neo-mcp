@@ -29,7 +29,7 @@ func TestImagegenTxt2ImgRequestMapsInput(t *testing.T) {
 		DenoisingStrength: 0.4,
 	}
 
-	got := imagegenTxt2ImgRequest(in)
+	got := generationTxt2ImgRequest(in)
 
 	if got.Model != "m.safetensors" || got.ForgePreset != "krea" ||
 		!slices.Equal(got.VAEAndTextModels, []string{"vae.safetensors"}) {
@@ -68,7 +68,7 @@ func TestImagegenImg2ImgRequestMapsInput(t *testing.T) {
 		Noise:             0.1,
 	}
 
-	got := imagegenImg2ImgRequest(in, initImage)
+	got := generationImg2ImgRequest(in, initImage)
 
 	if got.Model != "sd_xl_base_1.0.safetensors" || got.Prompt != "a cat" {
 		t.Errorf("params = %+v, want them copied", got.Params)

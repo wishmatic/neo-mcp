@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/imagegen"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
+	"github.com/wishmatic/neo-mcp/internal/generation"
 )
 
 func TestInitImageSize(t *testing.T) {
@@ -33,7 +33,7 @@ func TestInitImageSize(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			initImage := []byte("not an image")
 			if !tt.wantErr {
-				encoded, err := imgfmt.Encode(image.NewNRGBA(image.Rect(0, 0, tt.initWidth, tt.initHeight)), imgfmt.PNG)
+				encoded, err := format.Encode(image.NewNRGBA(image.Rect(0, 0, tt.initWidth, tt.initHeight)), format.PNG)
 				if err != nil {
 					t.Fatalf("encode init image: %v", err)
 				}
@@ -62,14 +62,14 @@ func TestInitImageSize(t *testing.T) {
 }
 
 func TestImg2ImgSchemaLeavesDimensionsUnset(t *testing.T) {
-	s := img2imgSchema(imgfmt.Default)
+	s := img2imgSchema(format.Default)
 
 	for _, field := range []string{"width", "height"} {
 		if s.Properties[field].Default != nil {
 			t.Errorf("img2img %s default = %s, want none so the init image sizes it", field, s.Properties[field].Default)
 		}
 
-		if txt2imgSchema(imgfmt.Default).Properties[field].Default == nil {
+		if txt2imgSchema(format.Default).Properties[field].Default == nil {
 			t.Errorf("txt2img %s default = nil, want the 512 the schema documents", field)
 		}
 	}
@@ -123,7 +123,7 @@ func TestImg2ImgForgeCallToolTakesSizeFromInitImage(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: imagegen.New(backend, nil),
+		Generator: generation.New(backend, nil),
 		Publisher: newTestPublisher(t),
 		Resolver:  newResolver(t),
 	})
@@ -154,7 +154,7 @@ func newImg2ImgServer(t *testing.T, log *requestLog) *mcp.Server {
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: imagegen.New(nil, backend),
+		Generator: generation.New(nil, backend),
 		Publisher: newTestPublisher(t),
 		Resolver:  newResolver(t),
 		NovelAI:   backend,

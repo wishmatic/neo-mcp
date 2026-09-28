@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/wishmatic/neo-mcp/internal/forge"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 )
 
 func TestBgkillRequestMapsInput(t *testing.T) {
@@ -27,7 +27,7 @@ func TestBgkillRequestMapsInput(t *testing.T) {
 }
 
 func TestBgkillSchema(t *testing.T) {
-	s := bgkillSchema(imgfmt.Default)
+	s := bgkillSchema(format.Default)
 
 	for _, field := range []string{"model_name", "image_url"} {
 		if !slices.Contains(s.Required, field) {
@@ -50,7 +50,7 @@ func TestBgkillSchema(t *testing.T) {
 }
 
 func TestBgkillSchemaDefaults(t *testing.T) {
-	s := bgkillSchema(imgfmt.Default)
+	s := bgkillSchema(format.Default)
 
 	fullMode := s.Properties["full_mode"]
 	if fullMode == nil {

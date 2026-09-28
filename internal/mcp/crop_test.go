@@ -14,7 +14,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/crop"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 )
 
@@ -77,12 +77,12 @@ func TestCropOptionsMapsExplicitPadding(t *testing.T) {
 }
 
 func TestCropImageTrimsToContent(t *testing.T) {
-	out, err := cropImage(marginPNG(t, 20, 5), crop.Options{}, imgfmt.PNG)
+	out, err := cropImage(marginPNG(t, 20, 5), crop.Options{}, format.PNG)
 	if err != nil {
 		t.Fatalf("cropImage() error: %v", err)
 	}
 
-	img, err := imgfmt.Decode(out)
+	img, err := format.Decode(out)
 	if err != nil {
 		t.Fatalf("Decode() error: %v", err)
 	}
@@ -93,12 +93,12 @@ func TestCropImageTrimsToContent(t *testing.T) {
 }
 
 func TestCropImageCircleCutsCorners(t *testing.T) {
-	out, err := cropImage(marginPNG(t, 20, 2), crop.Options{IsSquare: true, IsCircle: true}, imgfmt.PNG)
+	out, err := cropImage(marginPNG(t, 20, 2), crop.Options{IsSquare: true, IsCircle: true}, format.PNG)
 	if err != nil {
 		t.Fatalf("cropImage() error: %v", err)
 	}
 
-	img, err := imgfmt.Decode(out)
+	img, err := format.Decode(out)
 	if err != nil {
 		t.Fatalf("Decode() error: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestCropImageErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := cropImage(tt.data, tt.opts, imgfmt.PNG); err == nil {
+			if _, err := cropImage(tt.data, tt.opts, format.PNG); err == nil {
 				t.Fatal("cropImage() expected error, got nil")
 			}
 		})
@@ -135,7 +135,7 @@ func TestCropImageErrors(t *testing.T) {
 }
 
 func TestCropSchema(t *testing.T) {
-	s := cropSchema(imgfmt.Default)
+	s := cropSchema(format.Default)
 
 	if !slices.Contains(s.Required, "image_url") {
 		t.Error("crop: image_url is not required")
@@ -161,13 +161,13 @@ func TestCropSchema(t *testing.T) {
 		t.Errorf("crop: padding default = %s, want none", padding.Default)
 	}
 
-	format := s.Properties["format"]
-	if format == nil {
+	property := s.Properties["format"]
+	if property == nil {
 		t.Fatal("crop: format property is missing")
 	}
 
-	if len(format.Enum) != len(imgfmt.Names()) {
-		t.Errorf("crop: format has %d enum values, want %d", len(format.Enum), len(imgfmt.Names()))
+	if len(property.Enum) != len(format.Names()) {
+		t.Errorf("crop: format has %d enum values, want %d", len(property.Enum), len(format.Names()))
 	}
 }
 
@@ -186,7 +186,7 @@ func TestCropCallToolReturnsImage(t *testing.T) {
 		Log:          zapNop(),
 		Publisher:    newTestPublisher(t),
 		Resolver:     resolver,
-		OutputFormat: imgfmt.Default,
+		OutputFormat: format.Default,
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)

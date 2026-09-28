@@ -7,7 +7,7 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/forge"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"go.uber.org/zap"
 )
 
@@ -79,7 +79,7 @@ func bgkillRequest(in bgkillInput, image []byte) forge.BgkillRequest {
 	}
 }
 
-func bgkillSchema(def imgfmt.Format) *jsonschema.Schema {
+func bgkillSchema(def format.Format) *jsonschema.Schema {
 	s, err := jsonschema.For[bgkillInput](nil)
 	if err != nil {
 		panic(fmt.Sprintf("bgkill: infer input schema: %v", err))

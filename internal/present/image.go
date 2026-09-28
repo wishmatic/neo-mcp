@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 )
 
 const (
@@ -31,7 +31,7 @@ func StoredImages(images [][]byte, urls []string) ([]mcp.Content, []AttachmentFa
 			continue
 		}
 
-		image, err := imgfmt.Inline(images[i], imgfmt.InlineMaxEdge, imgfmt.InlineMaxBytes)
+		image, err := format.Inline(images[i], format.InlineMaxEdge, format.InlineMaxBytes)
 		if err != nil {
 			failures = append(failures, AttachmentFailure{Index: i + 1, Err: err})
 			content = append(content, &mcp.TextContent{Text: attachmentFailureNote(i+1, err)})
@@ -46,7 +46,7 @@ func StoredImages(images [][]byte, urls []string) ([]mcp.Content, []AttachmentFa
 }
 
 // imageBlock annotates the image for both the user and the assistant, which is what lets a vision-capable model see it.
-func imageBlock(image imgfmt.InlineImage) *mcp.ImageContent {
+func imageBlock(image format.InlineImage) *mcp.ImageContent {
 	return &mcp.ImageContent{
 		Data:        image.Data,
 		MIMEType:    image.MediaType,

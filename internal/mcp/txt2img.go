@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/imagegen"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
+	"github.com/wishmatic/neo-mcp/internal/generation"
 	"go.uber.org/zap"
 )
 
@@ -34,7 +34,7 @@ func (h *handlers) txt2img(
 	_ *mcp.CallToolRequest,
 	in txt2imgInput,
 ) (*mcp.CallToolResult, generationOutput, error) {
-	provider := imagegen.ProviderOf(in.Model)
+	provider := generation.ProviderOf(in.Model)
 
 	format, err := h.outputFormat(in.Format)
 	if err != nil {
@@ -71,7 +71,7 @@ func (h *handlers) txt2img(
 		zap.Int("height", in.Height),
 	)
 
-	images, err := h.gen.Txt2Img(ctx, imagegenTxt2ImgRequest(in))
+	images, err := h.gen.Txt2Img(ctx, generationTxt2ImgRequest(in))
 	if err != nil {
 		return nil, generationOutput{}, h.generationFailure(ctx, "txt2img", err)
 	}
@@ -86,7 +86,7 @@ func (h *handlers) txt2img(
 	return result, out, nil
 }
 
-func txt2imgSchema(def imgfmt.Format) *jsonschema.Schema {
+func txt2imgSchema(def format.Format) *jsonschema.Schema {
 	s, err := jsonschema.For[txt2imgInput](nil)
 	if err != nil {
 		panic(fmt.Sprintf("txt2img: infer input schema: %v", err))

@@ -16,7 +16,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/forge"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 )
 
@@ -61,19 +61,19 @@ func testImageJPEG(t *testing.T) []byte {
 }
 
 func TestOutputFormatResolver(t *testing.T) {
-	configured := &handlers{log: zapNop(), defaultFormat: imgfmt.JXL}
+	configured := &handlers{log: zapNop(), defaultFormat: format.JXL}
 
 	tests := []struct {
 		name    string
 		h       *handlers
 		flag    string
-		want    imgfmt.Format
+		want    format.Format
 		wantErr bool
 	}{
-		{name: "configured default", h: configured, want: imgfmt.JXL},
-		{name: "unset default falls back to webp", h: &handlers{log: zapNop()}, want: imgfmt.Default},
-		{name: "flag overrides the default", h: configured, flag: "png", want: imgfmt.PNG},
-		{name: "flag alias", h: configured, flag: "jpg", want: imgfmt.JPEG},
+		{name: "configured default", h: configured, want: format.JXL},
+		{name: "unset default falls back to webp", h: &handlers{log: zapNop()}, want: format.Default},
+		{name: "flag overrides the default", h: configured, flag: "png", want: format.PNG},
+		{name: "flag alias", h: configured, flag: "jpg", want: format.JPEG},
 		{name: "invalid flag", h: configured, flag: "gif", wantErr: true},
 	}
 
@@ -102,8 +102,8 @@ func TestOutputFormatResolver(t *testing.T) {
 func TestBuildHandlersDefaultsFormat(t *testing.T) {
 	h := buildHandlers(Deps{Log: zapNop()})
 
-	if h.defaultFormat != imgfmt.Default {
-		t.Errorf("defaultFormat = %q, want %q", h.defaultFormat, imgfmt.Default)
+	if h.defaultFormat != format.Default {
+		t.Errorf("defaultFormat = %q, want %q", h.defaultFormat, format.Default)
 	}
 }
 
@@ -142,7 +142,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 		Forge:        forge.New(forgeServer.URL, zapNop()),
 		Publisher:    newTestPublisher(t),
 		Resolver:     resolver,
-		OutputFormat: imgfmt.Default,
+		OutputFormat: format.Default,
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)

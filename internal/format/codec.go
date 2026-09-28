@@ -1,4 +1,4 @@
-package imgfmt
+package format
 
 import (
 	"bytes"
@@ -26,7 +26,7 @@ func Encode(img image.Image, format Format) ([]byte, error) {
 func Decode(data []byte) (image.Image, error) {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("imgfmt: decode image: %w", err)
+		return nil, fmt.Errorf("format: decode image: %w", err)
 	}
 
 	return img, nil
@@ -34,12 +34,12 @@ func Decode(data []byte) (image.Image, error) {
 
 func Convert(data []byte, format Format) ([]byte, error) {
 	if format.MediaType() == "" {
-		return nil, fmt.Errorf("imgfmt: cannot convert to unknown format %q", string(format))
+		return nil, fmt.Errorf("format: cannot convert to unknown format %q", string(format))
 	}
 
 	_, source, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("imgfmt: decode source image: %w", err)
+		return nil, fmt.Errorf("format: decode source image: %w", err)
 	}
 
 	if source == format.String() {
@@ -48,7 +48,7 @@ func Convert(data []byte, format Format) ([]byte, error) {
 
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("imgfmt: decode source image: %w", err)
+		return nil, fmt.Errorf("format: decode source image: %w", err)
 	}
 
 	var buf bytes.Buffer
@@ -62,7 +62,7 @@ func Convert(data []byte, format Format) ([]byte, error) {
 func Dimensions(data []byte) (width, height int, err error) {
 	config, _, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
-		return 0, 0, fmt.Errorf("imgfmt: decode image config: %w", err)
+		return 0, 0, fmt.Errorf("format: decode image config: %w", err)
 	}
 
 	return config.Width, config.Height, nil
@@ -83,11 +83,11 @@ func encode(w io.Writer, img image.Image, format Format) error {
 	case WebP:
 		err = webp.Encode(w, img, webpEncodeOptions)
 	default:
-		return fmt.Errorf("imgfmt: cannot encode unknown format %q", string(format))
+		return fmt.Errorf("format: cannot encode unknown format %q", string(format))
 	}
 
 	if err != nil {
-		return fmt.Errorf("imgfmt: encode %s: %w", format, err)
+		return fmt.Errorf("format: encode %s: %w", format, err)
 	}
 
 	return nil

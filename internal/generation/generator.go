@@ -1,4 +1,4 @@
-package imagegen
+package generation
 
 import (
 	"context"

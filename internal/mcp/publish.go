@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/present"
 	"go.uber.org/zap"
 )
@@ -14,7 +14,7 @@ func (h *handlers) publishImages(
 	ctx context.Context,
 	tool string,
 	images [][]byte,
-	format imgfmt.Format,
+	format format.Format,
 ) (*mcp.CallToolResult, generationOutput, error) {
 	converted, err := convertImages(images, format)
 	if err != nil {
@@ -34,11 +34,11 @@ func (h *handlers) publishImages(
 	return &mcp.CallToolResult{Content: content}, generationOutput{Count: len(urls), URLs: urls}, nil
 }
 
-func convertImages(images [][]byte, format imgfmt.Format) ([][]byte, error) {
+func convertImages(images [][]byte, target format.Format) ([][]byte, error) {
 	converted := make([][]byte, 0, len(images))
 
 	for _, data := range images {
-		out, err := imgfmt.Convert(data, format)
+		out, err := format.Convert(data, target)
 		if err != nil {
 			return nil, err
 		}

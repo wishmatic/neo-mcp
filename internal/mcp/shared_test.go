@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/google/jsonschema-go/jsonschema"
-	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"github.com/wishmatic/neo-mcp/internal/format"
 )
 
 func schemas() map[string]*jsonschema.Schema {
 	return map[string]*jsonschema.Schema{
-		"txt2img": txt2imgSchema(imgfmt.Default),
-		"img2img": img2imgSchema(imgfmt.Default),
+		"txt2img": txt2imgSchema(format.Default),
+		"img2img": img2imgSchema(format.Default),
 	}
 }
 
@@ -75,7 +75,7 @@ func TestSchemasIncludeSharedFields(t *testing.T) {
 
 func TestFormatFlagSchema(t *testing.T) {
 	withFlag := schemas()
-	withFlag["bgkill"] = bgkillSchema(imgfmt.Default)
+	withFlag["bgkill"] = bgkillSchema(format.Default)
 
 	for tool, s := range withFlag {
 		prop := s.Properties["format"]
@@ -88,7 +88,7 @@ func TestFormatFlagSchema(t *testing.T) {
 			t.Errorf("%s: format type = %q, want string", tool, prop.Type)
 		}
 
-		names := imgfmt.Names()
+		names := format.Names()
 		if len(prop.Enum) != len(names) {
 			t.Errorf("%s: format enum = %v, want %v", tool, prop.Enum, names)
 		}
@@ -110,8 +110,8 @@ func TestFormatFlagSchema(t *testing.T) {
 }
 
 func TestFormatFlagSchemaFollowsConfiguredDefault(t *testing.T) {
-	for _, name := range imgfmt.Names() {
-		format, err := imgfmt.Parse(name)
+	for _, name := range format.Names() {
+		format, err := format.Parse(name)
 		if err != nil {
 			t.Fatalf("Parse(%q) error: %v", name, err)
 		}
@@ -178,7 +178,7 @@ func TestSamplerDefaultsAreEmpty(t *testing.T) {
 }
 
 func TestImg2ImgNoiseDefault(t *testing.T) {
-	noise := img2imgSchema(imgfmt.Default).Properties["noise"]
+	noise := img2imgSchema(format.Default).Properties["noise"]
 	if noise == nil {
 		t.Fatal("noise property is missing")
 	}
@@ -187,7 +187,7 @@ func TestImg2ImgNoiseDefault(t *testing.T) {
 		t.Errorf("noise default = %s, want 0", noise.Default)
 	}
 
-	if txt2imgSchema(imgfmt.Default).Properties["noise"] != nil {
+	if txt2imgSchema(format.Default).Properties["noise"] != nil {
 		t.Error("txt2img has a noise property, want none")
 	}
 }
