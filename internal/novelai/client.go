@@ -18,20 +18,18 @@ const (
 )
 
 type Client struct {
-	baseURL         string
-	apiKey          string
-	http            *http.Client
-	isVerboseErrors bool
-	randomSeed      func() uint32
+	baseURL    string
+	apiKey     string
+	http       *http.Client
+	randomSeed func() uint32
 }
 
-func New(baseURL, apiKey string, isVerboseErrors bool) *Client {
+func New(baseURL, apiKey string) *Client {
 	return &Client{
-		baseURL:         strings.TrimRight(baseURL, "/"),
-		apiKey:          apiKey,
-		http:            &http.Client{},
-		isVerboseErrors: isVerboseErrors,
-		randomSeed:      rand.Uint32,
+		baseURL:    strings.TrimRight(baseURL, "/"),
+		apiKey:     apiKey,
+		http:       &http.Client{},
+		randomSeed: rand.Uint32,
 	}
 }
 
@@ -105,13 +103,6 @@ func (c *Client) resolveSeed(requested int) uint32 {
 // httpError builds a human-readable error for a non-2xx HTTP response.
 func (c *Client) httpError(method, path string, resp *http.Response) string {
 	body := utils.ReadLimited(resp.Body)
-
-	if c.isVerboseErrors {
-		return fmt.Sprintf(
-			"%s %s returned HTTP %d (%s): %s",
-			method, path, resp.StatusCode, resp.Status, body,
-		)
-	}
 
 	if body != "" {
 		return fmt.Sprintf("%s %s returned HTTP %d: %s", method, path, resp.StatusCode, body)

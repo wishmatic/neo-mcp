@@ -31,12 +31,12 @@ func TestToolRegistration(t *testing.T) {
 	}{
 		{
 			name:    "novelai only",
-			novelai: novelai.New("http://example.com", "sk", false),
+			novelai: novelai.New("http://example.com", "sk"),
 			want:    []string{"txt2img", "img2img", "anlas", "crop", "convert"},
 		},
 		{
 			name:  "forge only",
-			forge: forge.New("http://example.com", false),
+			forge: forge.New("http://example.com"),
 			want:  []string{"txt2img", "img2img", "bgkill", "crop", "convert"},
 		},
 		{
@@ -77,7 +77,7 @@ func zapNop() *zap.Logger {
 func TestGenerationDescriptionsRequireDenoisingStrengthForUpscaling(t *testing.T) {
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: imagegen.New(forge.New("http://example.com", false), nil),
+		Generator: imagegen.New(forge.New("http://example.com"), nil),
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)

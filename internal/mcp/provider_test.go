@@ -81,7 +81,7 @@ func newForgeBackend(t *testing.T, log *requestLog) *forge.Client {
 
 	t.Cleanup(server.Close)
 
-	return forge.New(server.URL, false)
+	return forge.New(server.URL)
 }
 
 func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {
@@ -96,7 +96,7 @@ func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {
 
 	t.Cleanup(server.Close)
 
-	return novelai.New(server.URL, "sk-test", false)
+	return novelai.New(server.URL, "sk-test")
 }
 
 func newInitImageURL(t *testing.T) string {
@@ -315,7 +315,7 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 
 	failing := &handlers{
 		log:       log,
-		gen:       imagegen.New(nil, novelai.New("http://127.0.0.1:1", "sk-test", false)),
+		gen:       imagegen.New(nil, novelai.New("http://127.0.0.1:1", "sk-test")),
 		publisher: newTestPublisher(t),
 	}
 

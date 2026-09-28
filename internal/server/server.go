@@ -85,7 +85,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	log.Info("local files enabled", zap.String("dir", cfg.FilesDir))
 	log.Warn("stored files are readable by anyone with the URL")
 
-	forgeClient := forge.New(cfg.SDURL, cfg.ErrorDetail == "verbose")
+	forgeClient := forge.New(cfg.SDURL)
 
 	sources, err := sourcemap.Parse(cfg.ImageURLMap)
 	if err != nil {
@@ -99,7 +99,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 
 	var novelaiClient *novelai.Client
 	if cfg.NovelAIAPIKey != "" {
-		novelaiClient = novelai.New(novelai.DefaultBaseURL, cfg.NovelAIAPIKey, cfg.ErrorDetail == "verbose")
+		novelaiClient = novelai.New(novelai.DefaultBaseURL, cfg.NovelAIAPIKey)
 
 		log.Info("novelai enabled", zap.String("base_url", novelai.DefaultBaseURL))
 	}

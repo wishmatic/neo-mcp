@@ -14,15 +14,12 @@ import (
 type Client struct {
 	baseURL string
 	http    *http.Client
-
-	isVerboseErrors bool
 }
 
-func New(baseURL string, isVerboseErrors bool) *Client {
+func New(baseURL string) *Client {
 	return &Client{
-		baseURL:         strings.TrimRight(baseURL, "/"),
-		http:            &http.Client{},
-		isVerboseErrors: isVerboseErrors,
+		baseURL: strings.TrimRight(baseURL, "/"),
+		http:    &http.Client{},
 	}
 }
 
@@ -66,13 +63,6 @@ func (c *Client) postJSON[T any](ctx context.Context, label, path string, payloa
 // httpError builds a human-readable error for a non-2xx HTTP response.
 func (c *Client) httpError(method, path string, resp *http.Response) string {
 	body := utils.ReadLimited(resp.Body)
-
-	if c.isVerboseErrors {
-		return fmt.Sprintf(
-			"%s %s returned HTTP %d (%s): %s",
-			method, path, resp.StatusCode, resp.Status, body,
-		)
-	}
 
 	if body != "" {
 		return fmt.Sprintf("%s %s returned HTTP %d: %s", method, path, resp.StatusCode, body)

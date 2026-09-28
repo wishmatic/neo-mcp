@@ -28,7 +28,7 @@ func TestAnlasBalance(t *testing.T) {
 
 	t.Cleanup(server.Close)
 
-	balance, err := New(server.URL, "sk-test", false).Anlas(context.Background())
+	balance, err := New(server.URL, "sk-test").Anlas(context.Background())
 	if err != nil {
 		t.Fatalf("Anlas() error: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestAnlasWithoutUsage(t *testing.T) {
 
 	t.Cleanup(server.Close)
 
-	balance, err := New(server.URL, "k", false).Anlas(context.Background())
+	balance, err := New(server.URL, "k").Anlas(context.Background())
 	if err != nil {
 		t.Fatalf("Anlas() error: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestAnlasHTTPError(t *testing.T) {
 
 	t.Cleanup(server.Close)
 
-	_, err := New(server.URL, "k", false).Anlas(context.Background())
+	_, err := New(server.URL, "k").Anlas(context.Background())
 	if err == nil {
 		t.Fatal("Anlas() error = nil, want an error")
 	}
@@ -96,7 +96,7 @@ func TestAnlasMalformedResponse(t *testing.T) {
 
 	t.Cleanup(server.Close)
 
-	if _, err := New(server.URL, "k", false).Anlas(context.Background()); err == nil {
+	if _, err := New(server.URL, "k").Anlas(context.Background()); err == nil {
 		t.Fatal("Anlas() error = nil, want an error")
 	}
 }

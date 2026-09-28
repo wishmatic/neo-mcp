@@ -24,7 +24,7 @@ func TestImg2ImgPayload(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := New(server.URL, false)
+	c := New(server.URL)
 
 	_, err := c.Img2Img(context.Background(), Img2ImgRequest{
 		Checkpoint:        "model",

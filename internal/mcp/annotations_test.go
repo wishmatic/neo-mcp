@@ -11,13 +11,13 @@ import (
 )
 
 func TestToolAnnotations(t *testing.T) {
-	forgeClient := forge.New("http://example.com", false)
+	forgeClient := forge.New("http://example.com")
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: imagegen.New(forgeClient, novelai.New("http://example.com", "sk", false)),
+		Generator: imagegen.New(forgeClient, novelai.New("http://example.com", "sk")),
 		Forge:     forgeClient,
-		NovelAI:   novelai.New("http://example.com", "sk", false),
+		NovelAI:   novelai.New("http://example.com", "sk"),
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)

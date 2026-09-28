@@ -20,7 +20,7 @@ func TestTxt2ImgOverrideSettings(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := New(server.URL, false)
+	c := New(server.URL)
 
 	_, err := c.Txt2Img(context.Background(), Txt2ImgRequest{
 		Checkpoint:             "model",
@@ -70,7 +70,7 @@ func TestTxt2ImgNoOverrideSettings(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := New(server.URL, false)
+	c := New(server.URL)
 
 	_, err := c.Txt2Img(context.Background(), Txt2ImgRequest{Prompt: "test"})
 	if err != nil {

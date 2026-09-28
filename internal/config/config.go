@@ -14,7 +14,6 @@ type Config struct {
 	Port int    `env:"PORT" envDefault:"8080"`
 
 	LogLevel     string `env:"LOG_LEVEL" envDefault:"info"`
-	ErrorDetail  string `env:"ERROR_DETAIL" envDefault:"useful"`
 	OutputFormat string `env:"OUTPUT_FORMAT" envDefault:"webp"`
 
 	APIKey string `env:"API_KEY"`

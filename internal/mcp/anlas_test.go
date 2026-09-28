@@ -20,7 +20,7 @@ func newNovelAIAccountBackend(t *testing.T, body string) *novelai.Client {
 
 	t.Cleanup(server.Close)
 
-	return novelai.New(server.URL, "sk-test", false)
+	return novelai.New(server.URL, "sk-test")
 }
 
 func TestAnlasTool(t *testing.T) {
@@ -65,7 +65,7 @@ func TestAnlasToolError(t *testing.T) {
 
 	t.Cleanup(server.Close)
 
-	h := &handlers{log: zapNop(), novelai: novelai.New(server.URL, "sk-test", false)}
+	h := &handlers{log: zapNop(), novelai: novelai.New(server.URL, "sk-test")}
 
 	if _, _, err := h.anlas(context.Background(), nil, anlasInput{}); err == nil {
 		t.Fatal("anlas() error = nil, want an error")

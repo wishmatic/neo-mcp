@@ -3,7 +3,7 @@ package novelai
 import "testing"
 
 func TestNewTrimsBaseURL(t *testing.T) {
-	client := New("https://image.novelai.net/", "sk-x", false)
+	client := New("https://image.novelai.net/", "sk-x")
 
 	if client.baseURL != "https://image.novelai.net" {
 		t.Errorf("baseURL = %q, want https://image.novelai.net", client.baseURL)
@@ -15,13 +15,13 @@ func TestNewTrimsBaseURL(t *testing.T) {
 }
 
 func TestNewAcceptsEmptyKey(t *testing.T) {
-	if client := New("http://example.com", "", false); client.apiKey != "" {
+	if client := New("http://example.com", ""); client.apiKey != "" {
 		t.Errorf("apiKey = %q, want empty", client.apiKey)
 	}
 }
 
 func TestResolveSeed(t *testing.T) {
-	client := New("http://example.com", "k", false)
+	client := New("http://example.com", "k")
 	client.randomSeed = func() uint32 { return 7 }
 
 	if got := client.resolveSeed(-1); got != 7 {

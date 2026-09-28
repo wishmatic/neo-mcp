@@ -14,7 +14,7 @@ func TestTxt2ImgRequest(t *testing.T) {
 		"image":      []byte("png"),
 	}))
 
-	client := New(server.URL, "sk-test", false)
+	client := New(server.URL, "sk-test")
 
 	images, err := client.Txt2Img(context.Background(), Txt2ImgRequest{
 		Model:  "nai-diffusion-5-full",
@@ -97,7 +97,7 @@ func TestTxt2ImgRoundsDimensions(t *testing.T) {
 		"image":      []byte("png"),
 	}))
 
-	client := New(server.URL, "sk-test", false)
+	client := New(server.URL, "sk-test")
 
 	if _, err := client.Txt2Img(context.Background(), Txt2ImgRequest{
 		Model:  "nai-diffusion-5-full",
@@ -119,7 +119,7 @@ func TestTxt2ImgRoundsDimensions(t *testing.T) {
 }
 
 func TestTxt2ImgRejectsBadDimensions(t *testing.T) {
-	client := New("http://example.com", "sk-test", false)
+	client := New("http://example.com", "sk-test")
 
 	if _, err := client.Txt2Img(context.Background(), Txt2ImgRequest{
 		Model:  "nai-diffusion-5-full",
@@ -138,25 +138,23 @@ func TestTxt2ImgHTTPError(t *testing.T) {
 
 	t.Cleanup(server.Close)
 
-	for _, verbose := range []bool{false, true} {
-		client := New(server.URL, "sk-test", verbose)
+	client := New(server.URL, "sk-test")
 
-		_, err := client.Txt2Img(context.Background(), Txt2ImgRequest{
-			Model:  "nai-diffusion-5-full",
-			Width:  512,
-			Height: 512,
-		})
-		if err == nil {
-			t.Fatalf("verbose %v: Txt2Img() error = nil, want an error", verbose)
-		}
+	_, err := client.Txt2Img(context.Background(), Txt2ImgRequest{
+		Model:  "nai-diffusion-5-full",
+		Width:  512,
+		Height: 512,
+	})
+	if err == nil {
+		t.Fatal("Txt2Img() error = nil, want an error")
+	}
 
-		if !strings.Contains(err.Error(), "500") {
-			t.Errorf("verbose %v: error = %q, want the status", verbose, err.Error())
-		}
+	if !strings.Contains(err.Error(), "500") {
+		t.Errorf("error = %q, want the status", err.Error())
+	}
 
-		if !strings.Contains(err.Error(), "boom") {
-			t.Errorf("verbose %v: error = %q, want the body", verbose, err.Error())
-		}
+	if !strings.Contains(err.Error(), "boom") {
+		t.Errorf("error = %q, want the body", err.Error())
 	}
 }
 
@@ -166,7 +164,7 @@ func TestTxt2ImgContextCancelled(t *testing.T) {
 		"image":      []byte("png"),
 	}))
 
-	client := New(server.URL, "sk-test", false)
+	client := New(server.URL, "sk-test")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

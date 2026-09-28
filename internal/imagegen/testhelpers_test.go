@@ -67,7 +67,7 @@ func newForgeBackend(t *testing.T, log *requestLog) *forge.Client {
 
 	t.Cleanup(server.Close)
 
-	return forge.New(server.URL, false)
+	return forge.New(server.URL)
 }
 
 func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {
@@ -82,7 +82,7 @@ func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {
 
 	t.Cleanup(server.Close)
 
-	return novelai.New(server.URL, "sk-test", false)
+	return novelai.New(server.URL, "sk-test")
 }
 
 func txt2ImgRequestFor(model string) Txt2ImgRequest {

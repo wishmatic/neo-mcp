@@ -36,7 +36,7 @@ func TestBgkillPayload(t *testing.T) {
 			}))
 			defer server.Close()
 
-			c := New(server.URL, false)
+			c := New(server.URL)
 
 			out, err := c.Bgkill(context.Background(), BgkillRequest{
 				ModelName:  "General",
@@ -85,7 +85,7 @@ func TestBgkillMissingForeground(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, false)
+	client := New(server.URL)
 
 	if _, err := client.Bgkill(
 		context.Background(), BgkillRequest{ModelName: "General", ImageData: []byte("png")},

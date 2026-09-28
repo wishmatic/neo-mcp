@@ -13,7 +13,7 @@ func TestImg2ImgRequest(t *testing.T) {
 		"image":      []byte("out"),
 	}))
 
-	client := New(server.URL, "sk-test", false)
+	client := New(server.URL, "sk-test")
 	client.randomSeed = func() uint32 { return 99 }
 
 	images, err := client.Img2Img(context.Background(), Img2ImgRequest{
