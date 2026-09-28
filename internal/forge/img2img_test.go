@@ -6,8 +6,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
+
+	"go.uber.org/zap"
 )
 
 func TestImg2ImgPayload(t *testing.T) {
@@ -20,11 +21,11 @@ func TestImg2ImgPayload(t *testing.T) {
 		gotPath = r.URL.Path
 		gotBody, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"images": []}`))
+		_, _ = w.Write([]byte(`{"images": ["cG5n"]}`))
 	}))
 	defer server.Close()
 
-	c := New(server.URL)
+	c := New(server.URL, zap.NewNop())
 
 	_, err := c.Img2Img(context.Background(), Img2ImgRequest{
 		Checkpoint:        "model",
@@ -51,8 +52,8 @@ func TestImg2ImgPayload(t *testing.T) {
 		t.Fatalf("decode payload: %v", err)
 	}
 
-	if len(payload.InitImages) != 1 || !strings.HasPrefix(payload.InitImages[0], "data:image/png;base64,") {
-		t.Errorf("init_images = %v, want one base64 data URI", payload.InitImages)
+	if len(payload.InitImages) != 1 || payload.InitImages[0] != "cG5n" {
+		t.Errorf("init_images = %v, want the init image base64 encoded as-is", payload.InitImages)
 	}
 	if payload.DenoisingStrength != 0.6 {
 		t.Errorf("denoising_strength = %v, want 0.6", payload.DenoisingStrength)

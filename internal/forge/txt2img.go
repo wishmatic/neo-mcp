@@ -2,8 +2,10 @@ package forge
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/wishmatic/neo-mcp/internal/utils"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"go.uber.org/zap"
 )
 
 type Txt2ImgRequest struct {
@@ -45,38 +47,34 @@ func (c *Client) Txt2Img(ctx context.Context, req Txt2ImgRequest) ([][]byte, err
 		"scheduler":       req.Scheduler,
 	}
 
-	if req.EnableHR {
-		payload["enable_hr"] = true
-
-		if req.HRScale != 0 {
-			payload["hr_scale"] = req.HRScale
-		}
-
-		if req.HRUpscaler != "" {
-			payload["hr_upscaler"] = req.HRUpscaler
-		}
-
-		if req.HRSecondPassSteps != 0 {
-			payload["hr_second_pass_steps"] = req.HRSecondPassSteps
-		}
-
-		if req.DenoisingStrength != 0 {
-			payload["denoising_strength"] = req.DenoisingStrength
-		}
-
-		if req.HRCFGScale != 0 {
-			payload["hr_cfg"] = req.HRCFGScale
-		}
-
-		payload["hr_additional_modules"] = []string{"Use same choices"}
-	}
-
 	applyOverrideSettings(payload, req.Checkpoint, req.ForgePreset, req.ForgeAdditionalModules)
+	applyUpscaleSettings(payload, upscaleSettings{
+		IsEnabled:         req.EnableHR,
+		Scale:             req.HRScale,
+		Upscaler:          req.HRUpscaler,
+		SecondPassSteps:   req.HRSecondPassSteps,
+		CFGScale:          req.HRCFGScale,
+		DenoisingStrength: req.DenoisingStrength,
+	})
 
 	out, err := c.postJSON[imagesResponse](ctx, "txt2img", "/sdapi/v1/txt2img", payload)
 	if err != nil {
 		return nil, err
 	}
 
-	return utils.Decode(out.Images)
+	if len(out.Images) == 0 {
+		return nil, fmt.Errorf("txt2img: response contained no images")
+	} else if len(out.Images) > 1 {
+		c.log.Warn("txt2img call returned more than one image, using the first",
+			zap.String("endpoint", "txt2img"),
+			zap.Int("images", len(out.Images)),
+		)
+	}
+
+	image, err := imgfmt.DecodeRawBase64(out.Images[0])
+	if err != nil {
+		return nil, err
+	}
+
+	return [][]byte{image}, nil
 }

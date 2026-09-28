@@ -50,7 +50,7 @@ func forgeImg2ImgRequest(req Img2ImgRequest) forge.Img2ImgRequest {
 
 		DenoisingStrength: req.Strength,
 
-		EnableHR:          req.EnableHR,
+		IsDoHR:            req.EnableHR,
 		HRScale:           req.HRScale,
 		HRUpscaler:        req.HRUpscaler,
 		HRSecondPassSteps: req.HRSecondPassSteps,

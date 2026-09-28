@@ -139,7 +139,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:          zapNop(),
-		Forge:        forge.New(forgeServer.URL),
+		Forge:        forge.New(forgeServer.URL, zapNop()),
 		Publisher:    newTestPublisher(t),
 		Resolver:     resolver,
 		OutputFormat: imgfmt.Default,

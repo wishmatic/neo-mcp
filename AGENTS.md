@@ -121,6 +121,7 @@ flowchart TD
     filestore --> imgfmt
     present --> imgfmt
 
+    forge --> imgfmt
     forge --> utils
     novelai --> utils
     resolve --> sourcemap

@@ -10,19 +10,27 @@ import (
 )
 
 type Config struct {
-	Host string `env:"HOST" envDefault:"0.0.0.0"`
-	Port int    `env:"PORT" envDefault:"8080"`
+	// Base:
 
-	LogLevel     string `env:"LOG_LEVEL" envDefault:"info"`
-	OutputFormat string `env:"OUTPUT_FORMAT" envDefault:"webp"`
+	Host     string `env:"HOST" envDefault:"0.0.0.0"`
+	Port     int    `env:"PORT" envDefault:"8080"`
+	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`
 
-	APIKey string `env:"API_KEY"`
+	// Core:
+
+	DefaultOutput string `env:"OUTPUT_FORMAT" envDefault:"webp"`
+	APIKey        string `env:"API_KEY"`
+
+	// Networking:
 
 	ImageURLMap string `env:"IMAGE_URL_MAP"`
 
-	SDURL string `env:"SD_URL" envDefault:"http://127.0.0.1:7860"`
+	// Providers:
 
+	SDURL         string `env:"SD_URL" envDefault:"http://127.0.0.1:7860"`
 	NovelAIAPIKey string `env:"NOVELAI_API_KEY"`
+
+	// File hosting:
 
 	PublicHost string `env:"PUBLIC_HOST"`
 	FilesDir   string `env:"FILES_DIR" envDefault:"files"`

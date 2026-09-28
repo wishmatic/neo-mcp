@@ -2,8 +2,11 @@ package forge
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 
-	"github.com/wishmatic/neo-mcp/internal/utils"
+	"github.com/wishmatic/neo-mcp/internal/imgfmt"
+	"go.uber.org/zap"
 )
 
 type Img2ImgRequest struct {
@@ -28,7 +31,7 @@ type Img2ImgRequest struct {
 
 	Seed int `json:"seed"`
 
-	EnableHR          bool    `json:"enable_hr"`
+	IsDoHR            bool    `json:"enable_hr"`
 	HRScale           float64 `json:"hr_scale"`
 	HRUpscaler        string  `json:"hr_upscaler"`
 	HRSecondPassSteps int     `json:"hr_second_pass_steps"`
@@ -37,7 +40,7 @@ type Img2ImgRequest struct {
 
 func (c *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, error) {
 	payload := map[string]any{
-		"init_images":        []string{utils.Encode(req.InitImageData)},
+		"init_images":        []string{base64.StdEncoding.EncodeToString(req.InitImageData)},
 		"prompt":             req.Prompt,
 		"negative_prompt":    req.NegativePrompt,
 		"steps":              req.Steps,
@@ -51,32 +54,33 @@ func (c *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, err
 	}
 
 	applyOverrideSettings(payload, req.Checkpoint, req.ForgePreset, req.ForgeAdditionalModules)
-
-	if req.EnableHR {
-		payload["enable_hr"] = true
-		if req.HRScale != 0 {
-			payload["hr_scale"] = req.HRScale
-		}
-
-		if req.HRUpscaler != "" {
-			payload["hr_upscaler"] = req.HRUpscaler
-		}
-
-		if req.HRSecondPassSteps != 0 {
-			payload["hr_second_pass_steps"] = req.HRSecondPassSteps
-		}
-
-		if req.HRCFGScale != 0 {
-			payload["hr_cfg"] = req.HRCFGScale
-		}
-
-		payload["hr_additional_modules"] = []string{"Use same choices"}
-	}
+	applyUpscaleSettings(payload, upscaleSettings{
+		IsEnabled:         req.IsDoHR,
+		Scale:             req.HRScale,
+		Upscaler:          req.HRUpscaler,
+		SecondPassSteps:   req.HRSecondPassSteps,
+		CFGScale:          req.HRCFGScale,
+		DenoisingStrength: req.DenoisingStrength,
+	})
 
 	out, err := c.postJSON[imagesResponse](ctx, "img2img", "/sdapi/v1/img2img", payload)
 	if err != nil {
 		return nil, err
 	}
 
-	return utils.Decode(out.Images)
+	if len(out.Images) == 0 {
+		return nil, fmt.Errorf("img2img: response contained no images")
+	} else if len(out.Images) > 1 {
+		c.log.Warn("img2img call returned more than one image, using the first",
+			zap.String("endpoint", "img2img"),
+			zap.Int("images", len(out.Images)),
+		)
+	}
+
+	image, err := imgfmt.DecodeRawBase64(out.Images[0])
+	if err != nil {
+		return nil, err
+	}
+
+	return [][]byte{image}, nil
 }

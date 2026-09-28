@@ -9,17 +9,20 @@ import (
 	"strings"
 
 	"github.com/wishmatic/neo-mcp/internal/utils"
+	"go.uber.org/zap"
 )
 
 type Client struct {
 	baseURL string
 	http    *http.Client
+	log     *zap.Logger
 }
 
-func New(baseURL string) *Client {
+func New(baseURL string, log *zap.Logger) *Client {
 	return &Client{
 		baseURL: strings.TrimRight(baseURL, "/"),
 		http:    &http.Client{},
+		log:     log,
 	}
 }
 

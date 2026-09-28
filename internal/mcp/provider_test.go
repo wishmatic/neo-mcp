@@ -81,7 +81,7 @@ func newForgeBackend(t *testing.T, log *requestLog) *forge.Client {
 
 	t.Cleanup(server.Close)
 
-	return forge.New(server.URL)
+	return forge.New(server.URL, zapNop())
 }
 
 func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {

@@ -34,8 +34,8 @@ func TestLoadOutputFormatDefaults(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 
-	if cfg.OutputFormat != "webp" {
-		t.Errorf("OutputFormat = %q, want webp", cfg.OutputFormat)
+	if cfg.DefaultOutput != "webp" {
+		t.Errorf("OutputFormat = %q, want webp", cfg.DefaultOutput)
 	}
 }
 
@@ -55,8 +55,8 @@ func TestLoadOutputFormat(t *testing.T) {
 				t.Fatalf("Load() error: %v", err)
 			}
 
-			if cfg.OutputFormat != want {
-				t.Errorf("OutputFormat = %q, want %q", cfg.OutputFormat, want)
+			if cfg.DefaultOutput != want {
+				t.Errorf("OutputFormat = %q, want %q", cfg.DefaultOutput, want)
 			}
 		})
 	}

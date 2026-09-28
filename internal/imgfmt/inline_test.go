@@ -2,61 +2,9 @@ package imgfmt
 
 import (
 	"bytes"
-	"image"
-	"image/color"
 	"strings"
 	"testing"
 )
-
-func solidPNG(t *testing.T, width, height int) []byte {
-	t.Helper()
-
-	img := image.NewNRGBA(image.Rect(0, 0, width, height))
-
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			img.SetNRGBA(x, y, color.NRGBA{R: 30, G: 120, B: 200, A: 255})
-		}
-	}
-
-	return encodePNG(t, img)
-}
-
-func noisePNG(t *testing.T, width, height int) []byte {
-	t.Helper()
-
-	img := image.NewNRGBA(image.Rect(0, 0, width, height))
-
-	state := uint32(1)
-
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			state = state*1664525 + 1013904223
-			img.SetNRGBA(x, y, color.NRGBA{R: uint8(state >> 24), G: uint8(state >> 16), B: uint8(state >> 8), A: 255})
-		}
-	}
-
-	return encodePNG(t, img)
-}
-
-func halfTransparentPNG(t *testing.T, size int) []byte {
-	t.Helper()
-
-	img := image.NewNRGBA(image.Rect(0, 0, size, size))
-
-	for y := 0; y < size; y++ {
-		for x := 0; x < size; x++ {
-			alpha := uint8(0)
-			if x >= size/2 {
-				alpha = 255
-			}
-
-			img.SetNRGBA(x, y, color.NRGBA{R: 200, G: 40, B: 10, A: alpha})
-		}
-	}
-
-	return encodePNG(t, img)
-}
 
 func TestInlineDownscalesToMaxEdge(t *testing.T) {
 	got, err := Inline(solidPNG(t, 2048, 1024), 1024, InlineMaxBytes)

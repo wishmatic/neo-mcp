@@ -154,7 +154,7 @@ func TestNewRequiresFilesDir(t *testing.T) {
 
 func TestNewRejectsInvalidOutputFormat(t *testing.T) {
 	cfg := testConfig(t)
-	cfg.OutputFormat = "nonsense"
+	cfg.DefaultOutput = "nonsense"
 
 	_, err := New(cfg, zap.NewNop())
 	if err == nil {
@@ -174,7 +174,7 @@ func TestNewRejectsInvalidOutputFormat(t *testing.T) {
 
 func TestNewAcceptsOutputFormat(t *testing.T) {
 	cfg := testConfig(t)
-	cfg.OutputFormat = "JXL"
+	cfg.DefaultOutput = "JXL"
 
 	srv, err := New(cfg, zap.NewNop())
 	if err != nil {

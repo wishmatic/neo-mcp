@@ -11,7 +11,7 @@ import (
 )
 
 func TestToolAnnotations(t *testing.T) {
-	forgeClient := forge.New("http://example.com")
+	forgeClient := forge.New("http://example.com", zapNop())
 
 	srv, err := New(Deps{
 		Log:       zapNop(),

@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-
-	"github.com/wishmatic/neo-mcp/internal/utils"
 )
 
 var BgkillModels = []string{
@@ -47,13 +45,15 @@ type birefnetResponse struct {
 }
 
 func (c *Client) Bgkill(ctx context.Context, req BgkillRequest) ([]byte, error) {
+	// Note that the image can be a webp/does not have to be a PNG. The base64 encoding below is raw.
+
 	out, err := c.postJSON[birefnetResponse](
 		ctx,
 		"bgkill",
 		"/birefnet/single",
 		birefnetRequest{
 			ModelName:        req.ModelName,
-			Image:            utils.Encode(req.ImageData),
+			Image:            base64.StdEncoding.EncodeToString(req.ImageData),
 			ReturnForeground: true,
 			SendOutput:       true,
 			UseFP16:          !req.IsFullMode,

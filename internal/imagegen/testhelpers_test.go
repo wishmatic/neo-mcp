@@ -13,6 +13,7 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
+	"go.uber.org/zap"
 )
 
 type requestLog struct {
@@ -67,7 +68,7 @@ func newForgeBackend(t *testing.T, log *requestLog) *forge.Client {
 
 	t.Cleanup(server.Close)
 
-	return forge.New(server.URL)
+	return forge.New(server.URL, zap.NewNop())
 }
 
 func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {

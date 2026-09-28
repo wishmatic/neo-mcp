@@ -8,6 +8,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestTxt2ImgOverrideSettings(t *testing.T) {
@@ -16,11 +20,11 @@ func TestTxt2ImgOverrideSettings(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotBody, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"images": []}`))
+		_, _ = w.Write([]byte(`{"images": ["cG5n"]}`))
 	}))
 	defer server.Close()
 
-	c := New(server.URL)
+	c := New(server.URL, zap.NewNop())
 
 	_, err := c.Txt2Img(context.Background(), Txt2ImgRequest{
 		Checkpoint:             "model",
@@ -66,11 +70,11 @@ func TestTxt2ImgNoOverrideSettings(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotBody, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"images": []}`))
+		_, _ = w.Write([]byte(`{"images": ["cG5n"]}`))
 	}))
 	defer server.Close()
 
-	c := New(server.URL)
+	c := New(server.URL, zap.NewNop())
 
 	_, err := c.Txt2Img(context.Background(), Txt2ImgRequest{Prompt: "test"})
 	if err != nil {
@@ -79,5 +83,48 @@ func TestTxt2ImgNoOverrideSettings(t *testing.T) {
 
 	if strings.Contains(string(gotBody), "override_settings") {
 		t.Errorf("payload should not contain override_settings when empty, got: %s", gotBody)
+	}
+}
+
+func TestTxt2ImgRejectsEmptyResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"images": []}`))
+	}))
+	defer server.Close()
+
+	c := New(server.URL, zap.NewNop())
+
+	_, err := c.Txt2Img(context.Background(), Txt2ImgRequest{Prompt: "test"})
+	if err == nil || !strings.Contains(err.Error(), "no images") {
+		t.Fatalf("Txt2Img() error = %v, want an error about the missing images", err)
+	}
+}
+
+func TestTxt2ImgWarnsAboutExtraImages(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"images": ["cG5n", "Z2lm"]}`))
+	}))
+	defer server.Close()
+
+	core, logs := observer.New(zapcore.DebugLevel)
+
+	images, err := New(server.URL, zap.New(core)).Txt2Img(context.Background(), Txt2ImgRequest{Prompt: "test"})
+	if err != nil {
+		t.Fatalf("Txt2Img() error: %v", err)
+	}
+
+	if len(images) != 1 || string(images[0]) != "png" {
+		t.Errorf("images = %q, want only the first image", images)
+	}
+
+	entries := logs.FilterLevelExact(zapcore.WarnLevel).All()
+	if len(entries) != 1 {
+		t.Fatalf("warnings = %d, want one warning about the extra image", len(entries))
+	}
+
+	if fields := entries[0].ContextMap(); fields["images"] != int64(2) || fields["endpoint"] != "txt2img" {
+		t.Errorf("warning fields = %v, want two images at the txt2img endpoint", fields)
 	}
 }

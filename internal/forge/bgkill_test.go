@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"go.uber.org/zap"
 )
 
 func TestBgkillPayload(t *testing.T) {
@@ -36,7 +38,7 @@ func TestBgkillPayload(t *testing.T) {
 			}))
 			defer server.Close()
 
-			c := New(server.URL)
+			c := New(server.URL, zap.NewNop())
 
 			out, err := c.Bgkill(context.Background(), BgkillRequest{
 				ModelName:  "General",
@@ -57,7 +59,7 @@ func TestBgkillPayload(t *testing.T) {
 
 			want := map[string]any{
 				"model_name":        "General",
-				"image":             "data:image/png;base64," + base64.StdEncoding.EncodeToString([]byte("png")),
+				"image":             base64.StdEncoding.EncodeToString([]byte("png")),
 				"resolution":        "",
 				"return_foreground": true,
 				"return_mask":       false,
@@ -85,7 +87,7 @@ func TestBgkillMissingForeground(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL)
+	client := New(server.URL, zap.NewNop())
 
 	if _, err := client.Bgkill(
 		context.Background(), BgkillRequest{ModelName: "General", ImageData: []byte("png")},

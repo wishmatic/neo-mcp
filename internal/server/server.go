@@ -85,7 +85,7 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	log.Info("local files enabled", zap.String("dir", cfg.FilesDir))
 	log.Warn("stored files are readable by anyone with the URL")
 
-	forgeClient := forge.New(cfg.SDURL)
+	forgeClient := forge.New(cfg.SDURL, log)
 
 	sources, err := sourcemap.Parse(cfg.ImageURLMap)
 	if err != nil {
@@ -146,11 +146,11 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 }
 
 func outputFormatFrom(cfg config.Config) (imgfmt.Format, error) {
-	if cfg.OutputFormat == "" {
+	if cfg.DefaultOutput == "" {
 		return imgfmt.Default, nil
 	}
 
-	format, err := imgfmt.Parse(cfg.OutputFormat)
+	format, err := imgfmt.Parse(cfg.DefaultOutput)
 	if err != nil {
 		return "", fmt.Errorf("OUTPUT_FORMAT: %w", err)
 	}
