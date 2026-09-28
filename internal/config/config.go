@@ -51,9 +51,7 @@ func (c Config) Addr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
 
-// PublicBase normalises PUBLIC_HOST into the base URL every returned image link is built from. It is nil when
-// PUBLIC_HOST is unset, and a trailing slash is accepted; any other path is rejected because the file routes are
-// mounted at the root and URLs must round-trip through the resolver.
+// PublicBase normalises PUBLIC_HOST into the base URL every returned image link is built from.
 func (c Config) PublicBase() (*url.URL, error) {
 	if c.PublicHost == "" {
 		return nil, nil
@@ -63,17 +61,16 @@ func (c Config) PublicBase() (*url.URL, error) {
 	if err != nil {
 		return nil, fmt.Errorf("PUBLIC_HOST %q is not a valid URL: %w", c.PublicHost, err)
 	}
-
 	if base.Scheme != "http" && base.Scheme != "https" {
 		return nil, fmt.Errorf("PUBLIC_HOST %q must use http or https", c.PublicHost)
 	}
-
 	if base.Host == "" {
 		return nil, fmt.Errorf("PUBLIC_HOST %q must include a host", c.PublicHost)
 	}
-
 	if base.Path != "" || base.RawQuery != "" || base.Fragment != "" {
-		return nil, fmt.Errorf("PUBLIC_HOST %q must not include a path, query, or fragment", c.PublicHost)
+		return nil, fmt.Errorf(
+			"PUBLIC_HOST %q must not include a path, query, or fragment", c.PublicHost,
+		)
 	}
 
 	return base, nil
