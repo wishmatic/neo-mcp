@@ -61,13 +61,11 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 ## Credits
 
-- Check `anlas` before anything outside the free band (more than one image, a base image, or a large
-  size), and again if the user asks how much is left.
+- Forge images never spend credit.
 - With an Opus subscription, one image at a time with no base image, at most 1,048,576 pixels, and
   28 steps or fewer does not spend Anlas.
 - Anything beyond that spends Anlas, for example roughly 45 for a single 1024x1536 image.
   Subscription Anlas resets when the subscription period ends; purchased Anlas does not expire.
-- `usage_percent` is a coarse allowance meter and will not move for a single image.
 
 ## Worth knowing
 

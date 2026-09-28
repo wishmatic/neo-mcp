@@ -18,9 +18,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/vmihailenco/msgpack/v5"
+	"github.com/wishmatic/neo-mcp/internal/diffusion"
 	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/format"
-	"github.com/wishmatic/neo-mcp/internal/generation"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/present"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
@@ -189,9 +189,8 @@ func TestTxt2ImgCallToolImageAudience(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: generation.New(nil, backend),
+		Generator: diffusion.New(nil, backend),
 		Store:     newTestStore(t),
-		NovelAI:   backend,
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
@@ -245,9 +244,8 @@ func TestTxt2ImgCallToolNovelAIWithDefaults(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: generation.New(nil, backend),
+		Generator: diffusion.New(nil, backend),
 		Store:     newTestStore(t),
-		NovelAI:   backend,
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
@@ -298,7 +296,7 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 
 	h := &handlers{
 		log:      log,
-		gen:      generation.New(nil, newNovelAIBackend(t, novelaiLog)),
+		gen:      diffusion.New(nil, newNovelAIBackend(t, novelaiLog)),
 		store:    newTestStore(t),
 		resolver: newResolver(t),
 	}
@@ -315,7 +313,7 @@ func TestNovelAILogsDoNotLeakSecrets(t *testing.T) {
 
 	failing := &handlers{
 		log:   log,
-		gen:   generation.New(nil, novelai.New("http://127.0.0.1:1", "sk-test")),
+		gen:   diffusion.New(nil, novelai.New("http://127.0.0.1:1", "sk-test")),
 		store: newTestStore(t),
 	}
 

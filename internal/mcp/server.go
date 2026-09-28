@@ -2,10 +2,8 @@ package mcp
 
 import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/forge"
+	"github.com/wishmatic/neo-mcp/internal/diffusion"
 	"github.com/wishmatic/neo-mcp/internal/format"
-	"github.com/wishmatic/neo-mcp/internal/generation"
-	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/store"
 	"go.uber.org/zap"
@@ -13,10 +11,8 @@ import (
 
 type Deps struct {
 	Log       *zap.Logger
-	Generator *generation.Generator
-	Forge     *forge.Client
+	Generator *diffusion.Generator
 	Store     *store.Client
-	NovelAI   *novelai.Client
 	Resolver  *resolve.Resolver
 
 	OutputFormat format.Format
@@ -37,15 +33,13 @@ func buildHandlers(deps Deps) *handlers {
 	h := &handlers{
 		log:           deps.Log,
 		gen:           deps.Generator,
-		forge:         deps.Forge,
 		store:         deps.Store,
-		novelai:       deps.NovelAI,
 		resolver:      deps.Resolver,
 		defaultFormat: deps.OutputFormat,
 	}
 
 	if h.gen == nil {
-		h.gen = generation.New(nil, nil)
+		h.gen = diffusion.New(nil, nil)
 	}
 
 	if h.defaultFormat == "" {
@@ -61,14 +55,10 @@ func registerTools(srv *mcp.Server, h *handlers) {
 		registerImg2Img(srv, h)
 	}
 
-	if h.novelai != nil {
-		registerAnlas(srv, h)
-	}
-
 	registerCrop(srv, h)
 	registerConvert(srv, h)
 
-	if h.forge != nil {
+	if h.gen.ForgeEnabled() {
 		registerBgkill(srv, h)
 	}
 }

@@ -13,7 +13,6 @@ Note that the only version of Forge we support is
   - They also route to NovelAI when `model` starts with `nai-diffusion-`.
     - Set `NOVELAI_API_KEY` to enable this.
   - Forge-only ptions such as hi-res fix, presets, and VAE/text encoders are ignored for NovelAI.
-- With NovelAI enabled, `anlas` reports the account's credit balance.
 - Not just PNG; WebP output by default, and JPEG and JXL are supported too!
   - Adjust default output with `OUTPUT_FORMAT`.
 - Every call to an image tool stores the image, returns its URL as text, and attaches the image as

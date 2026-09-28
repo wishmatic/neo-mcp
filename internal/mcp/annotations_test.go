@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/diffusion"
 	"github.com/wishmatic/neo-mcp/internal/forge"
-	"github.com/wishmatic/neo-mcp/internal/generation"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 )
 
@@ -15,16 +15,13 @@ func TestToolAnnotations(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: generation.New(forgeClient, novelai.New("http://example.com", "sk")),
-		Forge:     forgeClient,
-		NovelAI:   novelai.New("http://example.com", "sk"),
+		Generator: diffusion.New(forgeClient, novelai.New("http://example.com", "sk")),
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
 
 	want := map[string]mcp.ToolAnnotations{
-		"anlas":   {ReadOnlyHint: true, DestructiveHint: new(false), IdempotentHint: true, OpenWorldHint: new(true)},
 		"txt2img": {ReadOnlyHint: false, DestructiveHint: new(false), IdempotentHint: false, OpenWorldHint: new(true)},
 		"img2img": {ReadOnlyHint: false, DestructiveHint: new(false), IdempotentHint: false, OpenWorldHint: new(true)},
 		"bgkill":  {ReadOnlyHint: false, DestructiveHint: new(false), IdempotentHint: false, OpenWorldHint: new(true)},

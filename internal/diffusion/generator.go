@@ -1,4 +1,4 @@
-package generation
+package diffusion
 
 import (
 	"context"
@@ -12,9 +12,16 @@ import (
 const (
 	DefaultSampler   = "DPM++ 2M"
 	DefaultScheduler = "Automatic"
+
+	ProviderForge   = "forge"
+	ProviderNovelAI = "novelai"
 )
 
-var ErrForgeNotConfigured = errors.New("the Forge backend is not configured")
+var (
+	ErrForgeNotConfigured = errors.New("the Forge backend is not configured")
+
+	BgkillModels = forge.BgkillModels
+)
 
 type Generator struct {
 	forge   *forge.Client
@@ -27,10 +34,10 @@ func New(forge *forge.Client, novelai *novelai.Client) *Generator {
 
 func ProviderOf(model string) string {
 	if novelai.IsModel(model) {
-		return "novelai"
+		return ProviderNovelAI
 	}
 
-	return "forge"
+	return ProviderForge
 }
 
 func (g *Generator) ForgeEnabled() bool {
@@ -71,6 +78,14 @@ func (g *Generator) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, 
 	}
 
 	return g.forge.Img2Img(ctx, forgeImg2ImgRequest(req))
+}
+
+func (g *Generator) Bgkill(ctx context.Context, req BgkillRequest) ([]byte, error) {
+	if g.forge == nil {
+		return nil, ErrForgeNotConfigured
+	}
+
+	return g.forge.Bgkill(ctx, forgeBgkillRequest(req))
 }
 
 func noNovelAIClientError(model string) error {

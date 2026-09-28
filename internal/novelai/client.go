@@ -66,32 +66,6 @@ func (c *Client) generate(ctx context.Context, label string, payload map[string]
 	return [][]byte{image}, nil
 }
 
-func (c *Client) get(ctx context.Context, label, path string, out any) error {
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
-	if err != nil {
-		return fmt.Errorf("build %s request: %w", label, err)
-	}
-
-	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
-
-	resp, err := c.http.Do(httpReq)
-	if err != nil {
-		return fmt.Errorf("call %s: %w", label, err)
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return utils.FmtHTTPErr(http.MethodGet, path, resp)
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
-		return fmt.Errorf("decode %s response: %w", label, err)
-	}
-
-	return nil
-}
-
 func (c *Client) resolveSeed(requested int) uint32 {
 	if requested < 0 {
 		return c.randomSeed()

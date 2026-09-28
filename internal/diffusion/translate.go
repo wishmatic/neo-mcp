@@ -1,4 +1,4 @@
-package generation
+package diffusion
 
 import (
 	"github.com/wishmatic/neo-mcp/internal/forge"
@@ -27,6 +27,14 @@ func forgeTxt2ImgRequest(req Txt2ImgRequest) forge.Txt2ImgRequest {
 		HRSecondPassSteps: req.HRSecondPassSteps,
 		DenoisingStrength: req.HRDenoisingStrength,
 		HRCFGScale:        req.HRCFGScale,
+	}
+}
+
+func forgeBgkillRequest(req BgkillRequest) forge.BgkillRequest {
+	return forge.BgkillRequest{
+		ModelName:  req.ModelName,
+		ImageData:  req.ImageData,
+		IsFullMode: req.IsFullMode,
 	}
 }
 

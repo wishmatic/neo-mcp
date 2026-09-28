@@ -1,16 +1,16 @@
 package mcp
 
-import "github.com/wishmatic/neo-mcp/internal/generation"
+import "github.com/wishmatic/neo-mcp/internal/diffusion"
 
-func generationTxt2ImgRequest(in txt2imgInput) generation.Txt2ImgRequest {
-	return generation.Txt2ImgRequest{
+func generationTxt2ImgRequest(in txt2imgInput) diffusion.Txt2ImgRequest {
+	return diffusion.Txt2ImgRequest{
 		Params:              generationParams(in.generationInput),
 		HRDenoisingStrength: in.DenoisingStrength,
 	}
 }
 
-func generationImg2ImgRequest(in img2imgInput, initImage []byte) generation.Img2ImgRequest {
-	return generation.Img2ImgRequest{
+func generationImg2ImgRequest(in img2imgInput, initImage []byte) diffusion.Img2ImgRequest {
+	return diffusion.Img2ImgRequest{
 		Params:    generationParams(in.generationInput),
 		InitImage: initImage,
 		Strength:  in.DenoisingStrength,
@@ -18,8 +18,8 @@ func generationImg2ImgRequest(in img2imgInput, initImage []byte) generation.Img2
 	}
 }
 
-func generationParams(in generationInput) generation.Params {
-	return generation.Params{
+func generationParams(in generationInput) diffusion.Params {
+	return diffusion.Params{
 		Model:             in.Model,
 		ForgePreset:       in.ForgePreset,
 		VAEAndTextModels:  in.VAEAndTextModels,

@@ -13,9 +13,9 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wishmatic/neo-mcp/internal/auth"
 	"github.com/wishmatic/neo-mcp/internal/config"
+	"github.com/wishmatic/neo-mcp/internal/diffusion"
 	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/format"
-	"github.com/wishmatic/neo-mcp/internal/generation"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
@@ -105,10 +105,8 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 
 	mcpSrv, err := mcpServer.New(mcpServer.Deps{
 		Log:          log,
-		Generator:    generation.New(forgeClient, novelaiClient),
-		Forge:        forgeClient,
+		Generator:    diffusion.New(forgeClient, novelaiClient),
 		Store:        files,
-		NovelAI:      novelaiClient,
 		Resolver:     resolver,
 		OutputFormat: outputFormat,
 	})

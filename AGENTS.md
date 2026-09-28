@@ -82,10 +82,8 @@ If you make changes to the architecture, update this diagram.
 
 ```mermaid
 flowchart TD
-    cmd["cmd/server"]
-    server["internal/server"]
     mcp["internal/mcp"]
-    generation["internal/generation"]
+    diffusion["internal/diffusion"]
     present["internal/present"]
     crop["internal/crop"]
     format["internal/format"]
@@ -94,35 +92,17 @@ flowchart TD
     sourcemap["internal/sourcemap"]
     resolve["internal/resolve"]
     store["internal/store"]
-    config["internal/config"]
-    auth["internal/auth"]
     utils["internal/utils"]
 
-    cmd --> server
-    cmd --> config
-
-    server --> mcp
-    server --> generation
-    server --> auth
-    server --> config
-    server --> forge
-    server --> novelai
-    server --> resolve
-    server --> store
-    server --> format
-    server --> sourcemap
-
-    mcp --> generation
-    mcp --> forge
+    mcp --> diffusion
     mcp --> crop
     mcp --> present
     mcp --> format
-    mcp --> novelai
     mcp --> resolve
     mcp --> store
 
-    generation --> forge
-    generation --> novelai
+    diffusion --> forge
+    diffusion --> novelai
     store --> format
     present --> format
 
@@ -132,6 +112,11 @@ flowchart TD
     resolve --> sourcemap
     resolve --> utils
 ```
+
+`cmd/server`, `internal/server`, and `internal/config` are deliberately left out of the diagram:
+they are wiring and config plumbing, so every edge they own is expected rather than a constraint
+worth drawing. `internal/auth` is omitted too: with the server gone it is left with no internal
+edges.
 
 ## Comments and Docstrings
 

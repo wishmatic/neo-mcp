@@ -1,4 +1,4 @@
-package generation
+package diffusion
 
 type Params struct {
 	Model             string
@@ -32,4 +32,10 @@ type Img2ImgRequest struct {
 	InitImage []byte
 	Strength  float64
 	Noise     float64
+}
+
+type BgkillRequest struct {
+	ModelName  string
+	ImageData  []byte
+	IsFullMode bool
 }

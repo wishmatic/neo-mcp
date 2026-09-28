@@ -1,4 +1,4 @@
-package generation
+package diffusion
 
 import (
 	"context"
@@ -6,6 +6,44 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestBgkillRoutesToForge(t *testing.T) {
+	forgeLog := &requestLog{}
+
+	g := New(newBgkillBackend(t, forgeLog), nil)
+
+	out, err := g.Bgkill(context.Background(), BgkillRequest{
+		ModelName:  "Portrait",
+		ImageData:  []byte("input-image"),
+		IsFullMode: true,
+	})
+	if err != nil {
+		t.Fatalf("Bgkill() error: %v", err)
+	}
+
+	if string(out) != "forge-foreground" {
+		t.Errorf("out = %q, want forge-foreground", out)
+	}
+
+	paths, bodies := forgeLog.snapshot()
+	if len(paths) != 1 || paths[0] != "/birefnet/single" {
+		t.Fatalf("forge received %v, want one birefnet request", paths)
+	}
+
+	body := decodeJSONBody(t, bodies[0])
+	if body["model_name"] != "Portrait" || body["use_fp16"] != false {
+		t.Errorf("body = %v, want the request model in fp32 mode", body)
+	}
+}
+
+func TestBgkillForgeWithoutClient(t *testing.T) {
+	g := New(nil, newNovelAIBackend(t, &requestLog{}))
+
+	_, err := g.Bgkill(context.Background(), BgkillRequest{ModelName: "Portrait", ImageData: []byte("input-image")})
+	if !errors.Is(err, ErrForgeNotConfigured) {
+		t.Errorf("error = %v, want ErrForgeNotConfigured", err)
+	}
+}
 
 func TestProviderOf(t *testing.T) {
 	tests := []struct {

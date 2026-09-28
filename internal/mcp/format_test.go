@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/diffusion"
 	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
@@ -139,7 +140,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:          zapNop(),
-		Forge:        forge.New(forgeServer.URL, zapNop()),
+		Generator:    diffusion.New(forge.New(forgeServer.URL, zapNop()), nil),
 		Store:        newTestStore(t),
 		Resolver:     resolver,
 		OutputFormat: format.Default,
@@ -151,7 +152,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "bgkill",
 		Arguments: map[string]any{
-			"model_name": forge.BgkillModels[0],
+			"model_name": diffusion.BgkillModels[0],
 			"image_url":  images.URL + "/x.png",
 			"format":     "jpeg",
 		},

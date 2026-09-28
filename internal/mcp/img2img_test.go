@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/diffusion"
 	"github.com/wishmatic/neo-mcp/internal/format"
-	"github.com/wishmatic/neo-mcp/internal/generation"
 )
 
 func TestInitImageSize(t *testing.T) {
@@ -123,7 +123,7 @@ func TestImg2ImgForgeCallToolTakesSizeFromInitImage(t *testing.T) {
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: generation.New(backend, nil),
+		Generator: diffusion.New(backend, nil),
 		Store:     newTestStore(t),
 		Resolver:  newResolver(t),
 	})
@@ -154,10 +154,9 @@ func newImg2ImgServer(t *testing.T, log *requestLog) *mcp.Server {
 
 	srv, err := New(Deps{
 		Log:       zapNop(),
-		Generator: generation.New(nil, backend),
+		Generator: diffusion.New(nil, backend),
 		Store:     newTestStore(t),
 		Resolver:  newResolver(t),
-		NovelAI:   backend,
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)

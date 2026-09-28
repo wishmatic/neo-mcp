@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wishmatic/neo-mcp/internal/diffusion"
 	"github.com/wishmatic/neo-mcp/internal/format"
-	"github.com/wishmatic/neo-mcp/internal/generation"
 	"go.uber.org/zap"
 )
 
@@ -34,7 +34,7 @@ func (h *handlers) txt2img(
 	_ *mcp.CallToolRequest,
 	in txt2imgInput,
 ) (*mcp.CallToolResult, generationOutput, error) {
-	provider := generation.ProviderOf(in.Model)
+	provider := diffusion.ProviderOf(in.Model)
 
 	format, err := h.outputFormat(in.Format)
 	if err != nil {

@@ -1,4 +1,4 @@
-package generation
+package diffusion
 
 import (
 	"encoding/base64"
@@ -64,6 +64,23 @@ func newForgeBackend(t *testing.T, log *requestLog) *forge.Client {
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"images":["` + image + `"]}`))
+	}))
+
+	t.Cleanup(server.Close)
+
+	return forge.New(server.URL, zap.NewNop())
+}
+
+func newBgkillBackend(t *testing.T, log *requestLog) *forge.Client {
+	t.Helper()
+
+	image := base64.StdEncoding.EncodeToString([]byte("forge-foreground"))
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.add(r)
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"output_image":"` + image + `"}`))
 	}))
 
 	t.Cleanup(server.Close)
