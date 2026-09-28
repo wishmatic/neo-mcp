@@ -1,6 +1,10 @@
 package forge
 
-import "context"
+import (
+	"context"
+
+	"github.com/wishmatic/neo-mcp/internal/utils"
+)
 
 type Txt2ImgRequest struct {
 	Checkpoint             string   `json:"-"`
@@ -74,5 +78,5 @@ func (c *Client) Txt2Img(ctx context.Context, req Txt2ImgRequest) ([][]byte, err
 		return nil, err
 	}
 
-	return decodeImages(out)
+	return utils.Decode(out.Images)
 }

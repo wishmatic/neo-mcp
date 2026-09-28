@@ -2,6 +2,8 @@ package forge
 
 import (
 	"context"
+
+	"github.com/wishmatic/neo-mcp/internal/utils"
 )
 
 type Img2ImgRequest struct {
@@ -35,7 +37,7 @@ type Img2ImgRequest struct {
 
 func (c *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, error) {
 	payload := map[string]any{
-		"init_images":        []string{base64DataURI(req.InitImageData)},
+		"init_images":        []string{utils.Encode(req.InitImageData)},
 		"prompt":             req.Prompt,
 		"negative_prompt":    req.NegativePrompt,
 		"steps":              req.Steps,
@@ -76,5 +78,5 @@ func (c *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, err
 		return nil, err
 	}
 
-	return decodeImages(out)
+	return utils.Decode(out.Images)
 }
