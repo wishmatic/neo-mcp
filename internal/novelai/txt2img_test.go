@@ -16,7 +16,7 @@ func TestTxt2ImgRequest(t *testing.T) {
 
 	client := New(server.URL, "sk-test")
 
-	images, err := client.Txt2Img(context.Background(), Txt2ImgRequest{
+	images, err := client.txt2img(context.Background(), txt2imgRequest{
 		Model:  "nai-diffusion-5-full",
 		Prompt: "a cat",
 		Steps:  23,
@@ -26,7 +26,7 @@ func TestTxt2ImgRequest(t *testing.T) {
 		Seed:   42,
 	})
 	if err != nil {
-		t.Fatalf("Txt2Img() error: %v", err)
+		t.Fatalf("txt2img() error: %v", err)
 	}
 
 	if len(images) != 1 || string(images[0]) != "png" {
@@ -99,12 +99,12 @@ func TestTxt2ImgRoundsDimensions(t *testing.T) {
 
 	client := New(server.URL, "sk-test")
 
-	if _, err := client.Txt2Img(context.Background(), Txt2ImgRequest{
+	if _, err := client.txt2img(context.Background(), txt2imgRequest{
 		Model:  "nai-diffusion-5-full",
 		Width:  833,
 		Height: 1217,
 	}); err != nil {
-		t.Fatalf("Txt2Img() error: %v", err)
+		t.Fatalf("txt2img() error: %v", err)
 	}
 
 	params := nestedMap(t, decodeJSON(t, captured.body), "parameters")
@@ -121,12 +121,12 @@ func TestTxt2ImgRoundsDimensions(t *testing.T) {
 func TestTxt2ImgRejectsBadDimensions(t *testing.T) {
 	client := New("http://example.com", "sk-test")
 
-	if _, err := client.Txt2Img(context.Background(), Txt2ImgRequest{
+	if _, err := client.txt2img(context.Background(), txt2imgRequest{
 		Model:  "nai-diffusion-5-full",
 		Width:  4096,
 		Height: 4096,
 	}); err == nil {
-		t.Fatal("Txt2Img() error = nil, want an error")
+		t.Fatal("txt2img() error = nil, want an error")
 	}
 }
 
@@ -140,13 +140,13 @@ func TestTxt2ImgHTTPError(t *testing.T) {
 
 	client := New(server.URL, "sk-test")
 
-	_, err := client.Txt2Img(context.Background(), Txt2ImgRequest{
+	_, err := client.txt2img(context.Background(), txt2imgRequest{
 		Model:  "nai-diffusion-5-full",
 		Width:  512,
 		Height: 512,
 	})
 	if err == nil {
-		t.Fatal("Txt2Img() error = nil, want an error")
+		t.Fatal("txt2img() error = nil, want an error")
 	}
 
 	if !strings.Contains(err.Error(), "500") {
@@ -169,11 +169,11 @@ func TestTxt2ImgContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if _, err := client.Txt2Img(ctx, Txt2ImgRequest{
+	if _, err := client.txt2img(ctx, txt2imgRequest{
 		Model:  "nai-diffusion-5-full",
 		Width:  512,
 		Height: 512,
 	}); err == nil {
-		t.Fatal("Txt2Img() error = nil, want an error")
+		t.Fatal("txt2img() error = nil, want an error")
 	}
 }

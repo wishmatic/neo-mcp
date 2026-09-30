@@ -16,8 +16,8 @@ func TestBaseParamsDefaults(t *testing.T) {
 		t.Errorf("params_version = %v, want 3", got)
 	}
 
-	if params["sampler"] != defaultSampler {
-		t.Errorf("sampler = %v, want %s", params["sampler"], defaultSampler)
+	if params["sampler"] != DefaultSampler {
+		t.Errorf("sampler = %v, want %s", params["sampler"], DefaultSampler)
 	}
 
 	if params["negative_prompt"] != defaultNegativePrompt {

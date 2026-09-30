@@ -2,7 +2,7 @@ package novelai
 
 import "context"
 
-type Txt2ImgRequest struct {
+type txt2imgRequest struct {
 	Model          string
 	Prompt         string
 	NegativePrompt string
@@ -14,7 +14,7 @@ type Txt2ImgRequest struct {
 	Seed           int
 }
 
-func (c *Client) Txt2Img(ctx context.Context, req Txt2ImgRequest) ([][]byte, error) {
+func (c *Client) txt2img(ctx context.Context, req txt2imgRequest) ([][]byte, error) {
 	width, height, err := normalizeDimensions(req.Width, req.Height)
 	if err != nil {
 		return nil, err

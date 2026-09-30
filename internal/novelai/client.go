@@ -1,3 +1,5 @@
+// Package novelai is NovelAI's image generation API in two layers: Generate is the domain operation, and the
+// unexported requests, parameters, and streaming under it are the client that speaks NovelAI's own API.
 package novelai
 
 import (

@@ -8,34 +8,6 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/format"
 )
 
-type generationInput struct {
-	Model       string `json:"model" jsonschema:"checkpoint (model) filename to load, or a NovelAI model id starting with nai-diffusion- for the NovelAI backend; the id is passed through as-is"`
-	ForgePreset string `json:"forge_preset" jsonschema:"Forge UI preset; ignored by NovelAI"`
-
-	VAEAndTextModels []string `json:"vae_and_text_models,omitempty" jsonschema:"VAE and text encoder model filenames to load. Leave empty to use the defaults bundled with the checkpoint; ignored by NovelAI"`
-
-	Prompt         string `json:"prompt" jsonschema:"the text prompt describing the image to generate"`
-	NegativePrompt string `json:"negative_prompt,omitempty" jsonschema:"things to avoid in the generated image"`
-
-	SamplingMethod string `json:"sampler_name,omitempty" jsonschema:"the sampler to use; defaults to the backend's own sampler"`
-	ScheduleType   string `json:"scheduler,omitempty" jsonschema:"the scheduler to use; ignored by NovelAI"`
-	SamplingSteps  int    `json:"steps,omitempty" jsonschema:"number of sampling steps"`
-
-	Width    int     `json:"width,omitempty" jsonschema:"output width in pixels"`
-	Height   int     `json:"height,omitempty" jsonschema:"output height in pixels"`
-	CFGScale float64 `json:"cfg_scale,omitempty" jsonschema:"classifier-free guidance scale"`
-
-	Seed int `json:"seed,omitempty" jsonschema:"random seed; use -1 for a random seed"`
-
-	EnableHR          bool    `json:"enable_hr,omitempty" jsonschema:"Forge only: enable hi-res (HR) (second-pass) upscaling; ignored by NovelAI, as are the other hr_ fields"`
-	HRScale           float64 `json:"hr_scale,omitempty" jsonschema:"Forge only: if HR is enabled, the hi-res upscaling factor (e.g. 2 for 2x); ignored by NovelAI"`
-	HRUpscaler        string  `json:"hr_upscaler,omitempty" jsonschema:"Forge only: if HR is enabled, the hi-res upscaler to use. Leave empty to disable upscaling; ignored by NovelAI"`
-	HRSecondPassSteps int     `json:"hr_second_pass_steps,omitempty" jsonschema:"Forge only: if HR is enabled, the number of steps for the hi-res second pass; ignored by NovelAI"`
-	HRCFGScale        float64 `json:"hr_cfg,omitempty" jsonschema:"Forge only: if HR is enabled, the CFG scale for the hi-res second pass; ignored by NovelAI"`
-
-	formatInput
-}
-
 type formatInput struct {
 	Format string `json:"format,omitempty" jsonschema:"output image format: png, jpeg, jxl (JPEG XL), or webp; defaults to the server's configured output format"`
 }

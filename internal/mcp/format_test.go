@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/wishmatic/neo-mcp/internal/diffusion"
 	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
@@ -100,14 +99,27 @@ func TestOutputFormatResolver(t *testing.T) {
 	}
 }
 
-func TestTxt2ImgRejectsInvalidFormatBeforeGenerating(t *testing.T) {
+func TestForgeRejectsInvalidFormatBeforeGenerating(t *testing.T) {
 	h := &Clients{Log: zapNop()}
 
-	_, _, err := h.txt2img(context.Background(), nil, txt2imgInput{
-		generationInput: generationInput{Model: "m.safetensors", Format: "gif"},
+	_, _, err := h.forge(context.Background(), nil, forgeInput{
+		generationInput: generationInput{Prompt: "a cat", Format: "gif"},
+		Model:           "m.safetensors",
 	})
-	if err == nil || !strings.HasPrefix(err.Error(), "txt2img:") {
-		t.Fatalf("error = %v, want a txt2img: prefix", err)
+	if err == nil || !strings.HasPrefix(err.Error(), "forge:") {
+		t.Fatalf("error = %v, want a forge: prefix", err)
+	}
+}
+
+func TestNovelAIRejectsInvalidFormatBeforeGenerating(t *testing.T) {
+	h := &Clients{Log: zapNop()}
+
+	_, _, err := h.novelai(context.Background(), nil, novelaiInput{
+		generationInput: generationInput{Prompt: "a cat", Format: "gif"},
+		Model:           "nai-diffusion-5-full",
+	})
+	if err == nil || !strings.HasPrefix(err.Error(), "novelai:") {
+		t.Fatalf("error = %v, want a novelai: prefix", err)
 	}
 }
 
@@ -132,7 +144,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 
 	srv, err := New(Clients{
 		Log:                 zapNop(),
-		Generator:           diffusion.New(forge.New(forgeServer.URL, zapNop()), nil),
+		Forge:               forge.New(forgeServer.URL, zapNop()),
 		Store:               newTestStore(t),
 		Resolver:            resolver,
 		DefaultOutputFormat: format.Default,
@@ -144,7 +156,7 @@ func TestBgkillCallToolFormatsOutput(t *testing.T) {
 	result, err := connectSession(t, srv).CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "bgkill",
 		Arguments: map[string]any{
-			"model_name": diffusion.BgkillModels[0],
+			"model_name": forge.BgkillModels[0],
 			"image_url":  images.URL + "/x.png",
 			"format":     "jpeg",
 		},

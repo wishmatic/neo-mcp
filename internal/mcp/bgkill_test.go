@@ -4,27 +4,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/wishmatic/neo-mcp/internal/diffusion"
+	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/format"
 )
-
-func TestBgkillRequestMapsInput(t *testing.T) {
-	in := bgkillInput{
-		ModelName:  "Portrait",
-		ImageURL:   "https://example.com/a.png",
-		IsFullMode: true,
-	}
-
-	got := bgkillRequest(in, []byte("image"))
-
-	if got.ModelName != "Portrait" || got.IsFullMode != true {
-		t.Errorf("request = %+v, want the input fields copied", got)
-	}
-
-	if string(got.ImageData) != "image" {
-		t.Errorf("image = %q, want it copied", got.ImageData)
-	}
-}
 
 func TestBgkillSchema(t *testing.T) {
 	s := bgkillSchema(format.Default)
@@ -44,8 +26,8 @@ func TestBgkillSchema(t *testing.T) {
 		t.Error("bgkill: model_name must not have a default")
 	}
 
-	if len(model.Enum) != len(diffusion.BgkillModels) {
-		t.Errorf("bgkill: model_name has %d enum values, want %d", len(model.Enum), len(diffusion.BgkillModels))
+	if len(model.Enum) != len(forge.BgkillModels) {
+		t.Errorf("bgkill: model_name has %d enum values, want %d", len(model.Enum), len(forge.BgkillModels))
 	}
 }
 

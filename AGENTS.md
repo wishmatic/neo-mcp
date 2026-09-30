@@ -83,7 +83,6 @@ If you make changes to the architecture, update this diagram.
 ```mermaid
 flowchart TD
     mcp["internal/mcp"]
-    diffusion["internal/diffusion"]
     present["internal/present"]
     edit["internal/edit"]
     format["internal/format"]
@@ -94,20 +93,20 @@ flowchart TD
     store["internal/store"]
     utils["internal/utils"]
 
-    mcp --> diffusion
+    mcp --> forge
+    mcp --> novelai
     mcp --> edit
     mcp --> present
     mcp --> format
     mcp --> resolve
     mcp --> store
 
-    diffusion --> forge
-    diffusion --> novelai
     store --> format
     present --> format
 
     forge --> format
     forge --> utils
+    novelai --> format
     novelai --> utils
     resolve --> sourcemap
     resolve --> utils

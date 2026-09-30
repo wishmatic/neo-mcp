@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type Txt2ImgRequest struct {
+type txt2imgRequest struct {
 	Checkpoint             string   `json:"-"`
 	ForgePreset            string   `json:"-"`
 	ForgeAdditionalModules []string `json:"-"`
@@ -34,7 +34,7 @@ type Txt2ImgRequest struct {
 	HRCFGScale        float64 `json:"hr_cfg"`
 }
 
-func (c *Client) Txt2Img(ctx context.Context, req Txt2ImgRequest) ([][]byte, error) {
+func (c *Client) txt2img(ctx context.Context, req txt2imgRequest) ([][]byte, error) {
 	payload := map[string]any{
 		"prompt":          req.Prompt,
 		"negative_prompt": req.NegativePrompt,

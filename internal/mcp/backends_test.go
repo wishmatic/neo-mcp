@@ -1,9 +1,9 @@
-package diffusion
+package mcp
 
 import (
 	"encoding/base64"
 	"encoding/binary"
-	"encoding/json"
+	"image"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,8 +12,8 @@ import (
 
 	"github.com/vmihailenco/msgpack/v5"
 	"github.com/wishmatic/neo-mcp/internal/forge"
+	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
-	"go.uber.org/zap"
 )
 
 type requestLog struct {
@@ -57,7 +57,7 @@ func novelaiFrame(t *testing.T, image []byte) []byte {
 func newForgeBackend(t *testing.T, log *requestLog) *forge.Client {
 	t.Helper()
 
-	image := base64.StdEncoding.EncodeToString([]byte("forge-png"))
+	image := base64.StdEncoding.EncodeToString(testImagePNG(t))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.add(r)
@@ -68,30 +68,13 @@ func newForgeBackend(t *testing.T, log *requestLog) *forge.Client {
 
 	t.Cleanup(server.Close)
 
-	return forge.New(server.URL, zap.NewNop())
-}
-
-func newBgkillBackend(t *testing.T, log *requestLog) *forge.Client {
-	t.Helper()
-
-	image := base64.StdEncoding.EncodeToString([]byte("forge-foreground"))
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.add(r)
-
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"output_image":"` + image + `"}`))
-	}))
-
-	t.Cleanup(server.Close)
-
-	return forge.New(server.URL, zap.NewNop())
+	return forge.New(server.URL, zapNop())
 }
 
 func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {
 	t.Helper()
 
-	frame := novelaiFrame(t, []byte("novelai-png"))
+	frame := novelaiFrame(t, testImagePNG(t))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.add(r)
@@ -103,49 +86,25 @@ func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {
 	return novelai.New(server.URL, "sk-test")
 }
 
-func txt2ImgRequestFor(model string) Txt2ImgRequest {
-	return Txt2ImgRequest{
-		Params: Params{
-			Model:    model,
-			Prompt:   "a cat",
-			Steps:    20,
-			Width:    512,
-			Height:   512,
-			CFGScale: 7,
-			Seed:     -1,
-		},
-	}
-}
-
-func decodeJSONBody(t *testing.T, raw []byte) map[string]any {
+func newInitImageURL(t *testing.T) string {
 	t.Helper()
 
-	var decoded map[string]any
-	if err := json.Unmarshal(raw, &decoded); err != nil {
-		t.Fatalf("decode JSON: %v", err)
-	}
-
-	return decoded
+	return newSizedInitImageURL(t, testImageSize, testImageSize)
 }
 
-func paramsOf(t *testing.T, body map[string]any) map[string]any {
+func newSizedInitImageURL(t *testing.T, width, height int) string {
 	t.Helper()
 
-	params, ok := body["parameters"].(map[string]any)
-	if !ok {
-		t.Fatalf("parameters = %T, want a map", body["parameters"])
+	data, err := format.Encode(image.NewNRGBA(image.Rect(0, 0, width, height)), format.PNG)
+	if err != nil {
+		t.Fatalf("encode init image: %v", err)
 	}
 
-	return params
-}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(data)
+	}))
 
-func numberField(t *testing.T, params map[string]any, key string) float64 {
-	t.Helper()
+	t.Cleanup(server.Close)
 
-	value, ok := params[key].(float64)
-	if !ok {
-		t.Fatalf("%s = %T, want a number", key, params[key])
-	}
-
-	return value
+	return server.URL + "/init.png"
 }

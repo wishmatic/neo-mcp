@@ -16,7 +16,7 @@ func TestImg2ImgRequest(t *testing.T) {
 	client := New(server.URL, "sk-test")
 	client.randomSeed = func() uint32 { return 99 }
 
-	images, err := client.Img2Img(context.Background(), Img2ImgRequest{
+	images, err := client.img2img(context.Background(), img2imgRequest{
 		Model:     "nai-diffusion-5-full",
 		Prompt:    "a cat",
 		Steps:     23,
@@ -28,7 +28,7 @@ func TestImg2ImgRequest(t *testing.T) {
 		Strength:  0.7,
 	})
 	if err != nil {
-		t.Fatalf("Img2Img() error: %v", err)
+		t.Fatalf("img2img() error: %v", err)
 	}
 
 	if len(images) != 1 || string(images[0]) != "out" {

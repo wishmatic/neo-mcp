@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 )
 
-type Img2ImgRequest struct {
+type img2imgRequest struct {
 	Model          string
 	Prompt         string
 	NegativePrompt string
@@ -20,7 +20,7 @@ type Img2ImgRequest struct {
 	Noise          float64
 }
 
-func (c *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, error) {
+func (c *Client) img2img(ctx context.Context, req img2imgRequest) ([][]byte, error) {
 	width, height, err := normalizeDimensions(req.Width, req.Height)
 	if err != nil {
 		return nil, err

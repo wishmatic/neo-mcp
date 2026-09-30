@@ -9,10 +9,13 @@ A thin MCP wrapper exposing image capabilities to LLM agents.
 Note that the only version of Forge we support is
 [Haoming02's fork](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo#stable-diffusion-webui-forge---neo).
 
-- Core feature: `txt2img` and `img2img` to generate images.
-  - They also route to NovelAI when `model` starts with `nai-diffusion-`.
-    - Set `NOVELAI_API_KEY` to enable this.
-  - Forge-only ptions such as hi-res fix, presets, and VAE/text encoders are ignored for NovelAI.
+- Core feature: `forge` and `novelai` generate images, against your local Forge Neo instance and
+  NovelAI respectively.
+  - Set `NOVELAI_API_KEY` to enable `novelai`.
+  - Both take an optional `init_image_url`, and transform that image instead of generating from
+    scratch when it is given.
+  - The `forge` tool is the one with the Forge-only options: presets, VAE/text encoders, and hi-res
+    fix.
 - Not just PNG; WebP output by default, and JPEG and JXL are supported too!
   - Adjust default output with `OUTPUT_FORMAT`.
 - Every call to an image tool stores the image, returns its URL as text, and attaches the image as

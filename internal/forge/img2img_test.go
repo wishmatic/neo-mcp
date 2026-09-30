@@ -27,14 +27,14 @@ func TestImg2ImgPayload(t *testing.T) {
 
 	c := New(server.URL, zap.NewNop())
 
-	_, err := c.Img2Img(context.Background(), Img2ImgRequest{
+	_, err := c.img2img(context.Background(), img2imgRequest{
 		Checkpoint:        "model",
 		InitImageData:     []byte("png"),
 		Prompt:            "test",
 		DenoisingStrength: 0.6,
 	})
 	if err != nil {
-		t.Fatalf("Img2Img() error: %v", err)
+		t.Fatalf("img2img() error: %v", err)
 	}
 
 	if gotPath != "/sdapi/v1/img2img" {

@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type Img2ImgRequest struct {
+type img2imgRequest struct {
 	Checkpoint             string   `json:"-"`
 	ForgePreset            string   `json:"-"`
 	ForgeAdditionalModules []string `json:"-"`
@@ -38,7 +38,7 @@ type Img2ImgRequest struct {
 	HRCFGScale        float64 `json:"hr_cfg"`
 }
 
-func (c *Client) Img2Img(ctx context.Context, req Img2ImgRequest) ([][]byte, error) {
+func (c *Client) img2img(ctx context.Context, req img2imgRequest) ([][]byte, error) {
 	payload := map[string]any{
 		"init_images":        []string{base64.StdEncoding.EncodeToString(req.InitImageData)},
 		"prompt":             req.Prompt,

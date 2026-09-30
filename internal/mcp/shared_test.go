@@ -7,12 +7,13 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/wishmatic/neo-mcp/internal/format"
+	"github.com/wishmatic/neo-mcp/internal/novelai"
 )
 
 func schemas() map[string]*jsonschema.Schema {
 	return map[string]*jsonschema.Schema{
-		"txt2img": txt2imgSchema(format.Default),
-		"img2img": img2imgSchema(format.Default),
+		"forge":   forgeSchema(format.Default),
+		"novelai": novelaiSchema(format.Default),
 	}
 }
 
@@ -34,33 +35,34 @@ func TestModelIsRequired(t *testing.T) {
 	}
 }
 
-func TestForgePresetIsRequired(t *testing.T) {
+func TestPromptIsRequired(t *testing.T) {
 	for name, s := range schemas() {
-		if !slices.Contains(s.Required, "forge_preset") {
-			t.Errorf("%s: forge_preset is not required", name)
+		if !slices.Contains(s.Required, "prompt") {
+			t.Errorf("%s: prompt is not required", name)
 		}
 	}
 }
 
-func TestSchemasIncludeSharedFields(t *testing.T) {
+func TestInitImageIsOptional(t *testing.T) {
+	for name, s := range schemas() {
+		if slices.Contains(s.Required, "init_image_url") {
+			t.Errorf("%s: init_image_url must not be required, as it is what selects img2img", name)
+		}
+	}
+}
+
+func TestSchemasIncludeSharedGenerationFields(t *testing.T) {
 	shared := []string{
-		"model",
-		"forge_preset",
-		"vae_and_text_models",
 		"prompt",
 		"negative_prompt",
 		"sampler_name",
-		"scheduler",
 		"steps",
 		"width",
 		"height",
 		"cfg_scale",
 		"seed",
-		"enable_hr",
-		"hr_scale",
-		"hr_upscaler",
-		"hr_second_pass_steps",
-		"hr_cfg",
+		"init_image_url",
+		"denoising_strength",
 		"format",
 	}
 
@@ -69,6 +71,86 @@ func TestSchemasIncludeSharedFields(t *testing.T) {
 			if s.Properties[field] == nil {
 				t.Errorf("%s: missing shared field %q", name, field)
 			}
+		}
+	}
+}
+
+func TestForgeOnlyFieldsAreForgeOnly(t *testing.T) {
+	fields := []string{
+		"forge_preset",
+		"vae_and_text_models",
+		"scheduler",
+		"enable_hr",
+		"hr_scale",
+		"hr_upscaler",
+		"hr_second_pass_steps",
+		"hr_cfg",
+	}
+
+	for _, field := range fields {
+		if forgeSchema(format.Default).Properties[field] == nil {
+			t.Errorf("forge: missing %q", field)
+		}
+
+		if novelaiSchema(format.Default).Properties[field] != nil {
+			t.Errorf("novelai: %q is present, want it gone with the provider routing", field)
+		}
+	}
+}
+
+func TestForgePresetIsRequired(t *testing.T) {
+	if !slices.Contains(forgeSchema(format.Default).Required, "forge_preset") {
+		t.Error("forge: forge_preset is not required")
+	}
+}
+
+func TestNoiseIsNovelAIOnly(t *testing.T) {
+	noise := novelaiSchema(format.Default).Properties["noise"]
+	if noise == nil {
+		t.Fatal("novelai: noise property is missing")
+	}
+
+	if string(noise.Default) != "0" {
+		t.Errorf("novelai: noise default = %s, want 0", noise.Default)
+	}
+
+	if forgeSchema(format.Default).Properties["noise"] != nil {
+		t.Error("forge: noise is present, want none")
+	}
+}
+
+func TestDimensionsHaveNoDefault(t *testing.T) {
+	for name, s := range schemas() {
+		for _, field := range []string{"width", "height"} {
+			if s.Properties[field].Default != nil {
+				t.Errorf("%s: %s default = %s, want none so the init image can size it",
+					name, field, s.Properties[field].Default)
+			}
+		}
+	}
+}
+
+func TestDenoisingStrengthHasNoDefault(t *testing.T) {
+	for name, s := range schemas() {
+		prop := s.Properties["denoising_strength"]
+
+		if prop.Type != "number" {
+			t.Errorf("%s: denoising_strength type = %q, want number", name, prop.Type)
+		}
+
+		if prop.Default != nil {
+			t.Errorf("%s: denoising_strength default = %s, want none: 0 is what an omitted value looks like, and it "+
+				"means different things on the txt2img and img2img paths", name, prop.Default)
+		}
+	}
+}
+
+func TestForgeDenoisingStrengthDescribesBothMeanings(t *testing.T) {
+	desc := forgeSchema(format.Default).Properties["denoising_strength"].Description
+
+	for _, want := range []string{"init image", "0.75", "hi-res second pass"} {
+		if !strings.Contains(desc, want) {
+			t.Errorf("forge: denoising_strength description %q does not mention %q", desc, want)
 		}
 	}
 }
@@ -119,8 +201,8 @@ func TestFormatFlagSchemaFollowsConfiguredDefault(t *testing.T) {
 		want := `"` + name + `"`
 
 		for tool, prop := range map[string]*jsonschema.Schema{
-			"txt2img": txt2imgSchema(format).Properties["format"],
-			"img2img": img2imgSchema(format).Properties["format"],
+			"forge":   forgeSchema(format).Properties["format"],
+			"novelai": novelaiSchema(format).Properties["format"],
 			"bgkill":  bgkillSchema(format).Properties["format"],
 		} {
 			if string(prop.Default) != want {
@@ -130,64 +212,17 @@ func TestFormatFlagSchemaFollowsConfiguredDefault(t *testing.T) {
 	}
 }
 
-func TestModelDescriptionRoutesNovelAI(t *testing.T) {
+func TestSamplerDefaultsAreTheToolDefaults(t *testing.T) {
+	defaults := map[string]string{
+		"forge":   forgeDefaultSampler,
+		"novelai": novelai.DefaultSampler,
+	}
+
 	for name, s := range schemas() {
-		model := s.Properties["model"]
+		want := `"` + defaults[name] + `"`
 
-		if !strings.Contains(model.Description, "nai-diffusion-") {
-			t.Errorf("%s: model description %q does not mention nai-diffusion-", name, model.Description)
+		if string(s.Properties["sampler_name"].Default) != want {
+			t.Errorf("%s: sampler_name default = %s, want %s", name, s.Properties["sampler_name"].Default, want)
 		}
-
-		if len(model.Enum) != 0 {
-			t.Errorf("%s: model enum = %v, want none", name, model.Enum)
-		}
-	}
-}
-
-func TestHiresFieldsAreForgeOnly(t *testing.T) {
-	for name, s := range schemas() {
-		fields := []string{"enable_hr", "hr_scale", "hr_upscaler", "hr_second_pass_steps", "hr_cfg"}
-		if name == "txt2img" {
-			fields = append(fields, "denoising_strength")
-		}
-
-		for _, field := range fields {
-			desc := s.Properties[field].Description
-
-			if !strings.HasPrefix(desc, "Forge only:") {
-				t.Errorf("%s: %s description %q does not start with Forge only", name, field, desc)
-			}
-
-			if !strings.Contains(desc, "ignored by NovelAI") {
-				t.Errorf("%s: %s description %q does not say NovelAI ignores it", name, field, desc)
-			}
-		}
-	}
-}
-
-func TestSamplerDefaultsAreEmpty(t *testing.T) {
-	for name, s := range schemas() {
-		for _, field := range []string{"sampler_name", "scheduler"} {
-			raw := s.Properties[field].Default
-
-			if raw == nil || string(raw) != `""` {
-				t.Errorf("%s: %s default = %s, want an empty string", name, field, raw)
-			}
-		}
-	}
-}
-
-func TestImg2ImgNoiseDefault(t *testing.T) {
-	noise := img2imgSchema(format.Default).Properties["noise"]
-	if noise == nil {
-		t.Fatal("noise property is missing")
-	}
-
-	if string(noise.Default) != "0" {
-		t.Errorf("noise default = %s, want 0", noise.Default)
-	}
-
-	if txt2imgSchema(format.Default).Properties["noise"] != nil {
-		t.Error("txt2img has a noise property, want none")
 	}
 }

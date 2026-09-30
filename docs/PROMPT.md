@@ -53,7 +53,8 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 - When a call returns a URL, pass it straight to the image tools that take one instead of exporting
   and re-uploading anything.
 - Pass a URL you cannot open yourself: the server maps URLs it cannot reach to somewhere it can read
-  them. When the user pastes or attaches an image, ask for its URL and pass it as `init_image_url`.
+  them. When the user pastes or attaches an image, ask for its URL, then pass it as `init_image_url`
+  to `forge` or `novelai` to transform it, or as the input of `edit`, `convert`, or `bgkill`.
 - Use `edit` to trim the transparent margins off an image or to make a square or circular version of
   it. It works on any image, including one this or another tool just returned, and needs no Forge.
 - Use `convert` to change an image's file type, for example a `webp` to a `png`. Ask for a format
@@ -61,7 +62,7 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 ## Credits
 
-- Forge images never spend credit.
+- `forge` generations never spend credit; `novelai` ones can.
 - With an Opus subscription, one image at a time with no base image, at most 1,048,576 pixels, and
   28 steps or fewer does not spend Anlas.
 - Anything beyond that spends Anlas, for example roughly 45 for a single 1024x1536 image.
@@ -71,6 +72,6 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 - NovelAI rounds width and height up to a multiple of 64, so odd sizes will not come back exactly as
   requested.
-- The two backends use different sampler names and sizes; use the lists in this prompt rather than
+- The two tools use different sampler names and sizes; use the lists in this prompt rather than
   guessing.
 - {{OTHER_SETUP_NOTES}}

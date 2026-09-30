@@ -1,3 +1,6 @@
+// Package forge is the Stable Diffusion WebUI (Forge Neo) API in two layers: Generate and Bgkill are the domain
+// operations, and the unexported requests, payloads, and HTTP calls under them are the client that speaks Forge's own
+// payloads.
 package forge
 
 import (

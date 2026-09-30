@@ -26,14 +26,14 @@ func TestTxt2ImgOverrideSettings(t *testing.T) {
 
 	c := New(server.URL, zap.NewNop())
 
-	_, err := c.Txt2Img(context.Background(), Txt2ImgRequest{
+	_, err := c.txt2img(context.Background(), txt2imgRequest{
 		Checkpoint:             "model",
 		ForgePreset:            "flux",
 		ForgeAdditionalModules: []string{"vae", "t5xxl.ckpt"},
 		Prompt:                 "test",
 	})
 	if err != nil {
-		t.Fatalf("Txt2Img() error: %v", err)
+		t.Fatalf("txt2img() error: %v", err)
 	}
 
 	var payload struct {
@@ -76,9 +76,9 @@ func TestTxt2ImgNoOverrideSettings(t *testing.T) {
 
 	c := New(server.URL, zap.NewNop())
 
-	_, err := c.Txt2Img(context.Background(), Txt2ImgRequest{Prompt: "test"})
+	_, err := c.txt2img(context.Background(), txt2imgRequest{Prompt: "test"})
 	if err != nil {
-		t.Fatalf("Txt2Img() error: %v", err)
+		t.Fatalf("txt2img() error: %v", err)
 	}
 
 	if strings.Contains(string(gotBody), "override_settings") {
@@ -95,9 +95,9 @@ func TestTxt2ImgRejectsEmptyResponse(t *testing.T) {
 
 	c := New(server.URL, zap.NewNop())
 
-	_, err := c.Txt2Img(context.Background(), Txt2ImgRequest{Prompt: "test"})
+	_, err := c.txt2img(context.Background(), txt2imgRequest{Prompt: "test"})
 	if err == nil || !strings.Contains(err.Error(), "no images") {
-		t.Fatalf("Txt2Img() error = %v, want an error about the missing images", err)
+		t.Fatalf("txt2img() error = %v, want an error about the missing images", err)
 	}
 }
 
@@ -112,9 +112,9 @@ func TestTxt2ImgWarnsAboutExtraImages(t *testing.T) {
 
 	images, err := New(
 		server.URL, zap.New(core),
-	).Txt2Img(context.Background(), Txt2ImgRequest{Prompt: "test"})
+	).txt2img(context.Background(), txt2imgRequest{Prompt: "test"})
 	if err != nil {
-		t.Fatalf("Txt2Img() error: %v", err)
+		t.Fatalf("txt2img() error: %v", err)
 	}
 
 	if len(images) != 1 || string(images[0]) != "png" {

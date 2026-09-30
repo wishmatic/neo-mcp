@@ -3,7 +3,7 @@ package novelai
 import "fmt"
 
 const (
-	defaultSampler = "k_euler_ancestral"
+	DefaultSampler = "k_euler_ancestral"
 
 	dimensionMultiple = 64
 	minPixels         = dimensionMultiple * dimensionMultiple
@@ -29,7 +29,7 @@ type paramsInput struct {
 func baseParams(in paramsInput) map[string]any {
 	sampler := in.Sampler
 	if sampler == "" {
-		sampler = defaultSampler
+		sampler = DefaultSampler
 	}
 
 	negativePrompt := in.NegativePrompt
