@@ -18,10 +18,10 @@ Note that the only version of Forge we support is
     fix.
 - Not just PNG; WebP output by default, and JPEG and JXL are supported too!
   - Adjust default output with `OUTPUT_FORMAT`.
-- Every call to an image tool stores the image, returns its URL as text, and attaches the image as an MCP image
-  block such that a vision-capable agent can see the returned result.
-  - The attached copy is shrunk to a size budget the caller can raise or lower per call with `inline_max_edge` and
-    `inline_max_bytes`; the stored image at its URL keeps its own size.
+- Every call to an image tool stores the image, returns its URL as text, and attaches the image as
+  an MCP image block such that a vision-capable agent can see the returned result.
+  - The attached copy is shrunk to a size budget the caller can raise or lower per call with
+    `inline_max_edge` and `inline_max_bytes`; the stored image at its URL keeps its own size.
   - This also means that this isn't just an MCP; it also is a simple image hosting service!
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension for Forge.
