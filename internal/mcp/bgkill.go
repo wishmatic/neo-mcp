@@ -43,6 +43,8 @@ func (c *Clients) bgkill(
 	c.Log.Debug("tool called",
 		zap.String("tool", "bgkill"),
 		zap.String("format", format.String()),
+		zap.Int("inline_max_edge", in.InlineMaxEdge),
+		zap.Int("inline_max_bytes", in.InlineMaxBytes),
 		zap.String("model_name", in.ModelName),
 		zap.String("image_url", in.ImageURL),
 		zap.Bool("full_mode", in.IsFullMode),
@@ -72,7 +74,7 @@ func (c *Clients) bgkill(
 		return nil, generationOutput{}, c.generationFailure(ctx, "bgkill", err)
 	}
 
-	return c.publishImages(ctx, "bgkill", [][]byte{out}, format)
+	return c.publishImages(ctx, "bgkill", [][]byte{out}, format, in.inlineBudget())
 }
 
 func bgkillSchema(def format.Format) *jsonschema.Schema {

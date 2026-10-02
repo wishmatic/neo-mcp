@@ -45,6 +45,8 @@ func (c *Clients) novelai(
 	c.Log.Debug("tool called",
 		zap.String("tool", "novelai"),
 		zap.String("format", format.String()),
+		zap.Int("inline_max_edge", in.InlineMaxEdge),
+		zap.Int("inline_max_bytes", in.InlineMaxBytes),
 		zap.String("model", in.Model),
 		zap.String("init_image_url", in.InitImageURL),
 		zap.String("sampler", in.SamplingMethod),
@@ -76,7 +78,7 @@ func (c *Clients) novelai(
 
 	c.Log.Info("novelai generation finished", zap.Int("images", len(images)))
 
-	result, out, err := c.publishImages(ctx, "novelai", images, format)
+	result, out, err := c.publishImages(ctx, "novelai", images, format, in.inlineBudget())
 	if err != nil {
 		return nil, generationOutput{}, err
 	}

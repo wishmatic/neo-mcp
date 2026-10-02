@@ -14,6 +14,8 @@ type convertInput struct {
 	ImageURL string `json:"image_url" jsonschema:"URL of the image to convert; the service downloads it (following redirects)"`
 
 	Format string `json:"format" jsonschema:"format to convert to: png, jpeg, jxl (JPEG XL), or webp. Ask for a format the image is not already in: a call whose format matches the input's is an error rather than a no-op"`
+
+	inlineInput
 }
 
 func registerConvert(srv *mcp.Server, c *Clients) {
@@ -41,6 +43,8 @@ func (c *Clients) convert(
 	c.Log.Debug("tool called",
 		zap.String("tool", "convert"),
 		zap.String("format", target.String()),
+		zap.Int("inline_max_edge", in.InlineMaxEdge),
+		zap.Int("inline_max_bytes", in.InlineMaxBytes),
 		zap.String("image_url", in.ImageURL),
 	)
 
@@ -59,7 +63,7 @@ func (c *Clients) convert(
 		return nil, generationOutput{}, fmt.Errorf("convert: %w", err)
 	}
 
-	return c.publishImages(ctx, "convert", [][]byte{out}, target)
+	return c.publishImages(ctx, "convert", [][]byte{out}, target, in.inlineBudget())
 }
 
 func convertSchema() *jsonschema.Schema {
@@ -69,6 +73,7 @@ func convertSchema() *jsonschema.Schema {
 	}
 
 	setFormatEnum(s)
+	setInlineDefaults(s)
 
 	return s
 }

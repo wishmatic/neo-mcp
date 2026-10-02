@@ -25,10 +25,16 @@ const testImageSize = 4
 func testImagePNG(t *testing.T) []byte {
 	t.Helper()
 
-	img := image.NewNRGBA(image.Rect(0, 0, testImageSize, testImageSize))
+	return testImagePNGAt(t, testImageSize)
+}
 
-	for y := 0; y < testImageSize; y++ {
-		for x := 0; x < testImageSize; x++ {
+func testImagePNGAt(t *testing.T, size int) []byte {
+	t.Helper()
+
+	img := image.NewNRGBA(image.Rect(0, 0, size, size))
+
+	for y := 0; y < size; y++ {
+		for x := 0; x < size; x++ {
 			img.SetNRGBA(x, y, color.NRGBA{R: 180, G: 40, B: 10, A: 255})
 		}
 	}

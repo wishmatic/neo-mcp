@@ -2,12 +2,14 @@ package mcp
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
+	"github.com/wishmatic/neo-mcp/internal/present"
 )
 
 func schemas() map[string]*jsonschema.Schema {
@@ -15,6 +17,15 @@ func schemas() map[string]*jsonschema.Schema {
 		"forge":   forgeSchema(format.Default),
 		"novelai": novelaiSchema(format.Default),
 	}
+}
+
+func allImageSchemas() map[string]*jsonschema.Schema {
+	all := schemas()
+	all["bgkill"] = bgkillSchema(format.Default)
+	all["edit"] = editSchema(format.Default)
+	all["convert"] = convertSchema()
+
+	return all
 }
 
 func TestModelIsRequired(t *testing.T) {
@@ -64,6 +75,8 @@ func TestSchemasIncludeSharedGenerationFields(t *testing.T) {
 		"init_image_url",
 		"denoising_strength",
 		"format",
+		"inline_max_edge",
+		"inline_max_bytes",
 	}
 
 	for name, s := range schemas() {
@@ -151,6 +164,31 @@ func TestForgeDenoisingStrengthDescribesBothMeanings(t *testing.T) {
 	for _, want := range []string{"init image", "0.75", "hi-res second pass"} {
 		if !strings.Contains(desc, want) {
 			t.Errorf("forge: denoising_strength description %q does not mention %q", desc, want)
+		}
+	}
+}
+
+func TestInlineBudgetSchema(t *testing.T) {
+	tests := map[string]int{
+		"inline_max_edge":  present.DefaultInlineMaxEdge,
+		"inline_max_bytes": present.DefaultInlineMaxBytes,
+	}
+
+	for tool, s := range allImageSchemas() {
+		for field, def := range tests {
+			prop := s.Properties[field]
+			if prop == nil {
+				t.Errorf("%s: %s is missing", tool, field)
+				continue
+			}
+
+			if got := string(prop.Default); got != strconv.Itoa(def) {
+				t.Errorf("%s: %s default = %s, want %d", tool, field, got, def)
+			}
+
+			if slices.Contains(s.Required, field) {
+				t.Errorf("%s: %s must be optional, as naming no budget takes the default", tool, field)
+			}
 		}
 	}
 }

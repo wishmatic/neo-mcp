@@ -15,6 +15,7 @@ func (c *Clients) publishImages(
 	tool string,
 	images [][]byte,
 	format format.Format,
+	budget present.InlineBudget,
 ) (*mcp.CallToolResult, generationOutput, error) {
 	converted, err := convertImages(images, format)
 	if err != nil {
@@ -30,7 +31,7 @@ func (c *Clients) publishImages(
 		return nil, generationOutput{}, err
 	}
 
-	content, failures := present.StoredImages(images, urls)
+	content, failures := present.StoredImages(images, urls, budget)
 	for _, failure := range failures {
 		c.Log.Warn("inline image encoding failed", zap.Int("image", failure.Index), zap.Error(failure.Err))
 	}

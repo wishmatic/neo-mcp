@@ -48,6 +48,8 @@ func (c *Clients) edit(
 	c.Log.Debug("tool called",
 		zap.String("tool", "edit"),
 		zap.String("format", format.String()),
+		zap.Int("inline_max_edge", in.InlineMaxEdge),
+		zap.Int("inline_max_bytes", in.InlineMaxBytes),
 		zap.String("image_url", in.ImageURL),
 		zap.Bool("square", in.IsSquare),
 		zap.Bool("circle", in.IsCircle),
@@ -68,7 +70,7 @@ func (c *Clients) edit(
 		return nil, generationOutput{}, fmt.Errorf("edit: %w", err)
 	}
 
-	return c.publishImages(ctx, "edit", [][]byte{out}, format)
+	return c.publishImages(ctx, "edit", [][]byte{out}, format, in.inlineBudget())
 }
 
 func editOptions(in editInput) edit.Options {

@@ -1,8 +1,10 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"image"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -84,6 +86,42 @@ func TestConvertCallToolReturnsImage(t *testing.T) {
 				t.Fatalf("content[1] = %#v, want an image block", result.Content[1])
 			}
 		})
+	}
+}
+
+func TestConvertCallToolShrinksTheInlineImageToTheNamedBudget(t *testing.T) {
+	images := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(testImagePNGAt(t, 512))
+	}))
+	t.Cleanup(images.Close)
+
+	srv, err := New(Clients{
+		Log:      zapNop(),
+		Store:    newTestStore(t),
+		Resolver: newResolver(t),
+	})
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	result := callTool(t, srv, "convert", map[string]any{
+		"image_url":       images.URL + "/x.png",
+		"format":          "jpeg",
+		"inline_max_edge": 16,
+	})
+
+	img, ok := result.Content[1].(*mcp.ImageContent)
+	if !ok {
+		t.Fatalf("content[1] = %#v, want an image block", result.Content[1])
+	}
+
+	decoded, _, err := image.Decode(bytes.NewReader(img.Data))
+	if err != nil {
+		t.Fatalf("decode attached image: %v", err)
+	}
+
+	if bounds := decoded.Bounds(); bounds.Dx() != 16 {
+		t.Errorf("attached width = %d, want the requested 16", bounds.Dx())
 	}
 }
 

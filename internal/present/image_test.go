@@ -13,7 +13,11 @@ import (
 )
 
 func TestStoredImagesPairsURLsWithImages(t *testing.T) {
-	content, failures := StoredImages([][]byte{testPNG(t)}, []string{"https://cdn.example.com/i/1.png"})
+	content, failures := StoredImages(
+		[][]byte{testPNG(t)},
+		[]string{"https://cdn.example.com/i/1.png"},
+		InlineBudget{},
+	)
 	if len(failures) != 0 {
 		t.Fatalf("failures = %v, want none", failures)
 	}
@@ -42,7 +46,11 @@ func TestStoredImagesPairsURLsWithImages(t *testing.T) {
 }
 
 func TestStoredImagesAudience(t *testing.T) {
-	content, _ := StoredImages([][]byte{testPNG(t)}, []string{"https://cdn.example.com/i/1.png"})
+	content, _ := StoredImages(
+		[][]byte{testPNG(t)},
+		[]string{"https://cdn.example.com/i/1.png"},
+		InlineBudget{},
+	)
 
 	img, ok := content[1].(*mcp.ImageContent)
 	if !ok {
@@ -55,27 +63,61 @@ func TestStoredImagesAudience(t *testing.T) {
 }
 
 func TestStoredImagesShrinksToTheBudget(t *testing.T) {
-	content, failures := StoredImages([][]byte{sizedPNG(t, 2048, 1024)}, []string{"https://cdn.example.com/i/1.png"})
-	if len(failures) != 0 {
-		t.Fatalf("failures = %v, want none", failures)
+	tests := []struct {
+		name     string
+		budget   InlineBudget
+		wantEdge int
+	}{
+		{name: "default budget", budget: InlineBudget{}, wantEdge: DefaultInlineMaxEdge},
+		{name: "named budget", budget: InlineBudget{MaxEdge: 64}, wantEdge: 64},
 	}
 
-	img, ok := content[1].(*mcp.ImageContent)
-	if !ok {
-		t.Fatalf("content[1] = %#v, want an image block", content[1])
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content, failures := StoredImages(
+				[][]byte{sizedPNG(t, 2048, 1024)},
+				[]string{"https://cdn.example.com/i/1.png"},
+				tt.budget,
+			)
+			if len(failures) != 0 {
+				t.Fatalf("failures = %v, want none", failures)
+			}
+
+			img, ok := content[1].(*mcp.ImageContent)
+			if !ok {
+				t.Fatalf("content[1] = %#v, want an image block", content[1])
+			}
+
+			if len(img.Data) > DefaultInlineMaxBytes {
+				t.Errorf("attached size = %d bytes, want at most %d", len(img.Data), DefaultInlineMaxBytes)
+			}
+
+			decoded, _, err := image.Decode(bytes.NewReader(img.Data))
+			if err != nil {
+				t.Fatalf("decode attached image: %v", err)
+			}
+
+			if bounds := decoded.Bounds(); bounds.Dx() != tt.wantEdge {
+				t.Errorf("attached width = %d, want the longest edge shrunk to %d", bounds.Dx(), tt.wantEdge)
+			}
+		})
+	}
+}
+
+func TestStoredImagesReportsAnUnreachableByteBudget(t *testing.T) {
+	content, failures := StoredImages(
+		[][]byte{sizedPNG(t, 64, 64)},
+		[]string{"https://cdn.example.com/i/1.png"},
+		InlineBudget{MaxEdge: 64, MaxBytes: 1},
+	)
+
+	if len(failures) != 1 {
+		t.Fatalf("failures = %+v, want the byte budget to be unreachable", failures)
 	}
 
-	if len(img.Data) > inlineMaxBytes {
-		t.Errorf("attached size = %d bytes, want at most %d", len(img.Data), inlineMaxBytes)
-	}
-
-	decoded, _, err := image.Decode(bytes.NewReader(img.Data))
-	if err != nil {
-		t.Fatalf("decode attached image: %v", err)
-	}
-
-	if bounds := decoded.Bounds(); bounds.Dx() > inlineMaxEdge || bounds.Dy() > inlineMaxEdge {
-		t.Errorf("attached dimensions = %v, want at most %d on the longest edge", bounds, inlineMaxEdge)
+	note, ok := content[1].(*mcp.TextContent)
+	if !ok || !strings.Contains(note.Text, "could not be attached inline") {
+		t.Fatalf("content[1] = %#v, want a failure note", content[1])
 	}
 }
 
@@ -83,6 +125,7 @@ func TestStoredImagesFailsSoft(t *testing.T) {
 	content, failures := StoredImages(
 		[][]byte{[]byte("not an image"), testPNG(t)},
 		[]string{"https://cdn.example.com/i/1.png", "https://cdn.example.com/i/2.png"},
+		InlineBudget{},
 	)
 
 	if len(failures) != 1 || failures[0].Index != 1 {
@@ -104,7 +147,7 @@ func TestStoredImagesFailsSoft(t *testing.T) {
 }
 
 func TestStoredImagesWithoutImageData(t *testing.T) {
-	content, failures := StoredImages(nil, []string{"https://cdn.example.com/i/1.png"})
+	content, failures := StoredImages(nil, []string{"https://cdn.example.com/i/1.png"}, InlineBudget{})
 	if len(content) != 1 || len(failures) != 0 {
 		t.Fatalf("content = %d, failures = %v, want the URL alone", len(content), failures)
 	}

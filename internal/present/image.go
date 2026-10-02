@@ -7,17 +7,25 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/format"
 )
 
-// An attached image rides in the tool result, so it gets a size budget. WebP is what it is shrunk to because that keeps
-// transparency and is a media type the protocol allows.
+// A bounded copy of an image rides in the tool result, so it gets a size budget. WebP is what it is shrunk to because
+// that keeps transparency and is a media type the protocol allows.
 const (
-	inlineMaxEdge  = 1024
-	inlineMaxBytes = 1 << 20
+	DefaultInlineMaxEdge  = 1024
+	DefaultInlineMaxBytes = 1 << 20
 )
 
 const (
 	RoleUser      mcp.Role = "user"
 	RoleAssistant mcp.Role = "assistant"
 )
+
+// InlineBudget is the size the attached copy of a stored image is shrunk to. The stored image itself is left alone.
+//
+// A field left at zero or below means the caller named no limit for it, which takes the default.
+type InlineBudget struct {
+	MaxEdge  int
+	MaxBytes int
+}
 
 type AttachmentFailure struct {
 	Index int
@@ -27,9 +35,11 @@ type AttachmentFailure struct {
 // StoredImages presents stored images as [text(url), image, ...], one text block per image immediately before it.
 //
 // An image that cannot be prepared keeps its URL line and yields a note in place of its image block.
-func StoredImages(images [][]byte, urls []string) ([]mcp.Content, []AttachmentFailure) {
+func StoredImages(images [][]byte, urls []string, budget InlineBudget) ([]mcp.Content, []AttachmentFailure) {
 	content := make([]mcp.Content, 0, 2*len(urls))
 	var failures []AttachmentFailure
+
+	budget = budget.resolved()
 
 	for i, url := range urls {
 		content = append(content, &mcp.TextContent{Text: url})
@@ -38,7 +48,7 @@ func StoredImages(images [][]byte, urls []string) ([]mcp.Content, []AttachmentFa
 			continue
 		}
 
-		inline, err := format.Shrink(images[i], inlineMaxEdge, inlineMaxBytes)
+		inline, err := format.Shrink(images[i], budget.MaxEdge, budget.MaxBytes)
 		if err != nil {
 			failures = append(failures, AttachmentFailure{Index: i + 1, Err: err})
 			content = append(content, &mcp.TextContent{Text: attachmentFailureNote(i+1, err)})
@@ -50,6 +60,18 @@ func StoredImages(images [][]byte, urls []string) ([]mcp.Content, []AttachmentFa
 	}
 
 	return content, failures
+}
+
+func (b InlineBudget) resolved() InlineBudget {
+	if b.MaxEdge <= 0 {
+		b.MaxEdge = DefaultInlineMaxEdge
+	}
+
+	if b.MaxBytes <= 0 {
+		b.MaxBytes = DefaultInlineMaxBytes
+	}
+
+	return b
 }
 
 // imageBlock annotates the image for both the user and the assistant, which is what lets a vision-capable model see it.

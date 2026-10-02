@@ -61,6 +61,8 @@ func (c *Clients) forge(
 	c.Log.Debug("tool called",
 		zap.String("tool", "forge"),
 		zap.String("format", format.String()),
+		zap.Int("inline_max_edge", in.InlineMaxEdge),
+		zap.Int("inline_max_bytes", in.InlineMaxBytes),
 		zap.String("model", in.Model),
 		zap.String("forge_preset", in.ForgePreset),
 		zap.Strings("vae_and_text_models", in.VAEAndTextModels),
@@ -99,7 +101,7 @@ func (c *Clients) forge(
 
 	c.Log.Info("forge generation finished", zap.Int("images", len(images)))
 
-	result, out, err := c.publishImages(ctx, "forge", images, format)
+	result, out, err := c.publishImages(ctx, "forge", images, format, in.inlineBudget())
 	if err != nil {
 		return nil, generationOutput{}, err
 	}
