@@ -13,12 +13,13 @@ Note that the only version of Forge we support is
   - It takes an optional `init_image_url`, and transforms that image instead of generating from
     scratch when it is given.
   - It is the tool with the Forge-only options: presets, VAE/text encoders, and hi-res fix.
-- `openai` generates images through any OpenAI-compatible endpoint, and names which of the configured
+- `openai` generates images through any OpenAI-compatible endpoint, and names which of the
+  configured
   endpoints to call.
   - Set `OPENAI_PROVIDERS` to enable it: `name=endpoint=key` entries separated by commas, as in
-    `cloud=https://api.openai.com/v1=sk-xxx,local=http://127.0.0.1:8000/v1`. The name defaults to the
-    endpoint's host, the key may be left out for an endpoint that asks for none, and the first entry is
-    the default provider.
+    `cloud=https://api.openai.com/v1=sk-xxx,local=http://127.0.0.1:8000/v1`. The name defaults to
+    the endpoint's host, the key may be left out for an endpoint that asks for none, and the first
+    entry is the default provider.
   - Unlike the others, image inputs travel with the request inline, so the endpoint never fetches
     anything.
   - Which image models exist is the endpoint's own business; the caller names one the way it names a
