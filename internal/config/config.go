@@ -30,6 +30,10 @@ type Config struct {
 	SDURL         string `env:"SD_URL" envDefault:"http://127.0.0.1:7860"`
 	NovelAIAPIKey string `env:"NOVELAI_API_KEY"`
 
+	// OpenAIProviders is the endpoints an OpenAI-compatible image call may name, as [name=]endpoint=key entries
+	// separated by commas.
+	OpenAIProviders string `env:"OPENAI_PROVIDERS"`
+
 	// File hosting:
 
 	PublicHost string `env:"PUBLIC_HOST"`

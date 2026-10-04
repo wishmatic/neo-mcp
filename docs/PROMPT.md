@@ -31,6 +31,12 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 - Samplers: `k_euler`, `k_euler_ancestral`, `k_dpmpp_2m`, `k_dpmpp_2s_ancestral`, `k_dpmpp_sde`,
   `k_dpmpp_2m_sde`, `ddim_v3`
 
+## Available openai models
+
+- `openai` passes the model id to whichever OpenAI-compatible endpoint it calls, so the ids are that
+  endpoint's own: `{{OPENAI_MODEL_IDS}}`.
+- `provider` picks between the configured endpoints; leaving it out calls the first one.
+
 ## Image preferences
 
 - Default to {{PREFERRED_SIZE}} unless the request implies otherwise.
@@ -65,7 +71,8 @@ Pass these filenames exactly as written; if you are unsure which to use, ask the
 
 ## Credits
 
-- `forge` generations never spend credit; `novelai` ones can.
+- `forge` generations never spend credit; `novelai` ones can. `openai` ones bill the endpoint you
+  call, and each call reports what it cost in `costUsd`.
 - With an Opus subscription, one image at a time with no base image, at most 1,048,576 pixels, and
   28 steps or fewer does not spend Anlas.
 - Anything beyond that spends Anlas, for example roughly 45 for a single 1024x1536 image.

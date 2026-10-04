@@ -87,6 +87,7 @@ flowchart TD
     edit["internal/edit"]
     format["internal/format"]
     forge["internal/forge"]
+    openai["internal/openai"]
     novelai["internal/novelai"]
     sourcemap["internal/sourcemap"]
     resolve["internal/resolve"]
@@ -94,6 +95,7 @@ flowchart TD
     utils["internal/utils"]
 
     mcp --> forge
+    mcp --> openai
     mcp --> novelai
     mcp --> edit
     mcp --> present
@@ -106,6 +108,7 @@ flowchart TD
 
     forge --> format
     forge --> utils
+    openai --> utils
     novelai --> format
     novelai --> utils
     resolve --> sourcemap

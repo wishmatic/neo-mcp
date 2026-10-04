@@ -65,6 +65,61 @@ func TestNewWithNovelAIKey(t *testing.T) {
 	}
 }
 
+func TestNewWithOpenAIProviders(t *testing.T) {
+	core, logs := observer.New(zapcore.DebugLevel)
+
+	cfg := testConfig(t)
+	cfg.OpenAIProviders = "primary=https://api.example.com/api/v1=sk-test,local=http://127.0.0.1:8000/v1"
+
+	srv, err := New(cfg, zap.New(core))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	t.Cleanup(func() { _ = srv.Shutdown(context.Background()) })
+
+	enabled := false
+	providers := ""
+
+	for _, entry := range logs.All() {
+		if entry.Message == "openai enabled" {
+			enabled = true
+			providers = fmt.Sprint(entry.ContextMap()["providers"])
+		}
+
+		context := fmt.Sprint(entry.ContextMap())
+		if strings.Contains(entry.Message, "sk-test") || strings.Contains(context, "sk-test") {
+			t.Errorf("log entry %q leaks the API key", entry.Message)
+		}
+	}
+
+	if !enabled {
+		t.Error("no \"openai enabled\" log entry, want one")
+	}
+
+	if providers != "[primary local]" {
+		t.Errorf("providers = %v, want the configured names in order", providers)
+	}
+}
+
+func TestNewRejectsInvalidOpenAIProviders(t *testing.T) {
+	cfg := testConfig(t)
+	cfg.OpenAIProviders = "primary=nonsense=sk-test"
+
+	_, err := New(cfg, zap.NewNop())
+	if err == nil {
+		t.Fatal("New() error = nil, want an error")
+	}
+
+	if !strings.Contains(err.Error(), "OPENAI_PROVIDERS") {
+		t.Errorf("error = %q, want it to name OPENAI_PROVIDERS", err.Error())
+	}
+
+	if strings.Contains(err.Error(), "sk-test") {
+		t.Errorf("error = %q, want it to keep the key out", err.Error())
+	}
+}
+
 func TestNewRejectsInvalidImageURLMap(t *testing.T) {
 	cfg := testConfig(t)
 	cfg.ImageURLMap = "https://example.com"

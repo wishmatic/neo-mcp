@@ -30,6 +30,10 @@ func registerTools(srv *mcp.Server, c *Clients) {
 		registerNovelAI(srv, c)
 	}
 
+	if c.OpenAI != nil {
+		registerOpenAI(srv, c)
+	}
+
 	registerEdit(srv, c)
 	registerConvert(srv, c)
 }

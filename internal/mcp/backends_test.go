@@ -14,6 +14,7 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/format"
 	"github.com/wishmatic/neo-mcp/internal/novelai"
+	"github.com/wishmatic/neo-mcp/internal/openai"
 )
 
 type requestLog struct {
@@ -90,6 +91,33 @@ func newInitImageURL(t *testing.T) string {
 	t.Helper()
 
 	return newSizedInitImageURL(t, testImageSize, testImageSize)
+}
+
+func newOpenAIBackend(t *testing.T, log *requestLog) *openai.Client {
+	t.Helper()
+
+	return openai.New([]openai.Provider{newOpenAIProvider(t, log, openaiInlineResponse(t, testImagePNG(t)))})
+}
+
+func newOpenAIProvider(t *testing.T, log *requestLog, response string) openai.Provider {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.add(r)
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(response))
+	}))
+
+	t.Cleanup(server.Close)
+
+	return openai.Provider{Name: "primary", BaseURL: server.URL, APIKey: "sk-test"}
+}
+
+func openaiInlineResponse(t *testing.T, image []byte) string {
+	t.Helper()
+
+	return `{"data":[{"b64_json":"` + base64.StdEncoding.EncodeToString(image) + `"}],"cost":0.003}`
 }
 
 func newSizedInitImageURL(t *testing.T, width, height int) string {
