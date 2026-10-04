@@ -180,19 +180,6 @@ func TestLoadImageURLMapDefaults(t *testing.T) {
 	}
 }
 
-func TestLoadNovelAIAPIKey(t *testing.T) {
-	t.Setenv("NOVELAI_API_KEY", "sk-test")
-
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-
-	if cfg.NovelAIAPIKey != "sk-test" {
-		t.Errorf("NovelAIAPIKey = %q, want sk-test", cfg.NovelAIAPIKey)
-	}
-}
-
 func TestLoadOpenAIProviders(t *testing.T) {
 	spec := "primary=https://api.example.com/api/v1=sk-test,local=http://127.0.0.1:8000/v1"
 

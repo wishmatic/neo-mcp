@@ -8,14 +8,12 @@ import (
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/wishmatic/neo-mcp/internal/format"
-	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/present"
 )
 
 func schemas() map[string]*jsonschema.Schema {
 	return map[string]*jsonschema.Schema{
-		"forge":   forgeSchema(format.Default),
-		"novelai": novelaiSchema(format.Default),
+		"forge": forgeSchema(format.Default),
 	}
 }
 
@@ -104,31 +102,12 @@ func TestForgeOnlyFieldsAreForgeOnly(t *testing.T) {
 		if forgeSchema(format.Default).Properties[field] == nil {
 			t.Errorf("forge: missing %q", field)
 		}
-
-		if novelaiSchema(format.Default).Properties[field] != nil {
-			t.Errorf("novelai: %q is present, want it gone with the provider routing", field)
-		}
 	}
 }
 
 func TestForgePresetIsRequired(t *testing.T) {
 	if !slices.Contains(forgeSchema(format.Default).Required, "forge_preset") {
 		t.Error("forge: forge_preset is not required")
-	}
-}
-
-func TestNoiseIsNovelAIOnly(t *testing.T) {
-	noise := novelaiSchema(format.Default).Properties["noise"]
-	if noise == nil {
-		t.Fatal("novelai: noise property is missing")
-	}
-
-	if string(noise.Default) != "0" {
-		t.Errorf("novelai: noise default = %s, want 0", noise.Default)
-	}
-
-	if forgeSchema(format.Default).Properties["noise"] != nil {
-		t.Error("forge: noise is present, want none")
 	}
 }
 
@@ -239,9 +218,8 @@ func TestFormatFlagSchemaFollowsConfiguredDefault(t *testing.T) {
 		want := `"` + name + `"`
 
 		for tool, prop := range map[string]*jsonschema.Schema{
-			"forge":   forgeSchema(format).Properties["format"],
-			"novelai": novelaiSchema(format).Properties["format"],
-			"bgkill":  bgkillSchema(format).Properties["format"],
+			"forge":  forgeSchema(format).Properties["format"],
+			"bgkill": bgkillSchema(format).Properties["format"],
 		} {
 			if string(prop.Default) != want {
 				t.Errorf("%s with default %s: format default = %s, want %s", tool, name, prop.Default, want)
@@ -251,16 +229,9 @@ func TestFormatFlagSchemaFollowsConfiguredDefault(t *testing.T) {
 }
 
 func TestSamplerDefaultsAreTheToolDefaults(t *testing.T) {
-	defaults := map[string]string{
-		"forge":   forgeDefaultSampler,
-		"novelai": novelai.DefaultSampler,
-	}
+	s := forgeSchema(format.Default)
 
-	for name, s := range schemas() {
-		want := `"` + defaults[name] + `"`
-
-		if string(s.Properties["sampler_name"].Default) != want {
-			t.Errorf("%s: sampler_name default = %s, want %s", name, s.Properties["sampler_name"].Default, want)
-		}
+	if want := `"` + forgeDefaultSampler + `"`; string(s.Properties["sampler_name"].Default) != want {
+		t.Errorf("forge: sampler_name default = %s, want %s", s.Properties["sampler_name"].Default, want)
 	}
 }

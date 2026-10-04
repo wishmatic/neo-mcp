@@ -9,23 +9,20 @@ A thin MCP wrapper exposing image capabilities to LLM agents.
 Note that the only version of Forge we support is
 [Haoming02's fork](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo#stable-diffusion-webui-forge---neo).
 
-- Core feature: `forge` and `novelai` generate images, against your local Forge Neo instance and
-  NovelAI respectively.
-  - Set `NOVELAI_API_KEY` to enable `novelai`.
-  - Both take an optional `init_image_url`, and transform that image instead of generating from
+- Core feature: `forge` generates images against your local Forge Neo instance.
+  - It takes an optional `init_image_url`, and transforms that image instead of generating from
     scratch when it is given.
-  - The `forge` tool is the one with the Forge-only options: presets, VAE/text encoders, and hi-res
-    fix.
+  - It is the tool with the Forge-only options: presets, VAE/text encoders, and hi-res fix.
 - `openai` generates images through any OpenAI-compatible endpoint, and names which of the configured
   endpoints to call.
   - Set `OPENAI_PROVIDERS` to enable it: `name=endpoint=key` entries separated by commas, as in
     `cloud=https://api.openai.com/v1=sk-xxx,local=http://127.0.0.1:8000/v1`. The name defaults to the
     endpoint's host, the key may be left out for an endpoint that asks for none, and the first entry is
     the default provider.
-  - Unlike the other two, image inputs travel with the request inline, so the endpoint never fetches
+  - Unlike the others, image inputs travel with the request inline, so the endpoint never fetches
     anything.
   - Which image models exist is the endpoint's own business; the caller names one the way it names a
-    Forge or NovelAI model.
+    Forge model.
 - Not just PNG; WebP output by default, and JPEG and JXL are supported too!
   - Adjust default output with `OUTPUT_FORMAT`.
 - Every call to an image tool stores the image, returns its URL as text, and attaches the image as
@@ -36,8 +33,7 @@ Note that the only version of Forge we support is
 - `bgkill` removes the background from an image via the
   [`sd-webui-birefnet`](https://github.com/dimitribarbot/sd-webui-birefnet) extension for Forge.
 - `edit` trims an image to the bounding box of its visible content, optionally padding, centering or
-  even circularising it! Great for logos and avatars. This runs locally and does not require Forge
-  nor NovelAI.
+  even circularising it! Great for logos and avatars. This runs locally and does not require Forge.
 - `convert` re-encodes an image as `png`, `jpeg`, `jxl`, or `webp`. Also runs locally!
 - Private networking support; input URLs can be mapped before they are fetched, even to a local
   directory seen by the container.
@@ -79,8 +75,8 @@ images are served without authentication.
 
 Your agent will need knowledge of VAE and text encoder models as well as available upscalers in
 order to use them. Add these verbatim to your system prompt or a skill, along with checkpoints,
-LoRA, and anything else it needs. The same goes for NovelAI model ids and for the image model ids of
-the endpoints in `OPENAI_PROVIDERS`: no list is maintained here, so the agent supplies them.
+LoRA, and anything else it needs. The same goes for the image model ids of the endpoints in
+`OPENAI_PROVIDERS`: no list is maintained here, so the agent supplies them.
 
 ### Stored Images
 

@@ -26,10 +26,6 @@ func registerTools(srv *mcp.Server, c *Clients) {
 		registerBgkill(srv, c)
 	}
 
-	if c.NovelAI != nil {
-		registerNovelAI(srv, c)
-	}
-
 	if c.OpenAI != nil {
 		registerOpenAI(srv, c)
 	}

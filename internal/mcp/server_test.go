@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/wishmatic/neo-mcp/internal/forge"
-	"github.com/wishmatic/neo-mcp/internal/novelai"
 )
 
 func TestNewRegistersTools(t *testing.T) {
@@ -22,26 +21,14 @@ func TestNewRegistersTools(t *testing.T) {
 
 func TestToolRegistration(t *testing.T) {
 	tests := []struct {
-		name    string
-		forge   *forge.Client
-		novelai *novelai.Client
-		want    []string
+		name  string
+		forge *forge.Client
+		want  []string
 	}{
-		{
-			name:    "novelai only",
-			novelai: novelai.New("http://example.com", "sk"),
-			want:    []string{"novelai", "edit", "convert"},
-		},
 		{
 			name:  "forge only",
 			forge: forge.New("http://example.com", zapNop()),
 			want:  []string{"forge", "bgkill", "edit", "convert"},
-		},
-		{
-			name:    "both",
-			forge:   forge.New("http://example.com", zapNop()),
-			novelai: novelai.New("http://example.com", "sk"),
-			want:    []string{"forge", "novelai", "bgkill", "edit", "convert"},
 		},
 		{
 			name: "none",
@@ -52,9 +39,8 @@ func TestToolRegistration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			srv, err := New(Clients{
-				Log:     zapNop(),
-				Forge:   tt.forge,
-				NovelAI: tt.novelai,
+				Log:   zapNop(),
+				Forge: tt.forge,
 			})
 			if err != nil {
 				t.Fatalf("New() error: %v", err)
@@ -89,23 +75,20 @@ func TestForgeDescriptionRequiresDenoisingStrengthForUpscaling(t *testing.T) {
 	}
 }
 
-func TestGenerationDescriptionsDocumentTheInitImage(t *testing.T) {
+func TestForgeDescriptionDocumentsTheInitImage(t *testing.T) {
 	srv, err := New(Clients{
-		Log:     zapNop(),
-		Forge:   forge.New("http://example.com", zapNop()),
-		NovelAI: novelai.New("http://example.com", "sk"),
+		Log:   zapNop(),
+		Forge: forge.New("http://example.com", zapNop()),
 	})
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
 
-	for _, name := range []string{"forge", "novelai"} {
-		desc := toolByName(t, srv, name).Description
+	desc := toolByName(t, srv, "forge").Description
 
-		for _, want := range []string{"init_image_url", "default to 512"} {
-			if !strings.Contains(desc, want) {
-				t.Errorf("%s description %q does not mention %q", name, desc, want)
-			}
+	for _, want := range []string{"init_image_url", "default to 512"} {
+		if !strings.Contains(desc, want) {
+			t.Errorf("forge description %q does not mention %q", desc, want)
 		}
 	}
 }

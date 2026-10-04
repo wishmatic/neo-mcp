@@ -16,7 +16,6 @@ import (
 	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/format"
 	mcpServer "github.com/wishmatic/neo-mcp/internal/mcp"
-	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
 	"github.com/wishmatic/neo-mcp/internal/resolve"
 	"github.com/wishmatic/neo-mcp/internal/sourcemap"
@@ -96,13 +95,6 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 		return nil, fmt.Errorf("build image resolver: %w", err)
 	}
 
-	var novelaiClient *novelai.Client
-	if cfg.NovelAIAPIKey != "" {
-		novelaiClient = novelai.New(novelai.DefaultBaseURL, cfg.NovelAIAPIKey)
-
-		log.Info("novelai enabled", zap.String("base_url", novelai.DefaultBaseURL))
-	}
-
 	endpoints, err := openai.ParseProviders(cfg.OpenAIProviders)
 	if err != nil {
 		return nil, fmt.Errorf("OPENAI_PROVIDERS: %w", err)
@@ -118,7 +110,6 @@ func New(cfg config.Config, log *zap.Logger) (*Server, error) {
 	mcpSrv, err := mcpServer.New(mcpServer.Clients{
 		Log:                 log,
 		Forge:               forgeClient,
-		NovelAI:             novelaiClient,
 		OpenAI:              imageClient,
 		Store:               files,
 		Resolver:            resolver,

@@ -8,9 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// generationInput is the input shared by the Forge and NovelAI generation tools. Only fields whose wording is the same
-// for both tools carry a description here; the rest are described by each tool's schema, where the two wordings sit next
-// to each other.
+// generationInput is the input the generation tools share, so its fields are described here.
 type generationInput struct {
 	Prompt         string `json:"prompt" jsonschema:"the text prompt describing the image to generate"`
 	NegativePrompt string `json:"negative_prompt,omitempty" jsonschema:"things to avoid in the generated image"`
@@ -29,7 +27,7 @@ type generationInput struct {
 	// InitImageURL is what makes a call img2img; without it the call is txt2img.
 	InitImageURL string `json:"init_image_url,omitempty"`
 
-	// DenoisingStrength is 0 when the caller left it out, which each backend then reads as its own default on the
+	// DenoisingStrength is 0 when the caller left it out, which the backend then reads as its own default on the
 	// img2img path and as "use my own setting" on the Forge hi-res path.
 	DenoisingStrength float64 `json:"denoising_strength,omitempty"`
 

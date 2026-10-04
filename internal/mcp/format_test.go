@@ -117,18 +117,6 @@ func TestForgeRejectsInvalidFormatBeforeGenerating(t *testing.T) {
 	}
 }
 
-func TestNovelAIRejectsInvalidFormatBeforeGenerating(t *testing.T) {
-	h := &Clients{Log: zapNop()}
-
-	_, _, err := h.novelai(context.Background(), nil, novelaiInput{
-		generationInput: generationInput{Prompt: "a cat", Format: "gif"},
-		Model:           "nai-diffusion-5-full",
-	})
-	if err == nil || !strings.HasPrefix(err.Error(), "novelai:") {
-		t.Fatalf("error = %v, want a novelai: prefix", err)
-	}
-}
-
 func TestBgkillCallToolFormatsOutput(t *testing.T) {
 	forgeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

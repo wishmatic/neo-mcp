@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"encoding/base64"
-	"encoding/binary"
 	"image"
 	"io"
 	"net/http"
@@ -10,10 +9,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/vmihailenco/msgpack/v5"
 	"github.com/wishmatic/neo-mcp/internal/forge"
 	"github.com/wishmatic/neo-mcp/internal/format"
-	"github.com/wishmatic/neo-mcp/internal/novelai"
 	"github.com/wishmatic/neo-mcp/internal/openai"
 )
 
@@ -40,21 +37,6 @@ func (l *requestLog) snapshot() ([]string, [][]byte) {
 	return append([]string(nil), l.paths...), append([][]byte(nil), l.bodies...)
 }
 
-func novelaiFrame(t *testing.T, image []byte) []byte {
-	t.Helper()
-
-	payload, err := msgpack.Marshal(map[string]any{"event_type": "final", "image": image})
-	if err != nil {
-		t.Fatalf("marshal frame: %v", err)
-	}
-
-	frame := make([]byte, 4+len(payload))
-	binary.BigEndian.PutUint32(frame, uint32(len(payload)))
-	copy(frame[4:], payload)
-
-	return frame
-}
-
 func newForgeBackend(t *testing.T, log *requestLog) *forge.Client {
 	t.Helper()
 
@@ -70,21 +52,6 @@ func newForgeBackend(t *testing.T, log *requestLog) *forge.Client {
 	t.Cleanup(server.Close)
 
 	return forge.New(server.URL, zapNop())
-}
-
-func newNovelAIBackend(t *testing.T, log *requestLog) *novelai.Client {
-	t.Helper()
-
-	frame := novelaiFrame(t, testImagePNG(t))
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.add(r)
-		_, _ = w.Write(frame)
-	}))
-
-	t.Cleanup(server.Close)
-
-	return novelai.New(server.URL, "sk-test")
 }
 
 func newInitImageURL(t *testing.T) string {

@@ -97,17 +97,6 @@ func decodeJSONBody(t *testing.T, raw []byte) map[string]any {
 	return decoded
 }
 
-func paramsOf(t *testing.T, body map[string]any) map[string]any {
-	t.Helper()
-
-	params, ok := body["parameters"].(map[string]any)
-	if !ok {
-		t.Fatalf("parameters = %T, want a map", body["parameters"])
-	}
-
-	return params
-}
-
 func numberField(t *testing.T, body map[string]any, key string) float64 {
 	t.Helper()
 
