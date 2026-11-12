@@ -3,7 +3,7 @@ module github.com/wishmatic/neo-mcp
 go 1.27.0
 
 require (
-	github.com/caarlos0/env/v11 v11.4.1
+	github.com/caarlos0/env/v11 v11.4.2
 	github.com/gen2brain/jxl v0.2.0
 	github.com/gen2brain/vpx v0.2.1
 	github.com/go-chi/chi/v5 v5.5.0
